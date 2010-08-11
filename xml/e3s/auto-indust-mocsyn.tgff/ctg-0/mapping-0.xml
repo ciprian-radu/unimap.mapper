@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<mapping id="0" apcg="0" xmlns="http://www.example.org/mapping">
+	<map>
+		<node>10</node>
+		<core>22</core>
+	</map>
+	<map>
+		<node>4</node>
+		<core>17</core>
+	</map>
+	<map>
+		<node>11</node>
+		<core>2</core>
+	</map>
+	<map>
+		<node>15</node>
+		<core>18</core>
+	</map>
+	<map>
+		<node>12</node>
+		<core>7</core>
+	</map>
+	<map>
+		<node>13</node>
+		<core>6</core>
+	</map>
+</mapping>
