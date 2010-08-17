@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <apcg id="0" ctg="0" xmlns="http://www.example.org/apcg">
-	<core id="12">
-		<task>4</task>
+	<core id="20">
+		<task id="5" execTime="1.0E-5" power="14.0" />
 	</core>
-	<core id="31">
-		<task>0</task>
+	<core id="26">
+		<task id="0" execTime="1.0E-5" power="0.58" />
 	</core>
-	<core id="6">
-		<task>1</task>
+	<core id="19">
+		<task id="2" execTime="2.9E-6" power="10.0" />
 	</core>
 	<core id="4">
-		<task>2</task>
-	</core>
-	<core id="25">
-		<task>3</task>
+		<task id="3" execTime="1.1E-6" power="16.0" />
 	</core>
 	<core id="7">
-		<task>5</task>
+		<task id="1" execTime="1.0E-5" power="6.0" />
+	</core>
+	<core id="3">
+		<task id="4" execTime="4.8E-7" power="14.0" />
 	</core>
 </apcg>
