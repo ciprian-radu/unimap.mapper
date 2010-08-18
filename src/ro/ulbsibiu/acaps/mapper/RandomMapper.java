@@ -147,17 +147,22 @@ public class RandomMapper implements Mapper {
 	}
 
 	public static void main(String[] args) throws FileNotFoundException, TooFewNocNodesException {
+		String e3sBenchmark = "auto-indust-mocsyn.tgff";
+		String mappingId = "1";
+		String apcgId = "1";
+		String ctgId = "0";
+		
 		String path = "xml" + File.separator + "e3s" + File.separator
-				+ "auto-indust-mocsyn.tgff" + File.separator;
+				+ e3sBenchmark + File.separator;
 		List<String> nodeIds = new ArrayList<String>();
 		for (int i = 0; i < 16; i++) {
 			nodeIds.add(Integer.toString(i));
 		}
-		Mapper mapper = new RandomMapper(path + "ctg-0"
-				+ File.separator + "apcg-0.xml", nodeIds);
+		Mapper mapper = new RandomMapper(path + "ctg-" + ctgId
+				+ File.separator + "apcg-" + apcgId + ".xml", nodeIds);
 		String mappingXml = mapper.map();
-		PrintWriter pw = new PrintWriter(path + "ctg-0" + File.separator
-				+ "mapping-0.xml");
+		PrintWriter pw = new PrintWriter(path + "ctg-" + ctgId + File.separator
+				+ "mapping-" + mappingId + ".xml");
 		pw.write(mappingXml);
 		pw.close();
 	}
