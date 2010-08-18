@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<apcg id="1" ctg="0" xmlns="http://www.example.org/apcg">
+	<core id="1">
+		<task id="0" execTime="1.0E-5" power="11.0" />
+		<task id="2" execTime="0.0" power="11.0" />
+	</core>
+	<core id="11">
+		<task id="5" execTime="1.0E-5" power="0.77" />
+	</core>
+	<core id="33">
+		<task id="1" execTime="0.0" power="1.6" />
+	</core>
+	<core id="9">
+		<task id="3" execTime="0.0" power="0.58" />
+		<task id="4" execTime="0.0" power="0.58" />
+	</core>
+</apcg>
