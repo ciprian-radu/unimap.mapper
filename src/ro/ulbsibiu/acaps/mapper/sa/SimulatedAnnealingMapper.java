@@ -216,12 +216,6 @@ public class SimulatedAnnealingMapper implements Mapper {
 		gLink = new Link[gLinkNum];
 	}
 
-	public void initializeNocNodes(double switchEBit) {
-		for (int i = 0; i < gTile.length; i++) {
-			gTile[i] = new Tile(i, -1, i / gEdgeSize, i % gEdgeSize, switchEBit);
-		}
-	}
-
 	public void initializeCores() {
 		for (int i = 0; i < gProcess.length; i++) {
 			gProcess[i] = new Process(i, -1);
@@ -232,11 +226,17 @@ public class SimulatedAnnealingMapper implements Mapper {
 		}
 	}
 
-	public void initializeNocLinks(double bandwidth, double linkEBit) {
+	public void initializeNocTopology(double bandwidth, double switchEBit,
+			double linkEBit) {
+		// initialize nodes
+		for (int i = 0; i < gTile.length; i++) {
+			gTile[i] = new Tile(i, -1, i / gEdgeSize, i % gEdgeSize, switchEBit);
+		}
+		// initialize links
 		for (int i = 0; i < gLink.length; i++) {
 			// There are totally 2*(gEdgeSize-1)*gEdgeSize*2 links. The first
 			// half links are horizontal
-			// the second half links are veritcal links.
+			// the second half links are vertical links.
 			int fromTileRow;
 			int fromTileColumn;
 			int toTileRow;
@@ -296,15 +296,19 @@ public class SimulatedAnnealingMapper implements Mapper {
 			assert gTile[i].getInLinkList().size() > 0;
 			assert gTile[i].getOutLinkList().size() > 0;
 		}
+		// for each router generate a routing table provided by the XY routing
+		// protocol
+		for (int i = 0; i < gTileNum; i++) {
+			gTile[i].generateXYRoutingTable(gTileNum, gEdgeSize, gLink);
+		}
+
+		generateLinkUsageList();
 	}
 
-	public void generateLinkUsageList() {
+	private void generateLinkUsageList() {
 		if (this.buildRoutingTable == true) {
 			linkUsageList = null;
 		} else {
-			for (int i = 0; i < gTileNum; i++) {
-				gTile[i].generateXYRoutingTable(gTileNum, gEdgeSize, gLink);
-			}
 			// Allocate the space for the link usage table
 			int[][][] linkUsageMatrix = new int[gTileNum][gTileNum][gLinkNum];
 
@@ -1034,8 +1038,6 @@ public class SimulatedAnnealingMapper implements Mapper {
 
 	@Override
 	public String map() throws TooFewNocNodesException {
-		// TODO
-
 		if (gTileNum < gProcNum) {
 			throw new TooFewNocNodesException(gProcNum, gTileNum);
 		}
@@ -1067,7 +1069,6 @@ public class SimulatedAnnealingMapper implements Mapper {
 				try {
 					id = Integer.valueOf(line.substring("@NODE".length() + 1));
 				} catch (NumberFormatException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 				// System.err.print("ID = " + id);
@@ -1082,7 +1083,6 @@ public class SimulatedAnnealingMapper implements Mapper {
 							substring.indexOf("\t")));
 					// System.err.print(" dst ID = " + dstId);
 				} catch (NumberFormatException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 				double rate = 0;
@@ -1091,7 +1091,6 @@ public class SimulatedAnnealingMapper implements Mapper {
 							.indexOf("\t") + 1));
 					// System.err.print(" rate = " + rate);
 				} catch (NumberFormatException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 
@@ -1119,26 +1118,26 @@ public class SimulatedAnnealingMapper implements Mapper {
 		double linkBandwidth = 1000000;
 		double switchEBit = 0.284;
 		double linkEBit = 0.449;
+		double bufReadEBit = 1.056;
+		double burWriteEBit = 2.831;
 
 		// SA without routing
-		SimulatedAnnealingMapper saMapper = new SimulatedAnnealingMapper(tiles,
-				cores);
-		
-		// SA with routing
 //		SimulatedAnnealingMapper saMapper = new SimulatedAnnealingMapper(tiles,
-//				cores, true, LegalTurnSet.ODD_EVEN, 1.056, 2.831);
-		
-		saMapper.initializeNocNodes(switchEBit);
+//				cores);
+
+		// SA with routing
+		SimulatedAnnealingMapper saMapper = new SimulatedAnnealingMapper(tiles,
+				cores, true, LegalTurnSet.ODD_EVEN, bufReadEBit, burWriteEBit);
+
 		saMapper.initializeCores();
-		saMapper.initializeNocLinks(linkBandwidth, linkEBit);
-		saMapper.generateLinkUsageList();
+		saMapper.initializeNocTopology(linkBandwidth, switchEBit, linkEBit);
 
 		saMapper.parseTrafficConfig(
 				"telecom-mocsyn-16tile-selectedpe.traffic.config",
 				linkBandwidth);
 
 		saMapper.map();
-		
+
 		saMapper.printCurrentMapping();
 	}
 }
