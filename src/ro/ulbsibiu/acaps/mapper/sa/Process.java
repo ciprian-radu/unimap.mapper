@@ -25,6 +25,10 @@ public class Process {
 	/** the bandwidth requirement of the incoming traffic */
 	private int[] fromBandwidthRequirement = null;
 
+	private int rank;
+	
+	private int totalCommVol;
+	
 	public Process(int procId, int tileId) {
 		super();
 		this.procId = procId;
@@ -77,6 +81,22 @@ public class Process {
 
 	public void setFromBandwidthRequirement(int[] fromBandwidthRequirement) {
 		this.fromBandwidthRequirement = fromBandwidthRequirement;
+	}
+
+	public int getRank() {
+		return rank;
+	}
+
+	public void setRank(int rank) {
+		this.rank = rank;
+	}
+
+	public int getTotalCommVol() {
+		return totalCommVol;
+	}
+
+	public void setTotalCommVol(int totalCommVol) {
+		this.totalCommVol = totalCommVol;
 	}
 
 }
