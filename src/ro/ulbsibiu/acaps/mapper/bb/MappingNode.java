@@ -163,9 +163,7 @@ class MappingNode {
 		}
 
 		if (bbMapper.buildRoutingTable) {
-			if (!routeTraffics(stage, stage, false, false)) { // FIXME are the
-																// last 2 params
-																// false?
+			if (!routeTraffics(stage, stage, true, true)) {
 				cost = BranchAndBoundMapper.MAX_VALUE + 1;
 				illegal = true;
 				return;
@@ -177,7 +175,7 @@ class MappingNode {
 				proc1 = bbMapper.procMapArray[stage];
 				int proc2 = bbMapper.procMapArray[i];
 				if (bbMapper.gProcess[proc1].getToBandwidthRequirement()[proc2] > 0) {
-					for (int j = 0; i < bbMapper.linkUsageList[tile1][tile2]
+					for (int j = 0; j < bbMapper.linkUsageList[tile1][tile2]
 							.size(); j++) {
 						int linkId = bbMapper.linkUsageList[tile1][tile2]
 								.get(j);
@@ -192,7 +190,7 @@ class MappingNode {
 					}
 				}
 				if (bbMapper.gProcess[proc1].getFromBandwidthRequirement()[proc2] > 0) {
-					for (int j = 0; i < bbMapper.linkUsageList[tile2][tile1]
+					for (int j = 0; j < bbMapper.linkUsageList[tile2][tile1]
 							.size(); j++) {
 						int linkId = bbMapper.linkUsageList[tile2][tile1]
 								.get(j);
@@ -398,12 +396,7 @@ class MappingNode {
 
 		if (bbMapper.buildRoutingTable) {
 			createBandwidthTempMemory();
-			if (!routeTraffics(stage, bbMapper.gProcNum - 1, false, false)) {// FIXME
-																				// is
-				// the
-				// last
-				// param
-				// false?
+			if (!routeTraffics(stage, bbMapper.gProcNum - 1, false, true)) {
 				illegalChildMapping = true;
 				upperBound = BranchAndBoundMapper.MAX_VALUE;
 				return upperBound;
@@ -494,7 +487,7 @@ class MappingNode {
 				}
 
 				if (bbMapper.gProcess[proc1].getFromBandwidthRequirement()[proc2] != 0) {
-					for (int k = 0; i < bbMapper.linkUsageList[tile2][tile1]
+					for (int k = 0; k < bbMapper.linkUsageList[tile2][tile1]
 							.size(); k++) {
 						int linkId = bbMapper.linkUsageList[tile2][tile1]
 								.get(k);

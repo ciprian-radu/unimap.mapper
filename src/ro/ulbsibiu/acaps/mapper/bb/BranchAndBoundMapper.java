@@ -105,7 +105,7 @@ public class BranchAndBoundMapper implements Mapper {
 	int linkBandwidth;
 
 	/** the size of the Priority Queue */
-	private int pqSize;
+	private int priorityQueueSize;
 
 	private int minHitThreshold;
 
@@ -135,6 +135,18 @@ public class BranchAndBoundMapper implements Mapper {
 		EASY, HARD
 	}
 
+	private double minUpperBound;
+
+	private int minUpperBoundHitCount;
+
+	private boolean insertAllFlag;
+
+	private int previousInsert;
+
+	private double minCost;
+
+	private MappingNode bestMapping;
+
 	/**
 	 * Constructor
 	 * 
@@ -145,9 +157,13 @@ public class BranchAndBoundMapper implements Mapper {
 	 *            one task associated to it
 	 * @param linkBandwidth
 	 *            the bandwidth of each network link
+	 * @param priorityQueueSize
+	 *            the size of the priority queue
 	 */
-	public BranchAndBoundMapper(int gTileNum, int gProcNum, int linkBandwidth) {
-		this(gTileNum, gProcNum, linkBandwidth, false, LegalTurnSet.WEST_FIRST);
+	public BranchAndBoundMapper(int gTileNum, int gProcNum, int linkBandwidth,
+			int priorityQueueSize) {
+		this(gTileNum, gProcNum, linkBandwidth, priorityQueueSize, false,
+				LegalTurnSet.WEST_FIRST);
 	}
 
 	/**
@@ -160,6 +176,8 @@ public class BranchAndBoundMapper implements Mapper {
 	 *            one task associated to it
 	 * @param linkBandwidth
 	 *            the bandwidth of each network link
+	 * @param priorityQueueSize
+	 *            the size of the priority queue
 	 * @param buildRoutingTable
 	 *            whether or not to build routing table too
 	 * @param legalTurnSet
@@ -171,11 +189,13 @@ public class BranchAndBoundMapper implements Mapper {
 	 *            energy consumption per bit write
 	 */
 	public BranchAndBoundMapper(int gTileNum, int gProcNum, int linkBandwidth,
-			boolean buildRoutingTable, LegalTurnSet legalTurnSet) {
+			int priorityQueueSize, boolean buildRoutingTable,
+			LegalTurnSet legalTurnSet) {
 		this.gTileNum = gTileNum;
 		this.gEdgeSize = (int) Math.sqrt(gTileNum);
 		this.gProcNum = gProcNum;
 		this.linkBandwidth = linkBandwidth;
+		this.priorityQueueSize = priorityQueueSize;
 		// we have 2gEdgeSize(gEdgeSize - 1) bidirectional links =>
 		// 4gEdgeSize(gEdgeSize - 1) unidirectional links
 		this.gLinkNum = 2 * (gEdgeSize - 1) * gEdgeSize * 2;
@@ -484,8 +504,8 @@ public class BranchAndBoundMapper implements Mapper {
 
 	private void branchAndBoundMapping() {
 		init();
-		double minCost = MAX_VALUE;
-		double minUpperBound = MAX_VALUE;
+		minCost = MAX_VALUE;
+		minUpperBound = MAX_VALUE;
 		PriorityQueue Q = new PriorityQueue();
 
 		// if (exist_locked_pe()) {
@@ -533,8 +553,8 @@ public class BranchAndBoundMapper implements Mapper {
 		}
 		// }
 
-		MappingNode bestMapping = null;
-		int minUpperBoundHitCount = 0;
+		bestMapping = null;
+		minUpperBoundHitCount = 0;
 
 		while (!Q.empty()) {
 			MappingNode pNode = Q.next();
@@ -542,19 +562,17 @@ public class BranchAndBoundMapper implements Mapper {
 				continue;
 			}
 
-			boolean insertAllFlag = false;
-			int prev_insert = 0;
+			insertAllFlag = false;
+			previousInsert = 0;
 			/**********************************************************************
 			 * Change this to adjust the tradeoff between the solution quality *
 			 * and the run time *
 			 **********************************************************************/
-			if (Q.length() < pqSize) {
-				insertAll(pNode, minUpperBound, minUpperBoundHitCount,
-						insertAllFlag, prev_insert, minCost, bestMapping, Q);
+			if (Q.length() < priorityQueueSize) {
+				insertAll(pNode, Q);
 				continue;
 			} else {
-				selectiveInsert(pNode, minUpperBound, minUpperBoundHitCount,
-						minCost, bestMapping, insertAllFlag, Q, prev_insert);
+				selectiveInsert(pNode, Q);
 			}
 		}
 		System.out.println("Totally " + MappingNode.cnt
@@ -566,30 +584,24 @@ public class BranchAndBoundMapper implements Mapper {
 		}
 	}
 
-	private void insertAll(MappingNode pNode, double minUpperBound,
-			int min_upperbound_hit_cnt, boolean insertAllFlag, int prev_insert,
-			double minCost, MappingNode bestMapping, PriorityQueue Q) {
+	private void insertAll(MappingNode pNode, PriorityQueue Q) {
 		if (pNode.upperBound == minUpperBound && minUpperBound < MAX_VALUE
-				&& min_upperbound_hit_cnt <= minHitThreshold)
+				&& minUpperBoundHitCount <= minHitThreshold)
 			insertAllFlag = true;
-		for (int i = prev_insert; i < gTileNum; i++) {
+		for (int i = previousInsert; i < gTileNum; i++) {
 			if (pNode.isExpandable(i)) {
-				MappingNode child = new MappingNode(this, pNode, i, false); // FIXME
-				// 3rd
-				// param
-				// is
-				// false?
+				MappingNode child = new MappingNode(this, pNode, i, true);
 				if (child.lowerBound > minUpperBound || child.cost > minCost
 						|| (child.cost == minCost && bestMapping != null)
-				/* || child.isIllegal() */)
-					continue;
-				else {
+				/* || child.isIllegal() */) {
+					;
+				} else {
 					if (child.upperBound < minUpperBound) {
 						minUpperBound = child.upperBound;
 						System.out
 								.println("Current minimum cost upper bound is "
 										+ minUpperBound);
-						min_upperbound_hit_cnt = 0;
+						minUpperBoundHitCount = 0;
 
 						// some new stuff here: we keep the mapping with
 						// min upperBound
@@ -613,11 +625,9 @@ public class BranchAndBoundMapper implements Mapper {
 						bestMapping = child;
 					} else {
 						Q.insert(child);
-						if (Q.length() >= pqSize && !insertAllFlag) {
-							prev_insert = i;
-							selectiveInsert(pNode, minUpperBound,
-									min_upperbound_hit_cnt, minCost,
-									bestMapping, insertAllFlag, Q, prev_insert);
+						if (Q.length() >= priorityQueueSize && !insertAllFlag) {
+							previousInsert = i;
+							selectiveInsert(pNode, Q);
 						}
 					}
 				}
@@ -625,16 +635,12 @@ public class BranchAndBoundMapper implements Mapper {
 		}
 	}
 
-	private void selectiveInsert(MappingNode pNode, double minUpperBound,
-			int min_upperbound_hit_cnt, double minCost,
-			MappingNode bestMapping, boolean insertAllFlag, PriorityQueue Q,
-			int prev_insert) {
+	private void selectiveInsert(MappingNode pNode, PriorityQueue Q) {
 		if ((Math.abs(pNode.upperBound - minUpperBound) == 0.01)
 				&& minUpperBound < MAX_VALUE
-				&& min_upperbound_hit_cnt <= minHitThreshold) {
-			min_upperbound_hit_cnt++;
-			insertAll(pNode, minUpperBound, min_upperbound_hit_cnt,
-					insertAllFlag, prev_insert, minCost, bestMapping, Q);
+				&& minUpperBoundHitCount <= minHitThreshold) {
+			minUpperBoundHitCount++;
+			insertAll(pNode, Q);
 		}
 		// In this case, we only select one child which has the
 		// smallest partial cost. However, if the node is currently
@@ -642,11 +648,7 @@ public class BranchAndBoundMapper implements Mapper {
 		// is generated by the corresponding minUpperBound is
 		// also generated
 		int index = pNode.bestCostCandidate();
-		MappingNode child = new MappingNode(this, pNode, index, false); // FIXME
-		// is
-		// 3rd
-		// param
-		// false?
+		MappingNode child = new MappingNode(this, pNode, index, true);
 		if (child.lowerBound > minUpperBound || child.cost > minCost
 				|| (child.cost == minCost && bestMapping != null))
 			return;
@@ -654,8 +656,7 @@ public class BranchAndBoundMapper implements Mapper {
 			if (child.upperBound < minUpperBound - 0.01) {
 				// In this case, we should also insert other children
 				insertAllFlag = true;
-				insertAll(pNode, minUpperBound, min_upperbound_hit_cnt,
-						insertAllFlag, prev_insert, minCost, bestMapping, Q);
+				insertAll(pNode, Q);
 			}
 			if (child.stage == gProcNum || child.lowerBound == child.upperBound) {
 				minCost = child.cost;
@@ -684,9 +685,7 @@ public class BranchAndBoundMapper implements Mapper {
 			System.err.println("index = " + index);
 			System.exit(-1);
 		}
-		child = new MappingNode(this, pNode, index, false); // FIXME is the
-		// 3rd param
-		// false?
+		child = new MappingNode(this, pNode, index, true);
 		if (child.lowerBound > minUpperBound || child.cost > minCost)
 			return;
 		else {
@@ -694,7 +693,7 @@ public class BranchAndBoundMapper implements Mapper {
 				minUpperBound = child.upperBound;
 				System.out.println("Current minimum cost upper bound is "
 						+ minUpperBound);
-				min_upperbound_hit_cnt = 0;
+				minUpperBoundHitCount = 0;
 			}
 			if (child.stage == gProcNum || child.lowerBound == child.upperBound) {
 				if (minCost == child.cost && bestMapping != null)
@@ -815,6 +814,7 @@ public class BranchAndBoundMapper implements Mapper {
 		int tiles = 16;
 		int cores = 16;
 		int linkBandwidth = 1000000;
+		int priorityQueueSize = 2000;
 		double switchEBit = 0.284;
 		double linkEBit = 0.449;
 		double bufReadEBit = 1.056;
@@ -822,11 +822,11 @@ public class BranchAndBoundMapper implements Mapper {
 
 		// Branch and Bound without routing
 		BranchAndBoundMapper bbMapper = new BranchAndBoundMapper(tiles, cores,
-				linkBandwidth);
+				linkBandwidth, priorityQueueSize);
 
 		// Branch and Bound with routing
 		// BranchAndBoundMapper bbMapper = new BranchAndBoundMapper(tiles,
-		// cores, linkBandwidth,
+		// cores, linkBandwidth, priorityQueueSize,
 		// true, LegalTurnSet.ODD_EVEN);
 
 		bbMapper.initializeCores();
