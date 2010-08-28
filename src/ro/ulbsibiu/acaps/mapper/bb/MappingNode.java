@@ -101,7 +101,19 @@ class MappingNode {
 		linkBandwidthUsage = null;
 		rSynLinkBandwidthUsage = null;
 		rSynLinkBandwidthUsageTemp = null;
-		routingTable = null;
+		
+		if (bbMapper.buildRoutingTable) {
+			routingTable = new int[bbMapper.gEdgeSize][bbMapper.gEdgeSize][bbMapper.gTileNum][bbMapper.gTileNum];
+			for (int i = 0; i < routingTable.length; i++) {
+				for (int j = 0; j < routingTable[i].length; j++) {
+					for (int k = 0; k < routingTable[i][j].length; k++) {
+						for (int l = 0; l < routingTable[i][j][k].length; l++) {
+							routingTable[i][j][k][l] = -2;
+						}
+					}
+				}
+			}
+		}
 
 		routingBitArray = null;
 		bestRoutingBitArray = null;
@@ -239,7 +251,20 @@ class MappingNode {
 		linkBandwidthUsage = null;
 		rSynLinkBandwidthUsage = null;
 		rSynLinkBandwidthUsageTemp = null;
-		routingTable = null;
+		
+		if (bbMapper.buildRoutingTable) {
+			routingTable = new int[bbMapper.gEdgeSize][bbMapper.gEdgeSize][bbMapper.gTileNum][bbMapper.gTileNum];
+			for (int i = 0; i < routingTable.length; i++) {
+				for (int j = 0; j < routingTable[i].length; j++) {
+					for (int k = 0; k < routingTable[i][j].length; k++) {
+						for (int l = 0; l < routingTable[i][j][k].length; l++) {
+							routingTable[i][j][k][l] = -2;
+						}
+					}
+				}
+			}
+		}
+		
 		occupancyTableReady = false;
 		lowerBound = -1;
 
@@ -311,7 +336,19 @@ class MappingNode {
 		linkBandwidthUsage = null;
 		rSynLinkBandwidthUsage = null;
 		rSynLinkBandwidthUsageTemp = null;
-		routingTable = null;
+		
+		if (bbMapper.buildRoutingTable) {
+			routingTable = new int[bbMapper.gEdgeSize][bbMapper.gEdgeSize][bbMapper.gTileNum][bbMapper.gTileNum];
+			for (int i = 0; i < routingTable.length; i++) {
+				for (int j = 0; j < routingTable[i].length; j++) {
+					for (int k = 0; k < routingTable[i][j].length; k++) {
+						for (int l = 0; l < routingTable[i][j][k].length; l++) {
+							routingTable[i][j][k][l] = -2;
+						}
+					}
+				}
+			}
+		}
 
 		routingBitArray = null;
 		bestRoutingBitArray = null;
@@ -704,12 +741,11 @@ class MappingNode {
 							mappingSequency[proc_comm.srcProc],
 							mappingSequency[proc_comm.dstProc],
 							proc_comm.bandwidth);
-					ProcComm iter = Q.get(0);
 					for (Iterator<ProcComm> iterator = Q.iterator(); iterator
 							.hasNext();) {
 						ProcComm procComm = (ProcComm) iterator.next();
-						if ((procComm.adaptivity < iter.adaptivity)
-								|| (procComm.adaptivity == iter.adaptivity && procComm.bandwidth > iter.bandwidth))
+						if ((proc_comm.adaptivity < procComm.adaptivity)
+								|| (proc_comm.adaptivity == procComm.adaptivity && proc_comm.bandwidth > procComm.bandwidth))
 							break;
 					}
 					Q.add(proc_comm);
@@ -724,12 +760,11 @@ class MappingNode {
 							mappingSequency[proc_comm.srcProc],
 							mappingSequency[proc_comm.dstProc],
 							proc_comm.bandwidth);
-					ProcComm iter = Q.get(0);
 					for (Iterator<ProcComm> iterator = Q.iterator(); iterator
 							.hasNext();) {
 						ProcComm procComm = (ProcComm) iterator.next();
-						if ((procComm.adaptivity < iter.adaptivity)
-								|| (procComm.adaptivity == iter.adaptivity && procComm.bandwidth > iter.bandwidth))
+						if ((proc_comm.adaptivity < procComm.adaptivity)
+								|| (proc_comm.adaptivity == procComm.adaptivity && proc_comm.bandwidth > procComm.bandwidth))
 							break;
 					}
 					Q.add(proc_comm);

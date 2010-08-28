@@ -821,13 +821,12 @@ public class BranchAndBoundMapper implements Mapper {
 		double burWriteEBit = 2.831;
 
 		// Branch and Bound without routing
-		BranchAndBoundMapper bbMapper = new BranchAndBoundMapper(tiles, cores,
-				linkBandwidth, priorityQueueSize);
+//		BranchAndBoundMapper bbMapper = new BranchAndBoundMapper(tiles, cores,
+//				linkBandwidth, priorityQueueSize);
 
 		// Branch and Bound with routing
-		// BranchAndBoundMapper bbMapper = new BranchAndBoundMapper(tiles,
-		// cores, linkBandwidth, priorityQueueSize,
-		// true, LegalTurnSet.ODD_EVEN);
+		BranchAndBoundMapper bbMapper = new BranchAndBoundMapper(tiles, cores,
+				linkBandwidth, priorityQueueSize, true, LegalTurnSet.ODD_EVEN);
 
 		bbMapper.initializeCores();
 		bbMapper.initializeNocTopology(switchEBit, linkEBit);
