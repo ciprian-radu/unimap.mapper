@@ -6,6 +6,18 @@ import ro.ulbsibiu.acaps.mapper.sa.Link;
 import ro.ulbsibiu.acaps.mapper.sa.Process;
 import ro.ulbsibiu.acaps.mapper.sa.Tile;
 
+/**
+ * Branch-and-Bound algorithm for Network-on-Chip (NoC) application mapping. The
+ * implementation is based on the one from <a
+ * href="http://www.ece.cmu.edu/~sld/wiki/doku.php?id=shared:nocmap">NoCMap</a>
+ * 
+ * <p>
+ * Note that currently, this algorithm works only with N x N 2D mesh NoCs
+ * </p>
+ * 
+ * @author cipi
+ * 
+ */
 public class BranchAndBoundMapper implements Mapper {
 
 	private static final int DUMMY_VOL = Integer.MAX_VALUE / 100;
@@ -55,10 +67,11 @@ public class BranchAndBoundMapper implements Mapper {
 
 	private float[][] archMatrix = null;
 
-	// proc_map_array[i] represents the actual process that the i-th mapped
-	// process
-	// corresponding to
-	private int[] proc_map_array = null;
+	/**
+	 * procMapArray[i] represents the actual process that the i-th mapped
+	 * process corresponds to
+	 */
+	private int[] procMapArray = null;
 
 	static final double MAX_VALUE = Integer.MAX_VALUE - 100;
 
@@ -68,21 +81,30 @@ public class BranchAndBoundMapper implements Mapper {
 	 */
 	static final double MAX_PER_TRAN_COST = MAX_VALUE;
 
+	/**
+	 * @author cipi
+	 * 
+	 */
 	public enum RoutingEffort {
 		EASY, HARD
 	}
 
+	/**
+	 * Default constructor
+	 */
 	public BranchAndBoundMapper() {
-
+		;
 	}
 
-	// Initialization function for Branch-and-bound mapping
-	private void BBMInit() {
+	/**
+	 * Initialization function for Branch-and-Bound mapping
+	 */
+	private void init() {
 		System.out.println("Initialize for branch-and-bound");
-		proc_map_array = new int[gProcNum];
-		BBMSortProcesses();
-		BBMBuildProcessMatrix();
-		BBMBuildArchitectureMatrix();
+		procMapArray = new int[gProcNum];
+		sortProcesses();
+		buildProcessMatrix();
+		buildArchitectureMatrix();
 
 		// if (exist_non_regular_regions()) {
 		// // let's calculate the maximum ebit of sending a bit
@@ -104,7 +126,7 @@ public class BranchAndBoundMapper implements Mapper {
 
 	}
 
-	void BBMBuildProcessMatrix() {
+	private void buildProcessMatrix() {
 		procMatrix = new int[gProcNum][gProcNum];
 		for (int i = 0; i < gProcNum; i++) {
 			int row = gProcess[i].getRank();
@@ -130,7 +152,7 @@ public class BranchAndBoundMapper implements Mapper {
 		}
 	}
 
-	void BBMBuildArchitectureMatrix() {
+	private void buildArchitectureMatrix() {
 		archMatrix = new float[gTileNum][gTileNum];
 		for (int src = 0; src < gTileNum; src++) {
 			for (int dst = 0; dst < gTileNum; dst++) {
@@ -159,9 +181,11 @@ public class BranchAndBoundMapper implements Mapper {
 		}
 	}
 
-	// sort the processes so that the branch-and-bound mapping can be
-	// accelerated
-	void BBMSortProcesses() {
+	/**
+	 * sort the processes so that the branch-and-bound mapping can be
+	 * accelerated
+	 */
+	private void sortProcesses() {
 		// sort them according to the sum of each process's ingress and egress
 		// communication volume
 		for (int i = 0; i < gProcess.length; i++) {
@@ -198,15 +222,15 @@ public class BranchAndBoundMapper implements Mapper {
 				}
 			}
 			gProcess[maxid].setRank(i);
-			proc_map_array[i] = maxid;
+			procMapArray[i] = maxid;
 		}
 	}
 
 	private void branchAndBoundMapping() {
-		BBMInit();
+		init();
 		double minCost = MAX_VALUE;
 		double minUpperBound = MAX_VALUE;
-		PQueue Q = new PQueue();
+		PriorityQueue Q = new PriorityQueue();
 
 		// if (exist_locked_pe()) {
 		// // this ruins the symmetric structure of the system completely.
@@ -254,7 +278,7 @@ public class BranchAndBoundMapper implements Mapper {
 		// }
 
 		MappingNode bestMapping = null;
-		int min_upperbound_hit_cnt = 0;
+		int minUpperBoundHitCount = 0;
 
 		while (!Q.empty()) {
 			MappingNode pNode = Q.next();
@@ -269,18 +293,18 @@ public class BranchAndBoundMapper implements Mapper {
 			 * and the run time *
 			 **********************************************************************/
 			if (Q.length() < pqSize) {
-				insertAll(pNode, minUpperBound, min_upperbound_hit_cnt,
+				insertAll(pNode, minUpperBound, minUpperBoundHitCount,
 						insertAllFlag, prev_insert, minCost, bestMapping, Q);
 				continue;
 			} else {
-				selectiveInsert(pNode, minUpperBound, min_upperbound_hit_cnt,
+				selectiveInsert(pNode, minUpperBound, minUpperBoundHitCount,
 						minCost, bestMapping, insertAllFlag, Q, prev_insert);
 			}
 		}
 		System.out.println("Totally " + MappingNode.cnt
 				+ " have been generated");
 		if (bestMapping != null) {
-			BBMMap(bestMapping);
+			applyMapping(bestMapping);
 		} else {
 			System.out.println("Can not find a suitable solution.");
 		}
@@ -288,12 +312,12 @@ public class BranchAndBoundMapper implements Mapper {
 
 	private void insertAll(MappingNode pNode, double minUpperBound,
 			int min_upperbound_hit_cnt, boolean insertAllFlag, int prev_insert,
-			double minCost, MappingNode bestMapping, PQueue Q) {
+			double minCost, MappingNode bestMapping, PriorityQueue Q) {
 		if (pNode.upperBound == minUpperBound && minUpperBound < MAX_VALUE
 				&& min_upperbound_hit_cnt <= minHitThreshold)
 			insertAllFlag = true;
 		for (int i = prev_insert; i < gTileNum; i++) {
-			if (pNode.Expandable(i)) {
+			if (pNode.isExpandable(i)) {
 				MappingNode child = new MappingNode(pNode, i, false); // FIXME
 																		// 3rd
 																		// param
@@ -347,7 +371,7 @@ public class BranchAndBoundMapper implements Mapper {
 
 	private void selectiveInsert(MappingNode pNode, double minUpperBound,
 			int min_upperbound_hit_cnt, double minCost,
-			MappingNode bestMapping, boolean insertAllFlag, PQueue Q,
+			MappingNode bestMapping, boolean insertAllFlag, PriorityQueue Q,
 			int prev_insert) {
 		if ((Math.abs(pNode.upperBound - minUpperBound) == 0.01)
 				&& minUpperBound < MAX_VALUE
@@ -398,8 +422,9 @@ public class BranchAndBoundMapper implements Mapper {
 		}
 
 		index = pNode.bestUpperBoundCandidate();
-		if (!pNode.Expandable(index)) {
-			System.err.println("Error in expanding at stage " + pNode.Stage());
+		if (!pNode.isExpandable(index)) {
+			System.err.println("Error in expanding at stage "
+					+ pNode.getStage());
 			System.err.println("index = " + index);
 			System.exit(-1);
 		}
@@ -432,18 +457,18 @@ public class BranchAndBoundMapper implements Mapper {
 		}
 	}
 
-	private void BBMMap(MappingNode bestMapping) {
+	private void applyMapping(MappingNode bestMapping) {
 		for (int i = 0; i < gProcNum; i++)
 			gProcess[i].setTileId(-1);
 		for (int i = 0; i < gTileNum; i++)
 			gTile[i].setProcId(-1);
 		for (int i = 0; i < gProcNum; i++) {
-			int procId = proc_map_array[i];
+			int procId = procMapArray[i];
 			gProcess[procId].setTileId(bestMapping.mapToTile(i));
 			gTile[bestMapping.mapToTile(i)].setProcId(procId);
 		}
 		if (buildRoutingTable)
-			bestMapping.program_routers();
+			bestMapping.programRouters();
 	}
 
 	@Override
