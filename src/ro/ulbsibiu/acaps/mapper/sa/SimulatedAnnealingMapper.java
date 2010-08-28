@@ -1051,7 +1051,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 		return null;
 	}
 
-	void parseTrafficConfig(String filePath, double linkBandwidth)
+	private void parseTrafficConfig(String filePath, double linkBandwidth)
 			throws IOException {
 		BufferedReader br = new BufferedReader(new InputStreamReader(
 				new FileInputStream(filePath)));
