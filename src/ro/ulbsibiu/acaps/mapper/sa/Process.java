@@ -25,7 +25,7 @@ public class Process {
 	/** the bandwidth requirement of the incoming traffic */
 	private int[] fromBandwidthRequirement = null;
 
-	private int rank;
+	private int rank = -1;
 	
 	private int totalCommVol;
 	
