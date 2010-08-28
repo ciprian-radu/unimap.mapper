@@ -10,6 +10,12 @@ import ro.ulbsibiu.acaps.mapper.sa.Link;
 import ro.ulbsibiu.acaps.mapper.sa.Process;
 import ro.ulbsibiu.acaps.mapper.sa.Tile;
 
+/**
+ * Represents a node from the search tree of the Branch-and-Bound algorithm
+ * 
+ * @author cipi
+ * 
+ */
 class MappingNode {
 
 	private static final int NORTH = 0;
@@ -91,17 +97,19 @@ class MappingNode {
 
 	private float[][] archMatrix = null;
 
-	// proc_map_array[i] represents the actual process that the i-th mapped
-	// process
-	// corresponding to
-	private int[] proc_map_array = null;
+	/**
+	 * procMapArray[i] represents the actual process that the i-th mapped
+	 * process corresponds to
+	 */
+	private int[] procMapArray = null;
 
-	// It is an illegal node if it violates the spec constructor will init this
+	/** It is an illegal node if it violates the spec constructor will init this */
 	private boolean illegal;
 
+	/** counter (it is basically the ID of the mapping node) */
 	static int cnt;
 
-	// How many processes have been mapped
+	/** How many processes have been mapped */
 	int stage;
 
 	private int[] mappingSequency;
@@ -116,52 +124,65 @@ class MappingNode {
 
 	private boolean occupancyTableReady;
 
-	private boolean illegal_child_mapping;
+	private boolean illegalChildMapping;
 
-	// The array record how much BW have been used for each link, used for
-	// xy-routing
-	private int[] link_BW_usage;
+	/**
+	 * records how much bandwidth has been used for each link (used for XY
+	 * routing)
+	 */
+	private int[] linkBandwidthUsage;
 
-	// this array is used when we also need to synthesize the routing table This
-	// can be indexed by [src_row][src_col][direction]
-	private int[][][] R_syn_link_BW_usage;
+	/**
+	 * this array is used when we also need to synthesize the routing table.
+	 * This can be indexed by [src_row][src_col][direction].
+	 */
+	private int[][][] rSynLinkBandwidthUsage;
 
 	// working space
-	private int[][][] R_syn_link_BW_usage_temp;
+	private int[][][] rSynLinkBandwidthUsageTemp;
 
-	// [row][col][src_tile][dst_tile]
-	private int[][][][] routing_table;
+	/** [row][col][src_tile][dst_tile] */
+	private int[][][][] routingTable;
 
-	/**********************************************************************
-	 * The following three member are useful only in routing_synthesis * mode
-	 * and the routing_effort is HARD *
-	 **********************************************************************/
-	// 0: route in X; 1: route in Y
-	private int[] routing_bit_array;
+	// The following three member are useful only in routing_synthesis mode and
+	// the routing_effort is HARD
 
-	// The routing_bit_array in integer form
-	private int routing_int;
+	/** 0: route in X; 1: route in Y */
+	private int[] routingBitArray;
 
-	private int[] best_routing_bit_array;
+	/** The <tt>routingBitArray</tt> in integer form */
+	private int routingInt;
 
-	private boolean first_routing_path;
+	private int[] bestRoutingBitArray;
 
-	private int MAX_ROUTING_INT;
+	private boolean firstRoutingPath;
+
+	private int maxRoutingInt;
 
 	MappingNode next;
 
+	/**
+	 * Constructor
+	 * 
+	 * @param parent
+	 *            the parent node
+	 * @param tileId
+	 *            the ID of the tile to which this node is attached to
+	 * @param calcBound
+	 *            whether or not to compute upper and lower cost bounds
+	 */
 	public MappingNode(final MappingNode parent, int tileId, boolean calcBound) {
 		illegal = false;
 
 		tileOccupancyTable = null;
 		mappingSequency = null;
-		link_BW_usage = null;
-		R_syn_link_BW_usage = null;
-		R_syn_link_BW_usage_temp = null;
-		routing_table = null;
+		linkBandwidthUsage = null;
+		rSynLinkBandwidthUsage = null;
+		rSynLinkBandwidthUsageTemp = null;
+		routingTable = null;
 
-		routing_bit_array = null;
-		best_routing_bit_array = null;
+		routingBitArray = null;
+		bestRoutingBitArray = null;
 
 		occupancyTableReady = false;
 		lowerBound = -1;
@@ -172,7 +193,7 @@ class MappingNode {
 
 		stage = parent.stage;
 
-		int proc1 = proc_map_array[stage];
+		int proc1 = procMapArray[stage];
 		// if (gProcess[proc1]->is_locked() && gProcess[proc1]->lock_to !=
 		// tileId) {
 		// illegal = true;
@@ -187,16 +208,17 @@ class MappingNode {
 
 		if (buildRoutingTable) {
 			// Copy the parent's link bandwidth usage
-			R_syn_link_BW_usage = new int[gEdgeSize][gEdgeSize][4];
+			rSynLinkBandwidthUsage = new int[gEdgeSize][gEdgeSize][4];
 			for (int i = 0; i < gEdgeSize; i++) {
 				for (int j = 0; j < gEdgeSize; j++) {
-					R_syn_link_BW_usage[i][j] = Arrays.copyOf(
-							parent.R_syn_link_BW_usage[i][j], 4);
+					rSynLinkBandwidthUsage[i][j] = Arrays.copyOf(
+							parent.rSynLinkBandwidthUsage[i][j], 4);
 				}
 			}
 		} else {
-			link_BW_usage = new int[gLinkNum];
-			link_BW_usage = Arrays.copyOf(parent.link_BW_usage, gLinkNum);
+			linkBandwidthUsage = new int[gLinkNum];
+			linkBandwidthUsage = Arrays.copyOf(parent.linkBandwidthUsage,
+					gLinkNum);
 		}
 
 		// Map the next process to tile tileId
@@ -207,17 +229,17 @@ class MappingNode {
 		for (int i = 0; i < stage; i++) {
 			int tile1 = tileId;
 			int tile2 = mappingSequency[i];
-			float this_tran_cost = procMatrix[i][stage];
-			this_tran_cost = this_tran_cost * archMatrix[tile1][tile2];
-			cost += this_tran_cost;
-			if (this_tran_cost > BranchAndBoundMapper.MAX_PER_TRAN_COST) {
+			float thisTranCost = procMatrix[i][stage];
+			thisTranCost = thisTranCost * archMatrix[tile1][tile2];
+			cost += thisTranCost;
+			if (thisTranCost > BranchAndBoundMapper.MAX_PER_TRAN_COST) {
 				illegal = true;
 				return;
 			}
 		}
 
 		if (buildRoutingTable) {
-			if (!route_traffics(stage, stage, false, false)) { // FIXME are the
+			if (!routeTraffics(stage, stage, false, false)) { // FIXME are the
 																// last 2 params
 																// false?
 				cost = BranchAndBoundMapper.MAX_VALUE + 1;
@@ -228,14 +250,14 @@ class MappingNode {
 			for (int i = 0; i < stage; i++) {
 				int tile1 = tileId;
 				int tile2 = mappingSequency[i];
-				proc1 = proc_map_array[stage];
-				int proc2 = proc_map_array[i];
+				proc1 = procMapArray[stage];
+				int proc2 = procMapArray[i];
 				if (gProcess[proc1].getToBandwidthRequirement()[proc2] > 0) {
 					for (int j = 0; i < linkUsageList[tile1][tile2].size(); j++) {
-						int link_id = linkUsageList[tile1][tile2].get(j);
-						link_BW_usage[link_id] += gProcess[proc1]
+						int linkId = linkUsageList[tile1][tile2].get(j);
+						linkBandwidthUsage[linkId] += gProcess[proc1]
 								.getToBandwidthRequirement()[proc2];
-						if (link_BW_usage[link_id] > gLink[link_id]
+						if (linkBandwidthUsage[linkId] > gLink[linkId]
 								.getBandwidth()) {
 							cost = BranchAndBoundMapper.MAX_VALUE + 1;
 							illegal = true;
@@ -245,10 +267,10 @@ class MappingNode {
 				}
 				if (gProcess[proc1].getFromBandwidthRequirement()[proc2] > 0) {
 					for (int j = 0; i < linkUsageList[tile2][tile1].size(); j++) {
-						int link_id = linkUsageList[tile2][tile1].get(j);
-						link_BW_usage[link_id] += gProcess[proc1]
+						int linkId = linkUsageList[tile2][tile1].get(j);
+						linkBandwidthUsage[linkId] += gProcess[proc1]
 								.getFromBandwidthRequirement()[proc2];
-						if (link_BW_usage[link_id] > gLink[link_id]
+						if (linkBandwidthUsage[linkId] > gLink[linkId]
 								.getBandwidth()) {
 							cost = BranchAndBoundMapper.MAX_VALUE + 1;
 							illegal = true;
@@ -272,19 +294,25 @@ class MappingNode {
 		upperBound = UpperBound();
 	}
 
-	MappingNode(int tileId) {
+	/**
+	 * Constructor
+	 * 
+	 * @param tileId
+	 *            the ID of the tile to which this node is attached to
+	 */
+	public MappingNode(int tileId) {
 		illegal = false;
 		tileOccupancyTable = null;
 		mappingSequency = null;
-		link_BW_usage = null;
-		R_syn_link_BW_usage = null;
-		R_syn_link_BW_usage_temp = null;
-		routing_table = null;
+		linkBandwidthUsage = null;
+		rSynLinkBandwidthUsage = null;
+		rSynLinkBandwidthUsageTemp = null;
+		routingTable = null;
 		occupancyTableReady = false;
 		lowerBound = -1;
 
-		routing_bit_array = null;
-		best_routing_bit_array = null;
+		routingBitArray = null;
+		bestRoutingBitArray = null;
 
 		cnt++;
 		mappingSequency = new int[gProcNum];
@@ -296,7 +324,7 @@ class MappingNode {
 		next = null;
 		cost = 0;
 
-		int proc1 = proc_map_array[0];
+		// int proc1 = proc_map_array[0];
 		// if (gProcess[proc1]->is_locked() && gProcess[proc1]->lock_to !=
 		// tileId) {
 		// illegal = true;
@@ -308,36 +336,45 @@ class MappingNode {
 			tileOccupancyTable[i] = false;
 
 		if (buildRoutingTable) {
-			R_syn_link_BW_usage = new int[gEdgeSize][gEdgeSize][4];
+			rSynLinkBandwidthUsage = new int[gEdgeSize][gEdgeSize][4];
 			for (int i = 0; i < gEdgeSize; i++) {
 				for (int j = 0; j < gEdgeSize; j++) {
 					for (int k = 0; k < 4; k++) {
-						R_syn_link_BW_usage[i][j][k] = 0;
+						rSynLinkBandwidthUsage[i][j][k] = 0;
 					}
 				}
 			}
 		} else {
-			link_BW_usage = new int[gLinkNum];
+			linkBandwidthUsage = new int[gLinkNum];
 			for (int i = 0; i < gLinkNum; i++)
-				link_BW_usage[i] = 0;
+				linkBandwidthUsage[i] = 0;
 		}
 
 		lowerBound = LowerBound();
 		upperBound = UpperBound();
 	}
 
-	// essentially, this is to generate a mapping node which is a copy of
-	// the node origin
-	MappingNode(final MappingNode origin) {
+	/**
+	 * Copy constructor
+	 * 
+	 * <p>
+	 * essentially, this is to generate a mapping node which is a copy of the
+	 * node origin
+	 * </p>
+	 * 
+	 * @param origin
+	 *            the original node
+	 */
+	public MappingNode(final MappingNode origin) {
 		tileOccupancyTable = null;
 		mappingSequency = null;
-		link_BW_usage = null;
-		R_syn_link_BW_usage = null;
-		R_syn_link_BW_usage_temp = null;
-		routing_table = null;
+		linkBandwidthUsage = null;
+		rSynLinkBandwidthUsage = null;
+		rSynLinkBandwidthUsageTemp = null;
+		routingTable = null;
 
-		routing_bit_array = null;
-		best_routing_bit_array = null;
+		routingBitArray = null;
+		bestRoutingBitArray = null;
 
 		occupancyTableReady = false;
 		lowerBound = -1;
@@ -354,18 +391,20 @@ class MappingNode {
 
 		if (buildRoutingTable) {
 			// Copy the parent's link bandwidth usage
-			R_syn_link_BW_usage = new int[gEdgeSize][gEdgeSize][4];
+			rSynLinkBandwidthUsage = new int[gEdgeSize][gEdgeSize][4];
 			for (int i = 0; i < gEdgeSize; i++) {
 				for (int j = 0; j < gEdgeSize; j++) {
-					R_syn_link_BW_usage[i][j] = Arrays.copyOf(
-							origin.R_syn_link_BW_usage[i][j], 4);
+					rSynLinkBandwidthUsage[i][j] = Arrays.copyOf(
+							origin.rSynLinkBandwidthUsage[i][j], 4);
 				}
 			}
 		}
 	}
 
-	// This calculate the lower bound cost of the unmapped process nodes
-	// in the current mapping
+	/**
+	 * This calculates the lower bound cost of the unmapped process nodes in the
+	 * current mapping
+	 */
 	private double LowerBound() {
 		for (int i = 0; i < gTileNum; i++)
 			tileOccupancyTable[i] = false;
@@ -398,8 +437,10 @@ class MappingNode {
 		return lowerBound;
 	}
 
-	// This calculate the upper bound cost of the this partial mapping
-	// in the current mapping
+	/**
+	 * This calculates the upper bound cost of the this partial mapping in the
+	 * current mapping
+	 */
 	private double UpperBound() {
 		if (!occupancyTableReady) {
 			for (int i = 0; i < gTileNum; i++)
@@ -408,24 +449,24 @@ class MappingNode {
 				tileOccupancyTable[mappingSequency[i]] = true;
 		}
 
-		GreedyMapping();
+		greedyMapping();
 		upperBound = cost;
 
-		illegal_child_mapping = false;
+		illegalChildMapping = false;
 
 		if (buildRoutingTable) {
-			create_BW_temp_memory();
-			if (!route_traffics(stage, gProcNum - 1, false, false)) {// FIXME is
-																		// the
-																		// last
-																		// param
-																		// false?
-				illegal_child_mapping = true;
+			createBandwidthTempMemory();
+			if (!routeTraffics(stage, gProcNum - 1, false, false)) {// FIXME is
+																	// the
+																	// last
+																	// param
+																	// false?
+				illegalChildMapping = true;
 				upperBound = BranchAndBoundMapper.MAX_VALUE;
 				return upperBound;
 			}
-		} else if (!fixed_verify_BW_usage()) {
-			illegal_child_mapping = true;
+		} else if (!fixedVerifyBandwidthUsage()) {
+			illegalChildMapping = true;
 			upperBound = BranchAndBoundMapper.MAX_VALUE;
 			return upperBound;
 		}
@@ -447,22 +488,22 @@ class MappingNode {
 		return upperBound;
 	}
 
-	private boolean fixed_verify_BW_usage() {
-		int[] link_BW_usage_temp = new int[gLinkNum];
-		link_BW_usage_temp = Arrays.copyOf(link_BW_usage, gLinkNum);
+	private boolean fixedVerifyBandwidthUsage() {
+		int[] linkBandwidthUsageTemp = new int[gLinkNum];
+		linkBandwidthUsageTemp = Arrays.copyOf(linkBandwidthUsage, gLinkNum);
 
 		for (int i = 0; i < stage; i++) {
 			int tile1 = mappingSequency[i];
-			int proc1 = proc_map_array[i];
+			int proc1 = procMapArray[i];
 			for (int j = stage; j < gProcNum; j++) {
 				int tile2 = mappingSequency[j];
-				int proc2 = proc_map_array[j];
+				int proc2 = procMapArray[j];
 				if (gProcess[proc1].getToBandwidthRequirement()[proc2] != 0) {
 					for (int k = 0; k < linkUsageList[tile1][tile2].size(); k++) {
-						int link_id = linkUsageList[tile1][tile2].get(k);
-						link_BW_usage_temp[link_id] += gProcess[proc1]
+						int linkId = linkUsageList[tile1][tile2].get(k);
+						linkBandwidthUsageTemp[linkId] += gProcess[proc1]
 								.getToBandwidthRequirement()[proc2];
-						if (link_BW_usage_temp[link_id] > gLink[link_id]
+						if (linkBandwidthUsageTemp[linkId] > gLink[linkId]
 								.getBandwidth()) {
 							return false;
 						}
@@ -471,10 +512,10 @@ class MappingNode {
 
 				if (gProcess[proc1].getFromBandwidthRequirement()[proc2] != 0) {
 					for (int k = 0; k < linkUsageList[tile2][tile1].size(); k++) {
-						int link_id = linkUsageList[tile2][tile1].get(k);
-						link_BW_usage_temp[link_id] += gProcess[proc1]
+						int linkId = linkUsageList[tile2][tile1].get(k);
+						linkBandwidthUsageTemp[linkId] += gProcess[proc1]
 								.getFromBandwidthRequirement()[proc2];
-						if (link_BW_usage_temp[link_id] > gLink[link_id]
+						if (linkBandwidthUsageTemp[linkId] > gLink[linkId]
 								.getBandwidth()) {
 							return false;
 						}
@@ -484,16 +525,16 @@ class MappingNode {
 		}
 		for (int i = stage; i < gProcNum; i++) {
 			int tile1 = mappingSequency[i];
-			int proc1 = proc_map_array[i];
+			int proc1 = procMapArray[i];
 			for (int j = i + 1; j < gProcNum; j++) {
 				int tile2 = mappingSequency[j];
-				int proc2 = proc_map_array[j];
+				int proc2 = procMapArray[j];
 				if (gProcess[proc1].getToBandwidthRequirement()[proc2] != 0) {
 					for (int k = 0; k < linkUsageList[tile1][tile2].size(); k++) {
-						int link_id = linkUsageList[tile1][tile2].get(k);
-						link_BW_usage_temp[link_id] += gProcess[proc1]
+						int linkId = linkUsageList[tile1][tile2].get(k);
+						linkBandwidthUsageTemp[linkId] += gProcess[proc1]
 								.getToBandwidthRequirement()[proc2];
-						if (link_BW_usage_temp[link_id] > gLink[link_id]
+						if (linkBandwidthUsageTemp[linkId] > gLink[linkId]
 								.getBandwidth()) {
 							return false;
 						}
@@ -502,10 +543,10 @@ class MappingNode {
 
 				if (gProcess[proc1].getFromBandwidthRequirement()[proc2] != 0) {
 					for (int k = 0; i < linkUsageList[tile2][tile1].size(); k++) {
-						int link_id = linkUsageList[tile2][tile1].get(k);
-						link_BW_usage_temp[link_id] += gProcess[proc1]
+						int linkId = linkUsageList[tile2][tile1].get(k);
+						linkBandwidthUsageTemp[linkId] += gProcess[proc1]
 								.getFromBandwidthRequirement()[proc2];
-						if (link_BW_usage_temp[link_id] > gLink[link_id]
+						if (linkBandwidthUsageTemp[linkId] > gLink[linkId]
 								.getBandwidth()) {
 							return false;
 						}
@@ -516,8 +557,10 @@ class MappingNode {
 		return true;
 	}
 
-	// This method returns the tile to be mapped for the next node which will
-	// lead to the smallest partial mapping cost
+	/**
+	 * @return the tile to be mapped for the next node which will lead to the
+	 *         smallest partial mapping cost
+	 */
 	int bestCostCandidate() {
 		double minimal = BranchAndBoundMapper.MAX_VALUE;
 		for (int i = 0; i < gTileNum; i++)
@@ -549,14 +592,17 @@ class MappingNode {
 		return mappingSequency[i];
 	}
 
-	// This method returns the tile to be mapped for the next node with the
-	// criteria of the greedy mapping of the current one.
+	/**
+	 * @return the tile to be mapped for the next node with the criteria of the
+	 *         greedy mapping of the current one.
+	 */
 	int bestUpperBoundCandidate() {
 		return mappingSequency[stage];
 	}
 
-	// This function returns the lowest cost of the tileId to any unoccupied
-	// tile.
+	/**
+	 * @return the lowest cost of the tileId to any unoccupied tile.
+	 */
 	private float lowestUnitCost(int tileId) {
 		float min = 50000;
 		for (int i = 0; i < gTileNum; i++) {
@@ -570,7 +616,10 @@ class MappingNode {
 		return min;
 	}
 
-	// This function returns the lowest cost between anytwo unoccupied tiles
+	/**
+	 * 
+	 * @return the lowest cost between any two unoccupied tiles
+	 */
 	private float lowestUnmappedUnitCost() {
 		float min = 50000;
 		for (int i = 0; i < gTileNum; i++) {
@@ -586,8 +635,10 @@ class MappingNode {
 		return min;
 	}
 
-	// Map the other unmapped process node using greedy mapping
-	private void GreedyMapping() {
+	/**
+	 * Map the other unmapped process node using greedy mapping
+	 */
+	private void greedyMapping() {
 		for (int i = stage; i < gProcNum; i++) {
 			int sumRow = 0;
 			int sumCol = 0;
@@ -611,13 +662,22 @@ class MappingNode {
 				myRow = ((float) sumRow) / vol;
 				myCol = ((float) sumCol) / vol;
 			}
-			MapNode(i, myRow, myCol);
+			mapNode(i, myRow, myCol);
 		}
 	}
 
-	// Try to map the node to an unoccupied tile which is cloest to
-	// the tile(goodRow, goodCol)
-	private void MapNode(int procId, float goodRow, float goodCol) {
+	/**
+	 * Try to map the node to an unoccupied tile which is closest to the
+	 * tile(goodRow, goodCol)
+	 * 
+	 * @param procId
+	 *            the ID of the process to be mapped
+	 * @param goodRow
+	 *            the row of the tile
+	 * @param goodCol
+	 *            the column of the tile
+	 */
+	private void mapNode(int procId, float goodRow, float goodCol) {
 		float minDist = 10000;
 		int bestId = -1;
 		for (int i = 0; i < gTileNum; i++) {
@@ -639,7 +699,7 @@ class MappingNode {
 		tileOccupancyTable[bestId] = true;
 	}
 
-	boolean Expandable(int tileId) {
+	boolean isExpandable(int tileId) {
 		// If it's an illegal mapping, then just return false
 		for (int i = 0; i < stage; i++) {
 			if (mappingSequency[i] == tileId) // the tile has already been
@@ -649,69 +709,80 @@ class MappingNode {
 		return true;
 	}
 
-	int Stage() {
+	int getStage() {
 		return stage;
 	}
 
-	private void create_BW_temp_memory() {
-		// Copy the bandwidth usage status to R_syn_link_BW_usage_temp
-		R_syn_link_BW_usage_temp = new int[gEdgeSize][gEdgeSize][4];
+	private void createBandwidthTempMemory() {
+		// Copy the bandwidth usage status to rSynLinkBandwidthUsageTemp
+		rSynLinkBandwidthUsageTemp = new int[gEdgeSize][gEdgeSize][4];
 		for (int i = 0; i < gEdgeSize; i++) {
 			for (int j = 0; j < gEdgeSize; j++) {
-				R_syn_link_BW_usage_temp[i][j] = Arrays.copyOf(
-						R_syn_link_BW_usage[i][j], 4);
+				rSynLinkBandwidthUsageTemp[i][j] = Arrays.copyOf(
+						rSynLinkBandwidthUsage[i][j], 4);
 			}
 		}
 	}
 
-	// fixing the routing tables of the tiles which are occupied by the
-	// processes
-	// from begin_stage to end_stage
-	private boolean route_traffics(int begin_stage, int end_stage,
-			boolean commit, boolean update_routing_table) {
+	/**
+	 * fixing the routing tables of the tiles which are occupied by the
+	 * processes from beginStage to endStage
+	 * 
+	 * @param beginStage
+	 *            the begin stage
+	 * @param endStage
+	 *            the end stage
+	 * @param commit
+	 * @param updateRoutingTable
+	 * @return
+	 */
+	private boolean routeTraffics(int beginStage, int endStage, boolean commit,
+			boolean updateRoutingTable) {
 		List<ProcComm> Q = new ArrayList<ProcComm>();
-		for (int cur_stage = begin_stage; cur_stage <= end_stage; cur_stage++) {
-			int new_proc = proc_map_array[cur_stage];
+		for (int cur_stage = beginStage; cur_stage <= endStage; cur_stage++) {
+			int new_proc = procMapArray[cur_stage];
 			// Sort the request in the queue according to the BW
 			// However, if the src and the dst are in the same row or in the
 			// same column,
 			// then we should insert it at the head of the queue.
 			for (int i = 0; i < cur_stage; i++) {
-				int old_proc = proc_map_array[i];
+				int old_proc = procMapArray[i];
 				if (gProcess[new_proc].getToBandwidthRequirement()[old_proc] != 0) {
 					ProcComm proc_comm = new ProcComm();
-					proc_comm.src_proc = cur_stage; // we put virtual proc id
-					proc_comm.dst_proc = i;
-					proc_comm.BW = gProcess[new_proc]
+					proc_comm.srcProc = cur_stage; // we put virtual proc id
+					proc_comm.dstProc = i;
+					proc_comm.bandwidth = gProcess[new_proc]
 							.getToBandwidthRequirement()[old_proc];
-					proc_comm.adaptivity = calc_adaptivity(
-							mappingSequency[proc_comm.src_proc],
-							mappingSequency[proc_comm.dst_proc], proc_comm.BW);
+					proc_comm.adaptivity = calculateAdaptivity(
+							mappingSequency[proc_comm.srcProc],
+							mappingSequency[proc_comm.dstProc],
+							proc_comm.bandwidth);
 					ProcComm iter = Q.get(0);
 					for (Iterator<ProcComm> iterator = Q.iterator(); iterator
 							.hasNext();) {
 						ProcComm procComm = (ProcComm) iterator.next();
 						if ((procComm.adaptivity < iter.adaptivity)
-								|| (procComm.adaptivity == iter.adaptivity && procComm.BW > iter.BW))
+								|| (procComm.adaptivity == iter.adaptivity && procComm.bandwidth > iter.bandwidth))
 							break;
 					}
 					Q.add(proc_comm);
 				}
 				if (gProcess[new_proc].getFromBandwidthRequirement()[old_proc] > 0) {
 					ProcComm proc_comm = new ProcComm();
-					proc_comm.src_proc = i;
-					proc_comm.dst_proc = cur_stage;
-					proc_comm.BW = gProcess[new_proc]
+					proc_comm.srcProc = i;
+					proc_comm.dstProc = cur_stage;
+					proc_comm.bandwidth = gProcess[new_proc]
 							.getFromBandwidthRequirement()[old_proc];
-					proc_comm.adaptivity = calc_adaptivity(
-							mappingSequency[proc_comm.src_proc],
-							mappingSequency[proc_comm.dst_proc], proc_comm.BW);
+					proc_comm.adaptivity = calculateAdaptivity(
+							mappingSequency[proc_comm.srcProc],
+							mappingSequency[proc_comm.dstProc],
+							proc_comm.bandwidth);
 					ProcComm iter = Q.get(0);
 					for (Iterator<ProcComm> iterator = Q.iterator(); iterator
 							.hasNext();) {
 						ProcComm procComm = (ProcComm) iterator.next();
 						if ((procComm.adaptivity < iter.adaptivity)
-								|| (procComm.adaptivity == iter.adaptivity && procComm.BW > iter.BW))
+								|| (procComm.adaptivity == iter.adaptivity && procComm.bandwidth > iter.bandwidth))
 							break;
 					}
 					Q.add(proc_comm);
@@ -720,67 +791,74 @@ class MappingNode {
 		}
 		// now route the traffic
 		for (int i = 0; i < Q.size(); i++) {
-			int src_proc = Q.get(i).src_proc;
-			int dst_proc = Q.get(i).dst_proc;
+			int src_proc = Q.get(i).srcProc;
+			int dst_proc = Q.get(i).dstProc;
 			int src_tile = mappingSequency[src_proc];
 			int dst_tile = mappingSequency[dst_proc];
-			int BW = Q.get(i).BW;
+			int BW = Q.get(i).bandwidth;
 			if (RoutingEffort.EASY.equals(routingEffort)) {
-				if (!route_traffic_easy(src_tile, dst_tile, BW, commit,
-						update_routing_table))
+				if (!routeTrafficEasy(src_tile, dst_tile, BW, commit,
+						updateRoutingTable))
 					return false;
 			} else {
-				if (!route_traffic_hard(src_tile, dst_tile, BW, commit,
-						update_routing_table))
+				if (!routeTrafficHard(src_tile, dst_tile, BW, commit,
+						updateRoutingTable))
 					return false;
 			}
 		}
 		return true;
 	}
 
-	// currently there is only two levels of adaptivity. 0 for no adaptivity, 1
-	// for (maybe)
-	// some adaptivity
-	private final int calc_adaptivity(int src_tile, int dst_tile, int BW) {
+	/**
+	 * currently there is only two levels of adaptivity. 0 for no adaptivity, 1
+	 * for (maybe) some adaptivity
+	 * 
+	 * @param srcTile
+	 * @param dstTile
+	 * @param bandwidth
+	 * @return
+	 */
+	private final int calculateAdaptivity(int srcTile, int dstTile,
+			int bandwidth) {
 		int adaptivity;
-		if (gTile[src_tile].getRow() == gTile[dst_tile].getRow()
-				|| gTile[src_tile].getColumn() == gTile[dst_tile].getColumn()) {
+		if (gTile[srcTile].getRow() == gTile[dstTile].getRow()
+				|| gTile[srcTile].getColumn() == gTile[dstTile].getColumn()) {
 			adaptivity = 0;
 			return adaptivity;
 		}
 
-		int[][][] BW_usage = R_syn_link_BW_usage;
+		int[][][] bandwidthUusage = rSynLinkBandwidthUsage;
 
 		adaptivity = 1;
-		int row = gTile[src_tile].getRow();
-		int col = gTile[src_tile].getColumn();
+		int row = gTile[srcTile].getRow();
+		int col = gTile[srcTile].getColumn();
 		int direction = -2;
-		while (row != gTile[dst_tile].getRow()
-				|| col != gTile[dst_tile].getColumn()) {
+		while (row != gTile[dstTile].getRow()
+				|| col != gTile[dstTile].getColumn()) {
 			// For west-first routing
-			if (legalTurnSet.WEST_FIRST.equals(legalTurnSet)) {
-				if (col > gTile[dst_tile].getColumn()) // step west
+			if (LegalTurnSet.WEST_FIRST.equals(legalTurnSet)) {
+				if (col > gTile[dstTile].getColumn()) // step west
 					return 0;
-				else if (col == gTile[dst_tile].getColumn())
+				else if (col == gTile[dstTile].getColumn())
 					return 0;
-				else if (row == gTile[dst_tile].getRow())
+				else if (row == gTile[dstTile].getRow())
 					return 0;
 				// Here comes the flexibility. We can choose whether to go
 				// vertical or horizontal
 				else {
-					int direction1 = (row < gTile[dst_tile].getRow()) ? NORTH
+					int direction1 = (row < gTile[dstTile].getRow()) ? NORTH
 							: SOUTH;
-					if (BW_usage[row][col][direction1] + BW < linkBandwidth
-							&& BW_usage[row][col][EAST] + BW < linkBandwidth)
+					if (bandwidthUusage[row][col][direction1] + bandwidth < linkBandwidth
+							&& bandwidthUusage[row][col][EAST] + bandwidth < linkBandwidth)
 						return 1;
-					direction = (BW_usage[row][col][direction1] < BW_usage[row][col][EAST]) ? direction1
+					direction = (bandwidthUusage[row][col][direction1] < bandwidthUusage[row][col][EAST]) ? direction1
 							: EAST;
 				}
 			}
 			// For odd-even routing
-			else if (legalTurnSet.ODD_EVEN.equals(legalTurnSet)) {
-				int e0 = gTile[dst_tile].getColumn() - col;
-				int e1 = gTile[dst_tile].getRow() - row;
+			else if (LegalTurnSet.ODD_EVEN.equals(legalTurnSet)) {
+				int e0 = gTile[dstTile].getColumn() - col;
+				int e1 = gTile[dstTile].getRow() - row;
 				if (e0 == 0) // currently the same column as destination
 					direction = (e1 > 0) ? NORTH : SOUTH;
 				else {
@@ -790,19 +868,21 @@ class MappingNode {
 						else {
 							int direction1 = -1, direction2 = -1;
 							if (col % 2 == 1
-									|| col == gTile[src_tile].getColumn())
+									|| col == gTile[srcTile].getColumn())
 								direction1 = (e1 > 0) ? NORTH : SOUTH;
-							if (gTile[dst_tile].getColumn() % 2 == 1 || e0 != 1)
+							if (gTile[dstTile].getColumn() % 2 == 1 || e0 != 1)
 								direction2 = EAST;
 							if (direction1 == -1)
 								direction = direction2;
 							else if (direction2 == -1)
 								direction = direction1;
 							else {// we have two choices
-								if (BW_usage[row][col][direction1] + BW < linkBandwidth
-										&& BW_usage[row][col][direction2] + BW < linkBandwidth)
+								if (bandwidthUusage[row][col][direction1]
+										+ bandwidth < linkBandwidth
+										&& bandwidthUusage[row][col][direction2]
+												+ bandwidth < linkBandwidth)
 									return 1;
-								direction = (BW_usage[row][col][direction1] < BW_usage[row][col][direction2]) ? direction1
+								direction = (bandwidthUusage[row][col][direction1] < bandwidthUusage[row][col][direction2]) ? direction1
 										: direction2;
 							}
 						}
@@ -811,10 +891,12 @@ class MappingNode {
 							direction = WEST;
 						else {
 							int direction1 = (e1 > 0) ? NORTH : SOUTH;
-							if (BW_usage[row][col][direction1] + BW < linkBandwidth
-									&& BW_usage[row][col][WEST] + BW < linkBandwidth)
+							if (bandwidthUusage[row][col][direction1]
+									+ bandwidth < linkBandwidth
+									&& bandwidthUusage[row][col][WEST]
+											+ bandwidth < linkBandwidth)
 								return 1;
-							direction = (BW_usage[row][col][WEST] < BW_usage[row][col][direction1]) ? WEST
+							direction = (bandwidthUusage[row][col][WEST] < bandwidthUusage[row][col][direction1]) ? WEST
 									: direction1;
 						}
 					}
@@ -842,26 +924,33 @@ class MappingNode {
 		return 0;
 	}
 
-	// Route the traffic from src_tile to dst_tile using BW
-	// Two routing methods are provided: west-first and odd-even routing
-	private boolean route_traffic_easy(int src_tile, int dst_tile, int BW,
-			boolean commit, boolean update_routing_table) {
-		int row = gTile[src_tile].getRow();
-		int col = gTile[src_tile].getColumn();
+	/**
+	 * Route the traffic from srcTile to dstTile using bandwidth. Two routing
+	 * methods are provided: west-first and odd-even routing.
+	 * 
+	 * @param srcTile
+	 * @param dstTile
+	 * @param bandwidth
+	 * @param commit
+	 * @param updateRoutingTable
+	 * @return
+	 */
+	private boolean routeTrafficEasy(int srcTile, int dstTile, int bandwidth,
+			boolean commit, boolean updateRoutingTable) {
+		int row = gTile[srcTile].getRow();
+		int col = gTile[srcTile].getColumn();
 
-		int[][][] BW_usage = commit ? R_syn_link_BW_usage
-				: R_syn_link_BW_usage_temp;
+		int[][][] bandwidthUsage = commit ? rSynLinkBandwidthUsage
+				: rSynLinkBandwidthUsageTemp;
 		int direction = -2;
-		while (row != gTile[dst_tile].getRow()
-				|| col != gTile[dst_tile].getRow()) {
+		while (row != gTile[dstTile].getRow() || col != gTile[dstTile].getRow()) {
 			// For west-first routing
 			if (LegalTurnSet.WEST_FIRST.equals(legalTurnSet)) {
-				if (col > gTile[dst_tile].getColumn()) // step west
+				if (col > gTile[dstTile].getColumn()) // step west
 					direction = WEST;
-				else if (col == gTile[dst_tile].getColumn())
-					direction = (row < gTile[dst_tile].getRow()) ? NORTH
-							: SOUTH;
-				else if (row == gTile[dst_tile].getRow())
+				else if (col == gTile[dstTile].getColumn())
+					direction = (row < gTile[dstTile].getRow()) ? NORTH : SOUTH;
+				else if (row == gTile[dstTile].getRow())
 					direction = EAST;
 				// Here comes the flexibility. We can choose whether to go
 				// vertical or horizontal
@@ -879,15 +968,15 @@ class MappingNode {
 				 */
 				else {
 					direction = EAST;
-					if (BW_usage[row][col][direction] + BW > linkBandwidth)
-						direction = (row < gTile[dst_tile].getRow()) ? NORTH
+					if (bandwidthUsage[row][col][direction] + bandwidth > linkBandwidth)
+						direction = (row < gTile[dstTile].getRow()) ? NORTH
 								: SOUTH;
 				}
 			}
 			// For odd-even routing
 			else if (LegalTurnSet.ODD_EVEN.equals(legalTurnSet)) {
-				int e0 = gTile[dst_tile].getColumn() - col;
-				int e1 = gTile[dst_tile].getRow() - row;
+				int e0 = gTile[dstTile].getColumn() - col;
+				int e1 = gTile[dstTile].getRow() - row;
 				if (e0 == 0) // currently the same column as destination
 					direction = (e1 > 0) ? NORTH : SOUTH;
 				else {
@@ -897,9 +986,9 @@ class MappingNode {
 						else {
 							int direction1 = -1, direction2 = -1;
 							if (col % 2 == 1
-									|| col == gTile[src_tile].getColumn())
+									|| col == gTile[srcTile].getColumn())
 								direction1 = (e1 > 0) ? NORTH : SOUTH;
-							if (gTile[dst_tile].getColumn() % 2 == 1 || e0 != 1)
+							if (gTile[dstTile].getColumn() % 2 == 1 || e0 != 1)
 								direction2 = EAST;
 							if (direction1 == -1 && direction2 == -1) {
 								System.err.println("Error");
@@ -911,7 +1000,7 @@ class MappingNode {
 								direction = direction1;
 							else
 								// we have two choices
-								direction = (BW_usage[row][col][direction1] < BW_usage[row][col][direction2]) ? direction1
+								direction = (bandwidthUsage[row][col][direction1] < bandwidthUsage[row][col][direction2]) ? direction1
 										: direction2;
 						}
 					} else { // westbound messages
@@ -919,19 +1008,19 @@ class MappingNode {
 							direction = WEST;
 						else {
 							int direction1 = (e1 > 0) ? NORTH : SOUTH;
-							direction = (BW_usage[row][col][WEST] < BW_usage[row][col][direction1]) ? WEST
+							direction = (bandwidthUsage[row][col][WEST] < bandwidthUsage[row][col][direction1]) ? WEST
 									: direction1;
 						}
 					}
 				}
 			}
 
-			BW_usage[row][col][direction] += BW;
-			if (BW_usage[row][col][direction] > linkBandwidth
-					&& (!update_routing_table))
+			bandwidthUsage[row][col][direction] += bandwidth;
+			if (bandwidthUsage[row][col][direction] > linkBandwidth
+					&& (!updateRoutingTable))
 				return false;
-			if (update_routing_table)
-				routing_table[row][col][src_tile][dst_tile] = direction;
+			if (updateRoutingTable)
+				routingTable[row][col][srcTile][dstTile] = direction;
 
 			switch (direction) {
 			case SOUTH:
@@ -959,39 +1048,51 @@ class MappingNode {
 	 * by which it means select the path from all its candidate * pathes which
 	 * has the minimal maximal BW usage :) *
 	 **********************************************************************/
-	private boolean route_traffic_hard(int src_tile, int dst_tile, int BW,
-			boolean commit, boolean update_routing_table) {
-		int row = gTile[src_tile].getRow();
-		int col = gTile[src_tile].getColumn();
+	/**
+	 * Route the traffic from srcTile to dstTile using bandwidth in complex
+	 * model, by which it means select the path from all its candidate paths
+	 * which has the minimal maximal bandwidth usage.
+	 * 
+	 * @param srcTile
+	 * @param dstTile
+	 * @param bandwidth
+	 * @param commit
+	 * @param updateRoutingTable
+	 * @return
+	 */
+	private boolean routeTrafficHard(int srcTile, int dstTile, int bandwidth,
+			boolean commit, boolean updateRoutingTable) {
+		int row = gTile[srcTile].getRow();
+		int col = gTile[srcTile].getColumn();
 
-		int[][][] BW_usage = commit ? R_syn_link_BW_usage
-				: R_syn_link_BW_usage_temp;
+		int[][][] BW_usage = commit ? rSynLinkBandwidthUsage
+				: rSynLinkBandwidthUsageTemp;
 
 		// We can arrive at any destination with 2*gEdgeSize hops
-		if (routing_bit_array == null) {
-			routing_bit_array = new int[2 * gEdgeSize];
+		if (routingBitArray == null) {
+			routingBitArray = new int[2 * gEdgeSize];
 		}
-		if (best_routing_bit_array == null) {
-			best_routing_bit_array = new int[2 * gEdgeSize];
+		if (bestRoutingBitArray == null) {
+			bestRoutingBitArray = new int[2 * gEdgeSize];
 		}
 
 		// In the following, we find the routing path which has the minimal
 		// maximal
 		// link BW usage and store that routing path to best_routing_bit_array
 		int min_path_BW = Integer.MAX_VALUE;
-		int x_hop = gTile[src_tile].getColumn() - gTile[dst_tile].getColumn();
+		int x_hop = gTile[srcTile].getColumn() - gTile[dstTile].getColumn();
 		x_hop = (x_hop >= 0) ? x_hop : (0 - x_hop);
-		int y_hop = gTile[src_tile].getRow() - gTile[dst_tile].getRow();
+		int y_hop = gTile[srcTile].getRow() - gTile[dstTile].getRow();
 		y_hop = (y_hop >= 0) ? y_hop : (0 - y_hop);
 
-		init_routing_path_generator(x_hop, y_hop);
+		initRoutingPathGenerator(x_hop, y_hop);
 
-		while (next_routing_path(x_hop, y_hop)) { // For each path
-			int usage = path_BW_usage(row, col, gTile[dst_tile].getRow(),
-					gTile[dst_tile].getColumn(), BW_usage, BW);
+		while (nextRoutingPath(x_hop, y_hop)) { // For each path
+			int usage = pathBandwidthUsage(row, col, gTile[dstTile].getRow(),
+					gTile[dstTile].getColumn(), BW_usage, bandwidth);
 			if (usage < min_path_BW) {
 				min_path_BW = usage;
-				best_routing_bit_array = Arrays.copyOf(routing_bit_array, x_hop
+				bestRoutingBitArray = Arrays.copyOf(routingBitArray, x_hop
 						+ y_hop);
 			}
 		}
@@ -1002,21 +1103,21 @@ class MappingNode {
 		int direction = -2;
 
 		int hop_id = 0;
-		while (row != gTile[dst_tile].getRow()
-				|| col != gTile[dst_tile].getColumn()) {
+		while (row != gTile[dstTile].getRow()
+				|| col != gTile[dstTile].getColumn()) {
 
-			if (best_routing_bit_array[hop_id++] != 0)
-				direction = (row < gTile[dst_tile].getRow()) ? NORTH : SOUTH;
+			if (bestRoutingBitArray[hop_id++] != 0)
+				direction = (row < gTile[dstTile].getRow()) ? NORTH : SOUTH;
 			else
-				direction = (col < gTile[dst_tile].getColumn()) ? EAST : WEST;
+				direction = (col < gTile[dstTile].getColumn()) ? EAST : WEST;
 
-			BW_usage[row][col][direction] += BW;
+			BW_usage[row][col][direction] += bandwidth;
 
 			if ((BW_usage[row][col][direction] > linkBandwidth)
-					&& (!update_routing_table))
+					&& (!updateRoutingTable))
 				return false;
-			if (update_routing_table)
-				routing_table[row][col][src_tile][dst_tile] = direction;
+			if (updateRoutingTable)
+				routingTable[row][col][srcTile][dstTile] = direction;
 
 			switch (direction) {
 			case SOUTH:
@@ -1039,14 +1140,22 @@ class MappingNode {
 		return true;
 	}
 
-	/**********************************************************************
-	 * This function needs to fulfill two tasks. First, check to see * whether
-	 * it's a valid path according to the selected routing alg. * Second, it
-	 * checks to see if any BW requirement violates. If either * of the two
-	 * conditions is not met, return INT_MAX. *
-	 **********************************************************************/
-	private int path_BW_usage(int srcRow, int srcColumn, int dstRow,
-			int dstColumn, int[][][] BW_usage, int BW) {
+	/**
+	 * Fulfills two tasks. First, check to see whether it's a valid path
+	 * according to the selected routing algorithm. Second, it checks to see if
+	 * any bandwidth requirement violates. If either of the two conditions is
+	 * not met, return INT_MAX.
+	 * 
+	 * @param srcRow
+	 * @param srcColumn
+	 * @param dstRow
+	 * @param dstColumn
+	 * @param bandwidthUsage
+	 * @param bandwidth
+	 * @return
+	 */
+	private int pathBandwidthUsage(int srcRow, int srcColumn, int dstRow,
+			int dstColumn, int[][][] bandwidthUsage, int bandwidth) {
 		int row = srcRow;
 		int col = srcColumn;
 
@@ -1059,15 +1168,15 @@ class MappingNode {
 			if (LegalTurnSet.WEST_FIRST.equals(legalTurnSet)) {
 				if (col > dstColumn) { // step west
 					direction = WEST;
-					if (routing_bit_array[hop_id] != 0)
+					if (routingBitArray[hop_id] != 0)
 						return Integer.MAX_VALUE;
 				} else if (col == dstColumn) {
 					direction = (row < dstRow) ? NORTH : SOUTH;
-					if (routing_bit_array[hop_id] == 0)
+					if (routingBitArray[hop_id] == 0)
 						return Integer.MAX_VALUE;
 				} else if (row == dstRow) {
 					direction = EAST;
-					if (routing_bit_array[hop_id] != 0)
+					if (routingBitArray[hop_id] != 0)
 						return Integer.MAX_VALUE;
 				}
 				// Here comes the flexibility. We can choose whether to go
@@ -1075,7 +1184,7 @@ class MappingNode {
 				else {
 					int direction1 = (row < dstRow) ? NORTH : SOUTH;
 					int direction2 = EAST;
-					direction = (routing_bit_array[hop_id] != 0) ? direction1
+					direction = (routingBitArray[hop_id] != 0) ? direction1
 							: direction2;
 				}
 			}
@@ -1085,13 +1194,13 @@ class MappingNode {
 				int e1 = dstRow - row;
 				if (e0 == 0) { // currently the same column as destination
 					direction = (e1 > 0) ? NORTH : SOUTH;
-					if (routing_bit_array[hop_id] == 0)
+					if (routingBitArray[hop_id] == 0)
 						return Integer.MAX_VALUE;
 				} else {
 					if (e0 > 0) { // eastbound messages
 						if (e1 == 0) {
 							direction = EAST;
-							if (routing_bit_array[hop_id] != 0)
+							if (routingBitArray[hop_id] != 0)
 								return Integer.MAX_VALUE;
 						} else {
 							int direction1 = -1, direction2 = -1;
@@ -1102,36 +1211,36 @@ class MappingNode {
 							assert (!(direction1 == -1 && direction2 == -1));
 							if (direction1 == -1) {
 								direction = direction2;
-								if (routing_bit_array[hop_id] != 0)
+								if (routingBitArray[hop_id] != 0)
 									return Integer.MAX_VALUE;
 							} else if (direction2 == -1) {
 								direction = direction1;
-								if (routing_bit_array[hop_id] == 0)
+								if (routingBitArray[hop_id] == 0)
 									return Integer.MAX_VALUE;
 							} else
 								// we have two choices
-								direction = (routing_bit_array[hop_id] != 0) ? direction1
+								direction = (routingBitArray[hop_id] != 0) ? direction1
 										: direction2;
 						}
 					} else { // westbound messages
 						if (col % 2 != 0 || e1 == 0) {
 							direction = WEST;
-							if (routing_bit_array[hop_id] != 0)
+							if (routingBitArray[hop_id] != 0)
 								return Integer.MAX_VALUE;
 						} else {
 							int direction1 = (e1 > 0) ? NORTH : SOUTH;
 							int direction2 = WEST;
-							direction = (routing_bit_array[hop_id] != 0) ? direction1
+							direction = (routingBitArray[hop_id] != 0) ? direction1
 									: direction2;
 						}
 					}
 				}
 			}
 
-			if (BW_usage[row][col][direction] > max_BW)
-				max_BW = BW_usage[row][col][direction];
+			if (bandwidthUsage[row][col][direction] > max_BW)
+				max_BW = bandwidthUsage[row][col][direction];
 
-			if (BW_usage[row][col][direction] + BW > linkBandwidth)
+			if (bandwidthUsage[row][col][direction] + bandwidth > linkBandwidth)
 				return Integer.MAX_VALUE;
 
 			switch (direction) {
@@ -1157,26 +1266,36 @@ class MappingNode {
 		return 1;
 	}
 
-	private boolean init_routing_path_generator(int x_hop, int y_hop) {
-		first_routing_path = true;
-		MAX_ROUTING_INT = 0;
-		for (int index = 0; index < y_hop; index++)
-			MAX_ROUTING_INT = (MAX_ROUTING_INT << 1) + 1;
-		MAX_ROUTING_INT = MAX_ROUTING_INT << x_hop;
+	/**
+	 * @param xHop
+	 * @param yHop
+	 * @return
+	 */
+	private boolean initRoutingPathGenerator(int xHop, int yHop) {
+		firstRoutingPath = true;
+		maxRoutingInt = 0;
+		for (int index = 0; index < yHop; index++)
+			maxRoutingInt = (maxRoutingInt << 1) + 1;
+		maxRoutingInt = maxRoutingInt << xHop;
 		return true;
 	}
 
-	private boolean next_routing_path(int x_hop, int y_hop) {
-		if (first_routing_path) {
-			first_routing_path = false;
+	/**
+	 * @param xHop
+	 * @param yHop
+	 * @return
+	 */
+	private boolean nextRoutingPath(int xHop, int yHop) {
+		if (firstRoutingPath) {
+			firstRoutingPath = false;
 			int index = 0;
-			routing_int = 0;
-			for (index = 0; index < y_hop; index++) {
-				routing_bit_array[index] = 1;
-				routing_int = (routing_int << 1) + 1;
+			routingInt = 0;
+			for (index = 0; index < yHop; index++) {
+				routingBitArray[index] = 1;
+				routingInt = (routingInt << 1) + 1;
 			}
-			for (int x_index = 0; x_index < x_hop; x_index++)
-				routing_bit_array[index + x_index] = 0;
+			for (int x_index = 0; x_index < xHop; x_index++)
+				routingBitArray[index + x_index] = 0;
 			return true;
 		}
 
@@ -1185,30 +1304,36 @@ class MappingNode {
 		 * the next one is the one which is the minimal array which is larger *
 		 * than the current routing_bit_array but with the same number of 1s *
 		 **********************************************************************/
-		while (routing_int <= MAX_ROUTING_INT) {
-			if (routing_int % 2 == 0) // For an even number
-				routing_int += 2;
+		while (routingInt <= maxRoutingInt) {
+			if (routingInt % 2 == 0) // For an even number
+				routingInt += 2;
 			else
-				routing_int++;
-			if (one_bits(routing_int, y_hop))
+				routingInt++;
+			if (oneBits(routingInt, yHop))
 				break;
 		}
-		if (routing_int <= MAX_ROUTING_INT)
+		if (routingInt <= maxRoutingInt)
 			return true;
 		else
 			return false;
 	}
 
-	// Returns true if the binary representation of r contains y_hop number of
-	// 1s. It also assigns the bit form to routing_bit_array
-	private boolean one_bits(int r, int onebits) {
-		routing_bit_array = new int[2 * gEdgeSize];
-		Arrays.fill(routing_bit_array, 0);
+	/**
+	 * Returns true if the binary representation of r contains y_hop number of
+	 * 1s. It also assigns the bit form to routingBitArray
+	 * 
+	 * @param r
+	 * @param onebits
+	 * @return
+	 */
+	private boolean oneBits(int r, int onebits) {
+		routingBitArray = new int[2 * gEdgeSize];
+		Arrays.fill(routingBitArray, 0);
 		int index = 0;
 		int cur_one_bits = 0;
 		while (r != 0) {
-			routing_bit_array[index] = r & 1;
-			if (routing_bit_array[index] != 0)
+			routingBitArray[index] = r & 1;
+			if (routingBitArray[index] != 0)
 				cur_one_bits++;
 			if (cur_one_bits > onebits)
 				return false;
@@ -1221,8 +1346,8 @@ class MappingNode {
 			return false;
 	}
 
-	boolean program_routers() {
-		generate_routing_table();
+	boolean programRouters() {
+		generateRoutingTable();
 		// clean all the old routing table
 		for (int tile_id = 0; tile_id < gTileNum; tile_id++) {
 			for (int src_tile = 0; src_tile < gTileNum; src_tile++) {
@@ -1241,7 +1366,7 @@ class MappingNode {
 				for (int src_tile = 0; src_tile < gTileNum; src_tile++) {
 					for (int dst_tile = 0; dst_tile < gTileNum; dst_tile++) {
 						int link_id = locateLink(row, col,
-								routing_table[row][col][src_tile][dst_tile]);
+								routingTable[row][col][src_tile][dst_tile]);
 						if (link_id != -1)
 							gTile[tile_id].setRoutingEntry(src_tile, dst_tile,
 									link_id);
@@ -1297,31 +1422,31 @@ class MappingNode {
 		return link_id;
 	}
 
-	private void generate_routing_table() {
+	private void generateRoutingTable() {
 		// reset all the BW_usage
 		for (int i = 0; i < gEdgeSize; i++)
 			for (int j = 0; j < gEdgeSize; j++)
 				for (int k = 0; k < 4; k++)
-					R_syn_link_BW_usage[i][j][k] = 0;
+					rSynLinkBandwidthUsage[i][j][k] = 0;
 
-		routing_table = new int[gEdgeSize][gEdgeSize][gTileNum][gTileNum];
+		routingTable = new int[gEdgeSize][gEdgeSize][gTileNum][gTileNum];
 		for (int i = 0; i < gEdgeSize; i++) {
 			for (int j = 0; j < gEdgeSize; j++) {
 				for (int k = 0; k < gTileNum; k++) {
 					for (int m = 0; m < gTileNum; m++)
-						routing_table[i][j][k][m] = -2;
+						routingTable[i][j][k][m] = -2;
 				}
 			}
 		}
 
 		// if it's a real child mappingnode.
 		if (stage == gProcNum)
-			route_traffics(0, gProcNum - 1, true, true);
+			routeTraffics(0, gProcNum - 1, true, true);
 		// if it's the node which generate min upperBound
 		else {
 			for (int i = 0; i < stage; i++)
-				route_traffics(i, i, true, true);
-			route_traffics(stage, gProcNum - 1, true, true);
+				routeTraffics(i, i, true, true);
+			routeTraffics(stage, gProcNum - 1, true, true);
 		}
 	}
 

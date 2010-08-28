@@ -1,20 +1,30 @@
 package ro.ulbsibiu.acaps.mapper.bb;
 
 /**
+ * Helper class for keeping information regarding the communication between two
+ * processes.
+ * 
  * @author cipi
  * 
  */
 class ProcComm {
-	int src_proc;
 
-	int dst_proc;
+	/** the source process (i.e. the one who generates the communication) */
+	public int srcProc;
 
-	int BW;
+	/**
+	 * the destination process (i.e. the one who receives the data from the
+	 * source process)
+	 */
+	public int dstProc;
 
-	int adaptivity; // only useful in routing synthesis
+	/** the bandwidth requirement for this communication */
+	public int bandwidth;
 
-	// only useful energy aware routing
-	int volume;
+	/** (only useful in routing synthesis) */
+	public int adaptivity;
 
-	float rate;
+	/** the communication volume (only useful energy aware routing) */
+	public int volume;
+	
 }
