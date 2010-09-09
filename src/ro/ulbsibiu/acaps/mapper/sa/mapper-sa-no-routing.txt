@@ -1,0 +1,1380 @@
+########
+Core 0 is mapped to NoC node 11
+Core 1 is mapped to NoC node 13
+Core 2 is mapped to NoC node 10
+Core 3 is mapped to NoC node 8
+Core 4 is mapped to NoC node 12
+Core 5 is mapped to NoC node 0
+Core 6 is mapped to NoC node 9
+Core 7 is mapped to NoC node 1
+Core 8 is mapped to NoC node 2
+Core 9 is mapped to NoC node 4
+Core 10 is mapped to NoC node 14
+Core 11 is mapped to NoC node 15
+Core 12 is mapped to NoC node 5
+Core 13 is mapped to NoC node 3
+Core 14 is mapped to NoC node 7
+Core 15 is mapped to NoC node 6
+
+Round 0:
+Current Annealing temperature 100.0
+#
+total delta cost -9.78770125E8
+Current cost 2.1229874E7
+Accept ratio 0.87828125
+
+Core 0 is mapped to NoC node 4
+Core 1 is mapped to NoC node 13
+Core 2 is mapped to NoC node 10
+Core 3 is mapped to NoC node 5
+Core 4 is mapped to NoC node 0
+Core 5 is mapped to NoC node 7
+Core 6 is mapped to NoC node 12
+Core 7 is mapped to NoC node 8
+Core 8 is mapped to NoC node 3
+Core 9 is mapped to NoC node 11
+Core 10 is mapped to NoC node 14
+Core 11 is mapped to NoC node 2
+Core 12 is mapped to NoC node 1
+Core 13 is mapped to NoC node 15
+Core 14 is mapped to NoC node 9
+Core 15 is mapped to NoC node 6
+
+Round 1:
+Current Annealing temperature 90.0
+#########
+total delta cost 412480.0
+Current cost 2.1642354E7
+Accept ratio 0.8746484375
+
+Core 0 is mapped to NoC node 7
+Core 1 is mapped to NoC node 2
+Core 2 is mapped to NoC node 14
+Core 3 is mapped to NoC node 8
+Core 4 is mapped to NoC node 15
+Core 5 is mapped to NoC node 3
+Core 6 is mapped to NoC node 0
+Core 7 is mapped to NoC node 10
+Core 8 is mapped to NoC node 6
+Core 9 is mapped to NoC node 4
+Core 10 is mapped to NoC node 9
+Core 11 is mapped to NoC node 13
+Core 12 is mapped to NoC node 12
+Core 13 is mapped to NoC node 1
+Core 14 is mapped to NoC node 11
+Core 15 is mapped to NoC node 5
+
+Round 2:
+Current Annealing temperature 81.0
+#########
+total delta cost 5527472.0
+Current cost 2.7169826E7
+Accept ratio 0.87078125
+
+Core 0 is mapped to NoC node 4
+Core 1 is mapped to NoC node 1
+Core 2 is mapped to NoC node 13
+Core 3 is mapped to NoC node 6
+Core 4 is mapped to NoC node 3
+Core 5 is mapped to NoC node 8
+Core 6 is mapped to NoC node 9
+Core 7 is mapped to NoC node 11
+Core 8 is mapped to NoC node 2
+Core 9 is mapped to NoC node 0
+Core 10 is mapped to NoC node 14
+Core 11 is mapped to NoC node 10
+Core 12 is mapped to NoC node 5
+Core 13 is mapped to NoC node 12
+Core 14 is mapped to NoC node 7
+Core 15 is mapped to NoC node 15
+
+Round 3:
+Current Annealing temperature 72.9
+#########
+total delta cost 1897480.0
+Current cost 2.9067306E7
+Accept ratio 0.8651171875
+
+Core 0 is mapped to NoC node 14
+Core 1 is mapped to NoC node 6
+Core 2 is mapped to NoC node 8
+Core 3 is mapped to NoC node 9
+Core 4 is mapped to NoC node 0
+Core 5 is mapped to NoC node 10
+Core 6 is mapped to NoC node 1
+Core 7 is mapped to NoC node 7
+Core 8 is mapped to NoC node 3
+Core 9 is mapped to NoC node 12
+Core 10 is mapped to NoC node 4
+Core 11 is mapped to NoC node 11
+Core 12 is mapped to NoC node 15
+Core 13 is mapped to NoC node 2
+Core 14 is mapped to NoC node 13
+Core 15 is mapped to NoC node 5
+
+Round 4:
+Current Annealing temperature 65.61000000000001
+#########
+total delta cost -6847468.0
+Current cost 2.2219838E7
+Accept ratio 0.86078125
+
+Core 0 is mapped to NoC node 13
+Core 1 is mapped to NoC node 0
+Core 2 is mapped to NoC node 14
+Core 3 is mapped to NoC node 3
+Core 4 is mapped to NoC node 12
+Core 5 is mapped to NoC node 8
+Core 6 is mapped to NoC node 7
+Core 7 is mapped to NoC node 4
+Core 8 is mapped to NoC node 5
+Core 9 is mapped to NoC node 2
+Core 10 is mapped to NoC node 9
+Core 11 is mapped to NoC node 10
+Core 12 is mapped to NoC node 6
+Core 13 is mapped to NoC node 11
+Core 14 is mapped to NoC node 15
+Core 15 is mapped to NoC node 1
+
+Round 5:
+Current Annealing temperature 59.049000000000014
+#########
+total delta cost 1072506.0
+Current cost 2.3292344E7
+Accept ratio 0.8584765625
+
+Core 0 is mapped to NoC node 5
+Core 1 is mapped to NoC node 1
+Core 2 is mapped to NoC node 10
+Core 3 is mapped to NoC node 6
+Core 4 is mapped to NoC node 9
+Core 5 is mapped to NoC node 11
+Core 6 is mapped to NoC node 2
+Core 7 is mapped to NoC node 14
+Core 8 is mapped to NoC node 3
+Core 9 is mapped to NoC node 12
+Core 10 is mapped to NoC node 15
+Core 11 is mapped to NoC node 4
+Core 12 is mapped to NoC node 13
+Core 13 is mapped to NoC node 7
+Core 14 is mapped to NoC node 0
+Core 15 is mapped to NoC node 8
+
+Round 6:
+Current Annealing temperature 53.144100000000016
+#########
+total delta cost 3134988.0
+Current cost 2.6427332E7
+Accept ratio 0.8509765625
+
+Core 0 is mapped to NoC node 10
+Core 1 is mapped to NoC node 4
+Core 2 is mapped to NoC node 12
+Core 3 is mapped to NoC node 5
+Core 4 is mapped to NoC node 0
+Core 5 is mapped to NoC node 11
+Core 6 is mapped to NoC node 8
+Core 7 is mapped to NoC node 2
+Core 8 is mapped to NoC node 1
+Core 9 is mapped to NoC node 13
+Core 10 is mapped to NoC node 3
+Core 11 is mapped to NoC node 14
+Core 12 is mapped to NoC node 9
+Core 13 is mapped to NoC node 7
+Core 14 is mapped to NoC node 15
+Core 15 is mapped to NoC node 6
+
+Round 7:
+Current Annealing temperature 47.829690000000014
+#########
+total delta cost -1649978.0
+Current cost 2.4777354E7
+Accept ratio 0.8474609375
+
+Core 0 is mapped to NoC node 6
+Core 1 is mapped to NoC node 15
+Core 2 is mapped to NoC node 10
+Core 3 is mapped to NoC node 7
+Core 4 is mapped to NoC node 8
+Core 5 is mapped to NoC node 1
+Core 6 is mapped to NoC node 11
+Core 7 is mapped to NoC node 9
+Core 8 is mapped to NoC node 2
+Core 9 is mapped to NoC node 14
+Core 10 is mapped to NoC node 4
+Core 11 is mapped to NoC node 3
+Core 12 is mapped to NoC node 0
+Core 13 is mapped to NoC node 12
+Core 14 is mapped to NoC node 13
+Core 15 is mapped to NoC node 5
+
+Round 8:
+Current Annealing temperature 43.04672100000001
+#########
+total delta cost -2062486.0
+Current cost 2.2714868E7
+Accept ratio 0.8394921875
+
+Core 0 is mapped to NoC node 10
+Core 1 is mapped to NoC node 12
+Core 2 is mapped to NoC node 2
+Core 3 is mapped to NoC node 15
+Core 4 is mapped to NoC node 5
+Core 5 is mapped to NoC node 9
+Core 6 is mapped to NoC node 8
+Core 7 is mapped to NoC node 3
+Core 8 is mapped to NoC node 7
+Core 9 is mapped to NoC node 4
+Core 10 is mapped to NoC node 0
+Core 11 is mapped to NoC node 13
+Core 12 is mapped to NoC node 6
+Core 13 is mapped to NoC node 1
+Core 14 is mapped to NoC node 11
+Core 15 is mapped to NoC node 14
+
+Round 9:
+Current Annealing temperature 38.742048900000015
+#########
+total delta cost -2310004.0
+Current cost 2.0404864E7
+Accept ratio 0.8339453125
+
+Core 0 is mapped to NoC node 7
+Core 1 is mapped to NoC node 0
+Core 2 is mapped to NoC node 14
+Core 3 is mapped to NoC node 15
+Core 4 is mapped to NoC node 4
+Core 5 is mapped to NoC node 3
+Core 6 is mapped to NoC node 11
+Core 7 is mapped to NoC node 10
+Core 8 is mapped to NoC node 13
+Core 9 is mapped to NoC node 9
+Core 10 is mapped to NoC node 5
+Core 11 is mapped to NoC node 12
+Core 12 is mapped to NoC node 6
+Core 13 is mapped to NoC node 1
+Core 14 is mapped to NoC node 2
+Core 15 is mapped to NoC node 8
+
+Round 10:
+Current Annealing temperature 34.86784401000001
+#########
+total delta cost 4619960.0
+Current cost 2.5024824E7
+Accept ratio 0.825625
+
+Core 0 is mapped to NoC node 2
+Core 1 is mapped to NoC node 13
+Core 2 is mapped to NoC node 14
+Core 3 is mapped to NoC node 3
+Core 4 is mapped to NoC node 15
+Core 5 is mapped to NoC node 12
+Core 6 is mapped to NoC node 9
+Core 7 is mapped to NoC node 4
+Core 8 is mapped to NoC node 5
+Core 9 is mapped to NoC node 7
+Core 10 is mapped to NoC node 6
+Core 11 is mapped to NoC node 11
+Core 12 is mapped to NoC node 0
+Core 13 is mapped to NoC node 10
+Core 14 is mapped to NoC node 1
+Core 15 is mapped to NoC node 8
+
+Round 11:
+Current Annealing temperature 31.381059609000012
+#########
+total delta cost -4454970.0
+Current cost 2.0569854E7
+Accept ratio 0.8248046875
+
+Core 0 is mapped to NoC node 9
+Core 1 is mapped to NoC node 3
+Core 2 is mapped to NoC node 12
+Core 3 is mapped to NoC node 1
+Core 4 is mapped to NoC node 15
+Core 5 is mapped to NoC node 10
+Core 6 is mapped to NoC node 4
+Core 7 is mapped to NoC node 7
+Core 8 is mapped to NoC node 8
+Core 9 is mapped to NoC node 14
+Core 10 is mapped to NoC node 0
+Core 11 is mapped to NoC node 5
+Core 12 is mapped to NoC node 11
+Core 13 is mapped to NoC node 2
+Core 14 is mapped to NoC node 6
+Core 15 is mapped to NoC node 13
+
+Round 12:
+Current Annealing temperature 28.242953648100013
+#########
+total delta cost 2062502.0
+Current cost 2.2632356E7
+Accept ratio 0.815234375
+
+Core 0 is mapped to NoC node 10
+Core 1 is mapped to NoC node 6
+Core 2 is mapped to NoC node 14
+Core 3 is mapped to NoC node 1
+Core 4 is mapped to NoC node 5
+Core 5 is mapped to NoC node 13
+Core 6 is mapped to NoC node 3
+Core 7 is mapped to NoC node 2
+Core 8 is mapped to NoC node 11
+Core 9 is mapped to NoC node 8
+Core 10 is mapped to NoC node 7
+Core 11 is mapped to NoC node 0
+Core 12 is mapped to NoC node 9
+Core 13 is mapped to NoC node 12
+Core 14 is mapped to NoC node 15
+Core 15 is mapped to NoC node 4
+
+Round 13:
+Current Annealing temperature 25.41865828329001
+#########
+total delta cost 1072480.0
+Current cost 2.3704836E7
+Accept ratio 0.8065625
+
+Core 0 is mapped to NoC node 11
+Core 1 is mapped to NoC node 0
+Core 2 is mapped to NoC node 10
+Core 3 is mapped to NoC node 14
+Core 4 is mapped to NoC node 1
+Core 5 is mapped to NoC node 13
+Core 6 is mapped to NoC node 7
+Core 7 is mapped to NoC node 9
+Core 8 is mapped to NoC node 12
+Core 9 is mapped to NoC node 8
+Core 10 is mapped to NoC node 3
+Core 11 is mapped to NoC node 2
+Core 12 is mapped to NoC node 15
+Core 13 is mapped to NoC node 6
+Core 14 is mapped to NoC node 4
+Core 15 is mapped to NoC node 5
+
+Round 14:
+Current Annealing temperature 22.87679245496101
+#########
+total delta cost -329984.0
+Current cost 2.3374852E7
+Accept ratio 0.79328125
+
+Core 0 is mapped to NoC node 6
+Core 1 is mapped to NoC node 12
+Core 2 is mapped to NoC node 14
+Core 3 is mapped to NoC node 4
+Core 4 is mapped to NoC node 15
+Core 5 is mapped to NoC node 13
+Core 6 is mapped to NoC node 11
+Core 7 is mapped to NoC node 8
+Core 8 is mapped to NoC node 1
+Core 9 is mapped to NoC node 10
+Core 10 is mapped to NoC node 9
+Core 11 is mapped to NoC node 0
+Core 12 is mapped to NoC node 7
+Core 13 is mapped to NoC node 3
+Core 14 is mapped to NoC node 5
+Core 15 is mapped to NoC node 2
+
+Round 15:
+Current Annealing temperature 20.58911320946491
+#########
+total delta cost 3547484.0
+Current cost 2.6922336E7
+Accept ratio 0.7903515625
+
+Core 0 is mapped to NoC node 13
+Core 1 is mapped to NoC node 8
+Core 2 is mapped to NoC node 12
+Core 3 is mapped to NoC node 1
+Core 4 is mapped to NoC node 14
+Core 5 is mapped to NoC node 3
+Core 6 is mapped to NoC node 4
+Core 7 is mapped to NoC node 0
+Core 8 is mapped to NoC node 10
+Core 9 is mapped to NoC node 11
+Core 10 is mapped to NoC node 2
+Core 11 is mapped to NoC node 9
+Core 12 is mapped to NoC node 15
+Core 13 is mapped to NoC node 6
+Core 14 is mapped to NoC node 7
+Core 15 is mapped to NoC node 5
+
+Round 16:
+Current Annealing temperature 18.53020188851842
+#########
+total delta cost -5774988.0
+Current cost 2.1147348E7
+Accept ratio 0.780859375
+
+Core 0 is mapped to NoC node 14
+Core 1 is mapped to NoC node 11
+Core 2 is mapped to NoC node 8
+Core 3 is mapped to NoC node 7
+Core 4 is mapped to NoC node 10
+Core 5 is mapped to NoC node 15
+Core 6 is mapped to NoC node 5
+Core 7 is mapped to NoC node 1
+Core 8 is mapped to NoC node 6
+Core 9 is mapped to NoC node 13
+Core 10 is mapped to NoC node 12
+Core 11 is mapped to NoC node 4
+Core 12 is mapped to NoC node 2
+Core 13 is mapped to NoC node 0
+Core 14 is mapped to NoC node 3
+Core 15 is mapped to NoC node 9
+
+Round 17:
+Current Annealing temperature 16.67718169966658
+#########
+total delta cost 2144992.0
+Current cost 2.329234E7
+Accept ratio 0.759921875
+
+Core 0 is mapped to NoC node 14
+Core 1 is mapped to NoC node 15
+Core 2 is mapped to NoC node 8
+Core 3 is mapped to NoC node 10
+Core 4 is mapped to NoC node 5
+Core 5 is mapped to NoC node 13
+Core 6 is mapped to NoC node 2
+Core 7 is mapped to NoC node 7
+Core 8 is mapped to NoC node 3
+Core 9 is mapped to NoC node 6
+Core 10 is mapped to NoC node 4
+Core 11 is mapped to NoC node 1
+Core 12 is mapped to NoC node 11
+Core 13 is mapped to NoC node 12
+Core 14 is mapped to NoC node 0
+Core 15 is mapped to NoC node 9
+
+Round 18:
+Current Annealing temperature 15.009463529699921
+#########
+total delta cost -329998.0
+Current cost 2.2962342E7
+Accept ratio 0.751328125
+
+Core 0 is mapped to NoC node 12
+Core 1 is mapped to NoC node 3
+Core 2 is mapped to NoC node 8
+Core 3 is mapped to NoC node 7
+Core 4 is mapped to NoC node 0
+Core 5 is mapped to NoC node 6
+Core 6 is mapped to NoC node 15
+Core 7 is mapped to NoC node 5
+Core 8 is mapped to NoC node 1
+Core 9 is mapped to NoC node 14
+Core 10 is mapped to NoC node 2
+Core 11 is mapped to NoC node 11
+Core 12 is mapped to NoC node 9
+Core 13 is mapped to NoC node 4
+Core 14 is mapped to NoC node 13
+Core 15 is mapped to NoC node 10
+
+Round 19:
+Current Annealing temperature 13.50851717672993
+#########
+total delta cost -3052468.0
+Current cost 1.9909874E7
+Accept ratio 0.740234375
+
+Core 0 is mapped to NoC node 0
+Core 1 is mapped to NoC node 3
+Core 2 is mapped to NoC node 8
+Core 3 is mapped to NoC node 11
+Core 4 is mapped to NoC node 5
+Core 5 is mapped to NoC node 15
+Core 6 is mapped to NoC node 1
+Core 7 is mapped to NoC node 7
+Core 8 is mapped to NoC node 12
+Core 9 is mapped to NoC node 2
+Core 10 is mapped to NoC node 9
+Core 11 is mapped to NoC node 13
+Core 12 is mapped to NoC node 14
+Core 13 is mapped to NoC node 10
+Core 14 is mapped to NoC node 4
+Core 15 is mapped to NoC node 6
+
+Round 20:
+Current Annealing temperature 12.157665459056936
+#########
+total delta cost 3217478.0
+Current cost 2.3127352E7
+Accept ratio 0.7180078125
+
+Core 0 is mapped to NoC node 6
+Core 1 is mapped to NoC node 2
+Core 2 is mapped to NoC node 15
+Core 3 is mapped to NoC node 12
+Core 4 is mapped to NoC node 8
+Core 5 is mapped to NoC node 13
+Core 6 is mapped to NoC node 14
+Core 7 is mapped to NoC node 1
+Core 8 is mapped to NoC node 7
+Core 9 is mapped to NoC node 10
+Core 10 is mapped to NoC node 11
+Core 11 is mapped to NoC node 4
+Core 12 is mapped to NoC node 0
+Core 13 is mapped to NoC node 9
+Core 14 is mapped to NoC node 3
+Core 15 is mapped to NoC node 5
+
+Round 21:
+Current Annealing temperature 10.941898913151244
+#########
+total delta cost 1484996.0
+Current cost 2.4612348E7
+Accept ratio 0.6951171875
+
+Core 0 is mapped to NoC node 15
+Core 1 is mapped to NoC node 12
+Core 2 is mapped to NoC node 6
+Core 3 is mapped to NoC node 0
+Core 4 is mapped to NoC node 5
+Core 5 is mapped to NoC node 11
+Core 6 is mapped to NoC node 10
+Core 7 is mapped to NoC node 1
+Core 8 is mapped to NoC node 2
+Core 9 is mapped to NoC node 14
+Core 10 is mapped to NoC node 3
+Core 11 is mapped to NoC node 7
+Core 12 is mapped to NoC node 13
+Core 13 is mapped to NoC node 9
+Core 14 is mapped to NoC node 8
+Core 15 is mapped to NoC node 4
+
+Round 22:
+Current Annealing temperature 9.847709021836119
+#########
+total delta cost -1402500.0
+Current cost 2.3209848E7
+Accept ratio 0.678203125
+
+Core 0 is mapped to NoC node 7
+Core 1 is mapped to NoC node 9
+Core 2 is mapped to NoC node 13
+Core 3 is mapped to NoC node 11
+Core 4 is mapped to NoC node 2
+Core 5 is mapped to NoC node 3
+Core 6 is mapped to NoC node 15
+Core 7 is mapped to NoC node 4
+Core 8 is mapped to NoC node 0
+Core 9 is mapped to NoC node 10
+Core 10 is mapped to NoC node 14
+Core 11 is mapped to NoC node 6
+Core 12 is mapped to NoC node 1
+Core 13 is mapped to NoC node 8
+Core 14 is mapped to NoC node 12
+Core 15 is mapped to NoC node 5
+
+Round 23:
+Current Annealing temperature 8.862938119652506
+#########
+total delta cost -5527468.0
+Current cost 1.768238E7
+Accept ratio 0.6529296875
+
+Core 0 is mapped to NoC node 0
+Core 1 is mapped to NoC node 15
+Core 2 is mapped to NoC node 7
+Core 3 is mapped to NoC node 12
+Core 4 is mapped to NoC node 5
+Core 5 is mapped to NoC node 9
+Core 6 is mapped to NoC node 1
+Core 7 is mapped to NoC node 10
+Core 8 is mapped to NoC node 13
+Core 9 is mapped to NoC node 8
+Core 10 is mapped to NoC node 3
+Core 11 is mapped to NoC node 2
+Core 12 is mapped to NoC node 6
+Core 13 is mapped to NoC node 14
+Core 14 is mapped to NoC node 11
+Core 15 is mapped to NoC node 4
+
+Round 24:
+Current Annealing temperature 7.9766443076872555
+#########
+total delta cost 6104968.0
+Current cost 2.3787348E7
+Accept ratio 0.6241796875
+
+Core 0 is mapped to NoC node 0
+Core 1 is mapped to NoC node 11
+Core 2 is mapped to NoC node 15
+Core 3 is mapped to NoC node 14
+Core 4 is mapped to NoC node 13
+Core 5 is mapped to NoC node 7
+Core 6 is mapped to NoC node 8
+Core 7 is mapped to NoC node 3
+Core 8 is mapped to NoC node 6
+Core 9 is mapped to NoC node 1
+Core 10 is mapped to NoC node 4
+Core 11 is mapped to NoC node 5
+Core 12 is mapped to NoC node 9
+Core 13 is mapped to NoC node 2
+Core 14 is mapped to NoC node 10
+Core 15 is mapped to NoC node 12
+
+Round 25:
+Current Annealing temperature 7.17897987691853
+#########
+total delta cost 247504.0
+Current cost 2.4034852E7
+Accept ratio 0.60296875
+
+Core 0 is mapped to NoC node 3
+Core 1 is mapped to NoC node 0
+Core 2 is mapped to NoC node 5
+Core 3 is mapped to NoC node 10
+Core 4 is mapped to NoC node 1
+Core 5 is mapped to NoC node 15
+Core 6 is mapped to NoC node 12
+Core 7 is mapped to NoC node 13
+Core 8 is mapped to NoC node 14
+Core 9 is mapped to NoC node 11
+Core 10 is mapped to NoC node 4
+Core 11 is mapped to NoC node 7
+Core 12 is mapped to NoC node 2
+Core 13 is mapped to NoC node 6
+Core 14 is mapped to NoC node 8
+Core 15 is mapped to NoC node 9
+
+Round 26:
+Current Annealing temperature 6.461081889226677
+#########
+total delta cost -1732504.0
+Current cost 2.2302348E7
+Accept ratio 0.5658984375
+
+Core 0 is mapped to NoC node 0
+Core 1 is mapped to NoC node 7
+Core 2 is mapped to NoC node 10
+Core 3 is mapped to NoC node 9
+Core 4 is mapped to NoC node 14
+Core 5 is mapped to NoC node 1
+Core 6 is mapped to NoC node 6
+Core 7 is mapped to NoC node 13
+Core 8 is mapped to NoC node 8
+Core 9 is mapped to NoC node 3
+Core 10 is mapped to NoC node 11
+Core 11 is mapped to NoC node 15
+Core 12 is mapped to NoC node 4
+Core 13 is mapped to NoC node 12
+Core 14 is mapped to NoC node 5
+Core 15 is mapped to NoC node 2
+
+Round 27:
+Current Annealing temperature 5.81497370030401
+#########
+total delta cost -2474984.0
+Current cost 1.9827364E7
+Accept ratio 0.5351171875
+
+Core 0 is mapped to NoC node 5
+Core 1 is mapped to NoC node 9
+Core 2 is mapped to NoC node 14
+Core 3 is mapped to NoC node 3
+Core 4 is mapped to NoC node 8
+Core 5 is mapped to NoC node 2
+Core 6 is mapped to NoC node 12
+Core 7 is mapped to NoC node 11
+Core 8 is mapped to NoC node 6
+Core 9 is mapped to NoC node 0
+Core 10 is mapped to NoC node 15
+Core 11 is mapped to NoC node 13
+Core 12 is mapped to NoC node 10
+Core 13 is mapped to NoC node 1
+Core 14 is mapped to NoC node 7
+Core 15 is mapped to NoC node 4
+
+Round 28:
+Current Annealing temperature 5.233476330273609
+#########
+total delta cost -1567484.0
+Current cost 1.825988E7
+Accept ratio 0.50984375
+
+Core 0 is mapped to NoC node 13
+Core 1 is mapped to NoC node 12
+Core 2 is mapped to NoC node 1
+Core 3 is mapped to NoC node 9
+Core 4 is mapped to NoC node 11
+Core 5 is mapped to NoC node 3
+Core 6 is mapped to NoC node 7
+Core 7 is mapped to NoC node 15
+Core 8 is mapped to NoC node 2
+Core 9 is mapped to NoC node 10
+Core 10 is mapped to NoC node 0
+Core 11 is mapped to NoC node 4
+Core 12 is mapped to NoC node 14
+Core 13 is mapped to NoC node 8
+Core 14 is mapped to NoC node 5
+Core 15 is mapped to NoC node 6
+
+Round 29:
+Current Annealing temperature 4.710128697246248
+#########
+total delta cost 2309974.0
+Current cost 2.0569854E7
+Accept ratio 0.471484375
+
+Core 0 is mapped to NoC node 6
+Core 1 is mapped to NoC node 0
+Core 2 is mapped to NoC node 4
+Core 3 is mapped to NoC node 10
+Core 4 is mapped to NoC node 11
+Core 5 is mapped to NoC node 7
+Core 6 is mapped to NoC node 2
+Core 7 is mapped to NoC node 1
+Core 8 is mapped to NoC node 8
+Core 9 is mapped to NoC node 14
+Core 10 is mapped to NoC node 12
+Core 11 is mapped to NoC node 13
+Core 12 is mapped to NoC node 5
+Core 13 is mapped to NoC node 9
+Core 14 is mapped to NoC node 3
+Core 15 is mapped to NoC node 15
+
+Round 30:
+Current Annealing temperature 4.239115827521624
+#########
+total delta cost -164990.0
+Current cost 2.0404864E7
+Accept ratio 0.4239453125
+
+Core 0 is mapped to NoC node 12
+Core 1 is mapped to NoC node 8
+Core 2 is mapped to NoC node 4
+Core 3 is mapped to NoC node 9
+Core 4 is mapped to NoC node 10
+Core 5 is mapped to NoC node 15
+Core 6 is mapped to NoC node 5
+Core 7 is mapped to NoC node 1
+Core 8 is mapped to NoC node 0
+Core 9 is mapped to NoC node 14
+Core 10 is mapped to NoC node 3
+Core 11 is mapped to NoC node 2
+Core 12 is mapped to NoC node 6
+Core 13 is mapped to NoC node 7
+Core 14 is mapped to NoC node 11
+Core 15 is mapped to NoC node 13
+
+Round 31:
+Current Annealing temperature 3.815204244769461
+#########
+total delta cost -825004.0
+Current cost 1.957986E7
+Accept ratio 0.38046875
+
+Core 0 is mapped to NoC node 3
+Core 1 is mapped to NoC node 1
+Core 2 is mapped to NoC node 9
+Core 3 is mapped to NoC node 2
+Core 4 is mapped to NoC node 7
+Core 5 is mapped to NoC node 15
+Core 6 is mapped to NoC node 5
+Core 7 is mapped to NoC node 4
+Core 8 is mapped to NoC node 14
+Core 9 is mapped to NoC node 12
+Core 10 is mapped to NoC node 10
+Core 11 is mapped to NoC node 11
+Core 12 is mapped to NoC node 0
+Core 13 is mapped to NoC node 6
+Core 14 is mapped to NoC node 13
+Core 15 is mapped to NoC node 8
+
+Round 32:
+Current Annealing temperature 3.433683820292515
+#########
+total delta cost -659988.0
+Current cost 1.8919872E7
+Accept ratio 0.34203125
+
+Core 0 is mapped to NoC node 5
+Core 1 is mapped to NoC node 0
+Core 2 is mapped to NoC node 4
+Core 3 is mapped to NoC node 10
+Core 4 is mapped to NoC node 8
+Core 5 is mapped to NoC node 2
+Core 6 is mapped to NoC node 13
+Core 7 is mapped to NoC node 11
+Core 8 is mapped to NoC node 3
+Core 9 is mapped to NoC node 14
+Core 10 is mapped to NoC node 7
+Core 11 is mapped to NoC node 6
+Core 12 is mapped to NoC node 9
+Core 13 is mapped to NoC node 12
+Core 14 is mapped to NoC node 1
+Core 15 is mapped to NoC node 15
+
+Round 33:
+Current Annealing temperature 3.090315438263264
+#########
+total delta cost 1649980.0
+Current cost 2.0569852E7
+Accept ratio 0.299609375
+
+Core 0 is mapped to NoC node 6
+Core 1 is mapped to NoC node 0
+Core 2 is mapped to NoC node 4
+Core 3 is mapped to NoC node 2
+Core 4 is mapped to NoC node 1
+Core 5 is mapped to NoC node 5
+Core 6 is mapped to NoC node 7
+Core 7 is mapped to NoC node 12
+Core 8 is mapped to NoC node 3
+Core 9 is mapped to NoC node 10
+Core 10 is mapped to NoC node 13
+Core 11 is mapped to NoC node 14
+Core 12 is mapped to NoC node 8
+Core 13 is mapped to NoC node 9
+Core 14 is mapped to NoC node 15
+Core 15 is mapped to NoC node 11
+
+Round 34:
+Current Annealing temperature 2.7812838944369376
+#########
+total delta cost -5197452.0
+Current cost 1.53724E7
+Accept ratio 0.267109375
+
+Core 0 is mapped to NoC node 12
+Core 1 is mapped to NoC node 0
+Core 2 is mapped to NoC node 5
+Core 3 is mapped to NoC node 2
+Core 4 is mapped to NoC node 13
+Core 5 is mapped to NoC node 1
+Core 6 is mapped to NoC node 15
+Core 7 is mapped to NoC node 8
+Core 8 is mapped to NoC node 6
+Core 9 is mapped to NoC node 3
+Core 10 is mapped to NoC node 10
+Core 11 is mapped to NoC node 14
+Core 12 is mapped to NoC node 9
+Core 13 is mapped to NoC node 11
+Core 14 is mapped to NoC node 4
+Core 15 is mapped to NoC node 7
+
+Round 35:
+Current Annealing temperature 2.5031555049932437
+#########
+total delta cost 2969982.0
+Current cost 1.8342382E7
+Accept ratio 0.2244140625
+
+Core 0 is mapped to NoC node 2
+Core 1 is mapped to NoC node 3
+Core 2 is mapped to NoC node 12
+Core 3 is mapped to NoC node 10
+Core 4 is mapped to NoC node 5
+Core 5 is mapped to NoC node 0
+Core 6 is mapped to NoC node 6
+Core 7 is mapped to NoC node 4
+Core 8 is mapped to NoC node 15
+Core 9 is mapped to NoC node 13
+Core 10 is mapped to NoC node 9
+Core 11 is mapped to NoC node 11
+Core 12 is mapped to NoC node 1
+Core 13 is mapped to NoC node 8
+Core 14 is mapped to NoC node 7
+Core 15 is mapped to NoC node 14
+
+Round 36:
+Current Annealing temperature 2.2528399544939193
+#########
+total delta cost -330006.0
+Current cost 1.8012376E7
+Accept ratio 0.18796875
+
+Core 0 is mapped to NoC node 10
+Core 1 is mapped to NoC node 6
+Core 2 is mapped to NoC node 5
+Core 3 is mapped to NoC node 11
+Core 4 is mapped to NoC node 9
+Core 5 is mapped to NoC node 15
+Core 6 is mapped to NoC node 14
+Core 7 is mapped to NoC node 0
+Core 8 is mapped to NoC node 4
+Core 9 is mapped to NoC node 3
+Core 10 is mapped to NoC node 8
+Core 11 is mapped to NoC node 12
+Core 12 is mapped to NoC node 1
+Core 13 is mapped to NoC node 13
+Core 14 is mapped to NoC node 7
+Core 15 is mapped to NoC node 2
+
+Round 37:
+Current Annealing temperature 2.0275559590445273
+#########
+total delta cost -2309978.0
+Current cost 1.5702398E7
+Accept ratio 0.1632421875
+
+Core 0 is mapped to NoC node 13
+Core 1 is mapped to NoC node 8
+Core 2 is mapped to NoC node 0
+Core 3 is mapped to NoC node 3
+Core 4 is mapped to NoC node 14
+Core 5 is mapped to NoC node 4
+Core 6 is mapped to NoC node 15
+Core 7 is mapped to NoC node 11
+Core 8 is mapped to NoC node 2
+Core 9 is mapped to NoC node 6
+Core 10 is mapped to NoC node 5
+Core 11 is mapped to NoC node 1
+Core 12 is mapped to NoC node 10
+Core 13 is mapped to NoC node 12
+Core 14 is mapped to NoC node 9
+Core 15 is mapped to NoC node 7
+
+Round 38:
+Current Annealing temperature 1.8248003631400747
+#########
+total delta cost 1814986.0
+Current cost 1.7517384E7
+Accept ratio 0.1194140625
+
+Core 0 is mapped to NoC node 15
+Core 1 is mapped to NoC node 0
+Core 2 is mapped to NoC node 7
+Core 3 is mapped to NoC node 8
+Core 4 is mapped to NoC node 11
+Core 5 is mapped to NoC node 5
+Core 6 is mapped to NoC node 12
+Core 7 is mapped to NoC node 4
+Core 8 is mapped to NoC node 10
+Core 9 is mapped to NoC node 13
+Core 10 is mapped to NoC node 1
+Core 11 is mapped to NoC node 2
+Core 12 is mapped to NoC node 9
+Core 13 is mapped to NoC node 3
+Core 14 is mapped to NoC node 6
+Core 15 is mapped to NoC node 14
+
+Round 39:
+Current Annealing temperature 1.6423203268260673
+#########
+total delta cost -824993.0
+Current cost 1.6692391E7
+Accept ratio 0.104765625
+
+Core 0 is mapped to NoC node 12
+Core 1 is mapped to NoC node 14
+Core 2 is mapped to NoC node 4
+Core 3 is mapped to NoC node 2
+Core 4 is mapped to NoC node 10
+Core 5 is mapped to NoC node 5
+Core 6 is mapped to NoC node 6
+Core 7 is mapped to NoC node 15
+Core 8 is mapped to NoC node 0
+Core 9 is mapped to NoC node 3
+Core 10 is mapped to NoC node 9
+Core 11 is mapped to NoC node 13
+Core 12 is mapped to NoC node 11
+Core 13 is mapped to NoC node 1
+Core 14 is mapped to NoC node 8
+Core 15 is mapped to NoC node 7
+
+Round 40:
+Current Annealing temperature 1.4780882941434605
+#########
+total delta cost -577500.0
+Current cost 1.6114891E7
+Accept ratio 0.089765625
+
+Core 0 is mapped to NoC node 9
+Core 1 is mapped to NoC node 2
+Core 2 is mapped to NoC node 7
+Core 3 is mapped to NoC node 0
+Core 4 is mapped to NoC node 10
+Core 5 is mapped to NoC node 11
+Core 6 is mapped to NoC node 13
+Core 7 is mapped to NoC node 14
+Core 8 is mapped to NoC node 4
+Core 9 is mapped to NoC node 8
+Core 10 is mapped to NoC node 1
+Core 11 is mapped to NoC node 5
+Core 12 is mapped to NoC node 15
+Core 13 is mapped to NoC node 3
+Core 14 is mapped to NoC node 6
+Core 15 is mapped to NoC node 12
+
+Round 41:
+Current Annealing temperature 1.3302794647291145
+#########
+total delta cost -1402483.0
+Current cost 1.4712408E7
+Accept ratio 0.0730859375
+
+Core 0 is mapped to NoC node 15
+Core 1 is mapped to NoC node 13
+Core 2 is mapped to NoC node 1
+Core 3 is mapped to NoC node 0
+Core 4 is mapped to NoC node 14
+Core 5 is mapped to NoC node 6
+Core 6 is mapped to NoC node 11
+Core 7 is mapped to NoC node 9
+Core 8 is mapped to NoC node 4
+Core 9 is mapped to NoC node 12
+Core 10 is mapped to NoC node 3
+Core 11 is mapped to NoC node 7
+Core 12 is mapped to NoC node 10
+Core 13 is mapped to NoC node 2
+Core 14 is mapped to NoC node 5
+Core 15 is mapped to NoC node 8
+
+Round 42:
+Current Annealing temperature 1.1972515182562031
+#########
+total delta cost 577491.0
+Current cost 1.5289899E7
+Accept ratio 0.0608203125
+
+Core 0 is mapped to NoC node 9
+Core 1 is mapped to NoC node 0
+Core 2 is mapped to NoC node 6
+Core 3 is mapped to NoC node 4
+Core 4 is mapped to NoC node 11
+Core 5 is mapped to NoC node 13
+Core 6 is mapped to NoC node 15
+Core 7 is mapped to NoC node 14
+Core 8 is mapped to NoC node 5
+Core 9 is mapped to NoC node 12
+Core 10 is mapped to NoC node 7
+Core 11 is mapped to NoC node 3
+Core 12 is mapped to NoC node 10
+Core 13 is mapped to NoC node 2
+Core 14 is mapped to NoC node 1
+Core 15 is mapped to NoC node 8
+
+Round 43:
+Current Annealing temperature 1.0775263664305827
+#########
+total delta cost -742492.0
+Current cost 1.4547407E7
+Accept ratio 0.05625
+
+Core 0 is mapped to NoC node 14
+Core 1 is mapped to NoC node 13
+Core 2 is mapped to NoC node 11
+Core 3 is mapped to NoC node 12
+Core 4 is mapped to NoC node 10
+Core 5 is mapped to NoC node 5
+Core 6 is mapped to NoC node 15
+Core 7 is mapped to NoC node 7
+Core 8 is mapped to NoC node 8
+Core 9 is mapped to NoC node 0
+Core 10 is mapped to NoC node 2
+Core 11 is mapped to NoC node 1
+Core 12 is mapped to NoC node 6
+Core 13 is mapped to NoC node 3
+Core 14 is mapped to NoC node 9
+Core 15 is mapped to NoC node 4
+
+Round 44:
+Current Annealing temperature 0.9697737297875245
+#########
+total delta cost 247494.0
+Current cost 1.4794901E7
+Accept ratio 0.035859375
+
+Core 0 is mapped to NoC node 6
+Core 1 is mapped to NoC node 11
+Core 2 is mapped to NoC node 13
+Core 3 is mapped to NoC node 4
+Core 4 is mapped to NoC node 7
+Core 5 is mapped to NoC node 8
+Core 6 is mapped to NoC node 10
+Core 7 is mapped to NoC node 2
+Core 8 is mapped to NoC node 5
+Core 9 is mapped to NoC node 1
+Core 10 is mapped to NoC node 14
+Core 11 is mapped to NoC node 15
+Core 12 is mapped to NoC node 3
+Core 13 is mapped to NoC node 12
+Core 14 is mapped to NoC node 9
+Core 15 is mapped to NoC node 0
+
+Round 45:
+Current Annealing temperature 0.8727963568087721
+#########
+total delta cost -164995.0
+Current cost 1.4629906E7
+Accept ratio 0.035390625
+
+Core 0 is mapped to NoC node 2
+Core 1 is mapped to NoC node 11
+Core 2 is mapped to NoC node 9
+Core 3 is mapped to NoC node 12
+Core 4 is mapped to NoC node 7
+Core 5 is mapped to NoC node 1
+Core 6 is mapped to NoC node 3
+Core 7 is mapped to NoC node 10
+Core 8 is mapped to NoC node 8
+Core 9 is mapped to NoC node 0
+Core 10 is mapped to NoC node 14
+Core 11 is mapped to NoC node 15
+Core 12 is mapped to NoC node 6
+Core 13 is mapped to NoC node 13
+Core 14 is mapped to NoC node 5
+Core 15 is mapped to NoC node 4
+
+Round 46:
+Current Annealing temperature 0.785516721127895
+#########
+total delta cost -742496.0
+Current cost 1.388741E7
+Accept ratio 0.03453125
+
+Core 0 is mapped to NoC node 11
+Core 1 is mapped to NoC node 10
+Core 2 is mapped to NoC node 12
+Core 3 is mapped to NoC node 4
+Core 4 is mapped to NoC node 6
+Core 5 is mapped to NoC node 5
+Core 6 is mapped to NoC node 7
+Core 7 is mapped to NoC node 3
+Core 8 is mapped to NoC node 8
+Core 9 is mapped to NoC node 1
+Core 10 is mapped to NoC node 14
+Core 11 is mapped to NoC node 15
+Core 12 is mapped to NoC node 2
+Core 13 is mapped to NoC node 13
+Core 14 is mapped to NoC node 9
+Core 15 is mapped to NoC node 0
+
+Round 47:
+Current Annealing temperature 0.7069650490151055
+#########
+total delta cost -82499.0
+Current cost 1.3804911E7
+Accept ratio 0.0224609375
+
+Core 0 is mapped to NoC node 11
+Core 1 is mapped to NoC node 13
+Core 2 is mapped to NoC node 8
+Core 3 is mapped to NoC node 0
+Core 4 is mapped to NoC node 7
+Core 5 is mapped to NoC node 10
+Core 6 is mapped to NoC node 3
+Core 7 is mapped to NoC node 2
+Core 8 is mapped to NoC node 4
+Core 9 is mapped to NoC node 1
+Core 10 is mapped to NoC node 14
+Core 11 is mapped to NoC node 15
+Core 12 is mapped to NoC node 6
+Core 13 is mapped to NoC node 12
+Core 14 is mapped to NoC node 9
+Core 15 is mapped to NoC node 5
+
+Round 48:
+Current Annealing temperature 0.6362685441135949
+#########
+total delta cost 1.0
+Current cost 1.3804912E7
+Accept ratio 0.01484375
+
+Core 0 is mapped to NoC node 11
+Core 1 is mapped to NoC node 15
+Core 2 is mapped to NoC node 13
+Core 3 is mapped to NoC node 5
+Core 4 is mapped to NoC node 7
+Core 5 is mapped to NoC node 14
+Core 6 is mapped to NoC node 3
+Core 7 is mapped to NoC node 2
+Core 8 is mapped to NoC node 9
+Core 9 is mapped to NoC node 0
+Core 10 is mapped to NoC node 8
+Core 11 is mapped to NoC node 4
+Core 12 is mapped to NoC node 6
+Core 13 is mapped to NoC node 12
+Core 14 is mapped to NoC node 10
+Core 15 is mapped to NoC node 1
+
+Round 49:
+Current Annealing temperature 0.5726416897022354
+#########
+total delta cost -82499.0
+Current cost 1.3722413E7
+Accept ratio 0.0069140625
+
+Core 0 is mapped to NoC node 11
+Core 1 is mapped to NoC node 14
+Core 2 is mapped to NoC node 13
+Core 3 is mapped to NoC node 5
+Core 4 is mapped to NoC node 7
+Core 5 is mapped to NoC node 6
+Core 6 is mapped to NoC node 15
+Core 7 is mapped to NoC node 2
+Core 8 is mapped to NoC node 9
+Core 9 is mapped to NoC node 0
+Core 10 is mapped to NoC node 8
+Core 11 is mapped to NoC node 4
+Core 12 is mapped to NoC node 3
+Core 13 is mapped to NoC node 12
+Core 14 is mapped to NoC node 10
+Core 15 is mapped to NoC node 1
+
+Round 50:
+Current Annealing temperature 0.5153775207320118
+#########
+total delta cost 0.0
+Current cost 1.3722413E7
+Accept ratio 0.0040625
+
+Core 0 is mapped to NoC node 11
+Core 1 is mapped to NoC node 14
+Core 2 is mapped to NoC node 13
+Core 3 is mapped to NoC node 5
+Core 4 is mapped to NoC node 7
+Core 5 is mapped to NoC node 6
+Core 6 is mapped to NoC node 15
+Core 7 is mapped to NoC node 2
+Core 8 is mapped to NoC node 9
+Core 9 is mapped to NoC node 0
+Core 10 is mapped to NoC node 8
+Core 11 is mapped to NoC node 4
+Core 12 is mapped to NoC node 3
+Core 13 is mapped to NoC node 12
+Core 14 is mapped to NoC node 10
+Core 15 is mapped to NoC node 1
+
+Round 51:
+Current Annealing temperature 0.46383976865881066
+#########
+total delta cost 164998.0
+Current cost 1.3887411E7
+Accept ratio 0.0030859375
+
+Core 0 is mapped to NoC node 11
+Core 1 is mapped to NoC node 14
+Core 2 is mapped to NoC node 13
+Core 3 is mapped to NoC node 5
+Core 4 is mapped to NoC node 7
+Core 5 is mapped to NoC node 6
+Core 6 is mapped to NoC node 15
+Core 7 is mapped to NoC node 3
+Core 8 is mapped to NoC node 9
+Core 9 is mapped to NoC node 0
+Core 10 is mapped to NoC node 8
+Core 11 is mapped to NoC node 4
+Core 12 is mapped to NoC node 2
+Core 13 is mapped to NoC node 12
+Core 14 is mapped to NoC node 10
+Core 15 is mapped to NoC node 1
+
+Round 52:
+Current Annealing temperature 0.4174557917929296
+#########
+total delta cost -164998.0
+Current cost 1.3722413E7
+Accept ratio 0.0023046875
+
+Core 0 is mapped to NoC node 11
+Core 1 is mapped to NoC node 14
+Core 2 is mapped to NoC node 13
+Core 3 is mapped to NoC node 5
+Core 4 is mapped to NoC node 7
+Core 5 is mapped to NoC node 6
+Core 6 is mapped to NoC node 15
+Core 7 is mapped to NoC node 2
+Core 8 is mapped to NoC node 9
+Core 9 is mapped to NoC node 0
+Core 10 is mapped to NoC node 8
+Core 11 is mapped to NoC node 4
+Core 12 is mapped to NoC node 3
+Core 13 is mapped to NoC node 12
+Core 14 is mapped to NoC node 10
+Core 15 is mapped to NoC node 1
+
+Round 53:
+Current Annealing temperature 0.37571021261363663
+#########
+total delta cost 0.0
+Current cost 1.3722413E7
+Accept ratio 0.00140625
+
+Core 0 is mapped to NoC node 11
+Core 1 is mapped to NoC node 14
+Core 2 is mapped to NoC node 13
+Core 3 is mapped to NoC node 5
+Core 4 is mapped to NoC node 7
+Core 5 is mapped to NoC node 6
+Core 6 is mapped to NoC node 15
+Core 7 is mapped to NoC node 2
+Core 8 is mapped to NoC node 9
+Core 9 is mapped to NoC node 0
+Core 10 is mapped to NoC node 8
+Core 11 is mapped to NoC node 4
+Core 12 is mapped to NoC node 3
+Core 13 is mapped to NoC node 12
+Core 14 is mapped to NoC node 10
+Core 15 is mapped to NoC node 1
+
+Round 54:
+Current Annealing temperature 0.338139191352273
+#########
+total delta cost 0.0
+Current cost 1.3722413E7
+Accept ratio 0.001015625
+
+Core 0 is mapped to NoC node 11
+Core 1 is mapped to NoC node 14
+Core 2 is mapped to NoC node 13
+Core 3 is mapped to NoC node 5
+Core 4 is mapped to NoC node 7
+Core 5 is mapped to NoC node 6
+Core 6 is mapped to NoC node 15
+Core 7 is mapped to NoC node 2
+Core 8 is mapped to NoC node 9
+Core 9 is mapped to NoC node 0
+Core 10 is mapped to NoC node 8
+Core 11 is mapped to NoC node 4
+Core 12 is mapped to NoC node 3
+Core 13 is mapped to NoC node 12
+Core 14 is mapped to NoC node 10
+Core 15 is mapped to NoC node 1
+
+Round 55:
+Current Annealing temperature 0.3043252722170457
+#########
+total delta cost 0.0
+Current cost 1.3722413E7
+Accept ratio 3.125E-4
+
+Core 0 is mapped to NoC node 11
+Core 1 is mapped to NoC node 14
+Core 2 is mapped to NoC node 13
+Core 3 is mapped to NoC node 5
+Core 4 is mapped to NoC node 7
+Core 5 is mapped to NoC node 6
+Core 6 is mapped to NoC node 15
+Core 7 is mapped to NoC node 2
+Core 8 is mapped to NoC node 9
+Core 9 is mapped to NoC node 0
+Core 10 is mapped to NoC node 8
+Core 11 is mapped to NoC node 4
+Core 12 is mapped to NoC node 3
+Core 13 is mapped to NoC node 12
+Core 14 is mapped to NoC node 10
+Core 15 is mapped to NoC node 1
+
+
+Core 0 is mapped to NoC node 11
+Core 1 is mapped to NoC node 14
+Core 2 is mapped to NoC node 13
+Core 3 is mapped to NoC node 5
+Core 4 is mapped to NoC node 7
+Core 5 is mapped to NoC node 6
+Core 6 is mapped to NoC node 15
+Core 7 is mapped to NoC node 2
+Core 8 is mapped to NoC node 9
+Core 9 is mapped to NoC node 0
+Core 10 is mapped to NoC node 8
+Core 11 is mapped to NoC node 4
+Core 12 is mapped to NoC node 3
+Core 13 is mapped to NoC node 12
+Core 14 is mapped to NoC node 10
+Core 15 is mapped to NoC node 1
+
