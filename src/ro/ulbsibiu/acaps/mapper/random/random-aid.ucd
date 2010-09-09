@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<editmodel:ClassDiagramEditModel xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:editmodel="editmodel.xmi" xmlns:options="options.xmi" name="random-aid" foregroundRGB="255,255,255" description="" id="{UMLID=_M-BAwLvfEd-5yacvcrPEqQ,JavaID=ro.ulbsibiu.acaps.mapper.random}" metadata="uml2-1.0" initialized="true" tag="10" key="3230303730363239204D6170706572" Shrink="true">
+  <children xsi:type="editmodel:NotepadEditModel" foregroundRGB="91,91,0" location="295,190" size="296,24" fontInfo="Arial-8-0" note="Only the most significant fields and methods are shown.">
+    <sourceConnections xsi:type="editmodel:IndicationEditModel" autoLocated="true" source="//@children.0" target="//@children.2" targetEnd="//@children.0/@sourceConnections.0/@children.1" sourceEnd="//@children.0/@sourceConnections.0/@children.0" connectionRouterKind="Manual">
+      <children xsi:type="editmodel:AssociationEndEditModel" location="148,0" attachSource="true"/>
+      <children xsi:type="editmodel:AssociationEndEditModel" location="169,137"/>
+    </sourceConnections>
+  </children>
+  <children xsi:type="editmodel:PackageEditModel" name="ro.ulbsibiu.acaps.mapper" location="50,50" size="195,159" description="Java" id="{UMLID=_k0HIoLveEd-5yacvcrPEqQ,JavaID=ro.ulbsibiu.acaps.mapper}" shortName="true">
+    <children xsi:type="editmodel:InterfaceEditModel" targetConnections="//@children.2/@sourceConnections.0" name="Mapper" location="50,50" size="115,79" timstampe="15" stereotype="" id="{UMLID=_pcSiwLvgEd-5yacvcrPEqQ,JavaID=ro.ulbsibiu.acaps.mapper/Mapper}" runTimeClassModel="map()">
+      <children xsi:type="editmodel:CompartmentEditModel"/>
+      <children xsi:type="editmodel:CompartmentEditModel" size="60,18">
+        <children xsi:type="editmodel:MethodEditModel" name="map" size="60,16" id="{UMLID=_pghigLvgEd-5yacvcrPEqQ,JavaID=ro.ulbsibiu.acaps.mapper/Mapper#map()}" isAssociationMemeber="true"/>
+      </children>
+      <children xsi:type="editmodel:CompartmentEditModel"/>
+      <classifierPreferences xsi:type="editmodel:UMLClassDiagramClassifierPreference" showMethodsParameterTypes="true" showMethodsReturnType="true" showMethodsParameterNames="true" attributeSorter="Natural" methodSorter="Natural" innerClassSorter="Natural" showPrivateAttributes="true" showProtectedAttributes="true" showPublicAttributes="true" showPackageAttributes="true" showStaticAttributes="true" showProtectedMethods="true" showPublicMethods="true" showPackageMethods="true" showPrivateMethods="true" showStaticMethods="true" showProtectedInnerClasses="true" showPublicInnerClasses="true" showPackageInnerClasses="true" showPrivateInnerClasses="true" showStaticInnerClasses="true" showMethods="true" showAttributes="true" showLiterals="true" showAttributeParameterType="true" showAttributeJavaStereotype="true" showMethodJavaStereotype="true" showAttributeDefaultValue="true"/>
+    </children>
+    <packagePreferences xsi:type="editmodel:UMLClassDiagramPackagePreference" shortPackageNameFormat="true"/>
+  </children>
+  <children xsi:type="editmodel:ClassEditModel" targetConnections="//@children.0/@sourceConnections.0" name="RandomMapper" location="274,40" size="338,137" timstampe="11" stereotype="" id="{UMLID=_uC9WcLvhEd-5yacvcrPEqQ,JavaID=ro.ulbsibiu.acaps.mapper.random/RandomMapper}" runTimeClassModel="main([Ljava.lang.String;),generateMap(),RandomMapper(Ljava.lang.String;LCollection;),getApcgId(),map(),apcgFile,nodeIds,getCoreIds(),coresToNodes">
+    <children xsi:type="editmodel:CompartmentEditModel">
+      <children xsi:type="editmodel:AttributeEditModel" name="apcgFile" size="69,16" id="{UMLID=_uDceorvhEd-5yacvcrPEqQ}"/>
+    </children>
+    <children xsi:type="editmodel:CompartmentEditModel">
+      <children xsi:type="editmodel:MethodEditModel" name="main" size="115,16" id="{UMLID=_uDzrAbvhEd-5yacvcrPEqQ,JavaID=ro.ulbsibiu.acaps.mapper.random/RandomMapper#main([Ljava.lang.String;)}" isAssociationMemeber="true"/>
+      <children xsi:type="editmodel:MethodEditModel" name="map" size="60,16" id="{UMLID=_uDyc4bvhEd-5yacvcrPEqQ,JavaID=ro.ulbsibiu.acaps.mapper.random/RandomMapper#map()}" isAssociationMemeber="true"/>
+      <children xsi:type="editmodel:MethodEditModel" name="generateMap" size="103,16" id="{UMLID=_uDpS8bvhEd-5yacvcrPEqQ,JavaID=ro.ulbsibiu.acaps.mapper.random/RandomMapper#generateMap()}" isAssociationMemeber="true"/>
+      <children xsi:type="editmodel:MethodEditModel" name="RandomMapper" size="62,16" id="{UMLID=_uDhXILvhEd-5yacvcrPEqQ,JavaID=ro.ulbsibiu.acaps.mapper.random/RandomMapper#RandomMapper(Ljava.lang.String;LCollection;)}" isAssociationMemeber="true"/>
+    </children>
+    <children xsi:type="editmodel:CompartmentEditModel"/>
+    <sourceConnections xsi:type="editmodel:InterfaceRealizationEditModel" size="2,1" autoLocated="true" id="{UMLID=_uDF5ULvhEd-5yacvcrPEqQ}" source="//@children.2" target="//@children.1/@children.0" targetEnd="//@children.2/@sourceConnections.0/@children.2" label="//@children.2/@sourceConnections.0/@children.0" sourceEnd="//@children.2/@sourceConnections.0/@children.1" connectionRouterKind="Manhattan">
+      <children xsi:type="editmodel:WireLabelEditModel" size="0,14" fontInfo="Arial-8-0" anchorKind="MiddlePart"/>
+      <children xsi:type="editmodel:AssociationEndEditModel" location="0,98" attachSource="true"/>
+      <children xsi:type="editmodel:AssociationEndEditModel" location="115,38"/>
+    </sourceConnections>
+    <classifierPreferences xsi:type="editmodel:UMLClassDiagramClassifierPreference" showMethodsParameterTypes="true" showMethodsReturnType="true" showMethodsParameterNames="true" attributeSorter="Natural" methodSorter="Natural" innerClassSorter="Natural" showPrivateAttributes="true" showProtectedAttributes="true" showPublicAttributes="true" showPackageAttributes="true" showStaticAttributes="true" showProtectedMethods="true" showPublicMethods="true" showPackageMethods="true" showPrivateMethods="true" showStaticMethods="true" showProtectedInnerClasses="true" showPublicInnerClasses="true" showPackageInnerClasses="true" showPrivateInnerClasses="true" showStaticInnerClasses="true" showMethods="true" showAttributes="true" showLiterals="true" showAttributeParameterType="true" showAttributeJavaStereotype="true" showMethodJavaStereotype="true" showAttributeDefaultValue="true"/>
+  </children>
+  <diagramOptions xsi:type="options:ClassDiagramOptions" level="4" showScope="InPackage" properties="wireOptions=0"/>
+  <boardSetting snapToGeometry="true" gridEnabled="true" gridSpacing="14,14" gridOrigin="0,0" rulerUnit="cm">
+    <leftRuler/>
+    <topRuler/>
+  </boardSetting>
+  <classDiagramPreferences xsi:type="editmodel:UMLClassDiagramPreference" showMethodsParameterTypes="true" showMethodsReturnType="true" showMethodsParameterNames="true" attributeSorter="Natural" methodSorter="Natural" shortPackageNameFormat="true" showClassStereotype="true" showPackageStereotype="true" innerClassSorter="Natural" showPrivateAttributes="true" showProtectedAttributes="true" showPublicAttributes="true" showPackageAttributes="true" showStaticAttributes="true" showProtectedMethods="true" showPublicMethods="true" showPackageMethods="true" showPrivateMethods="true" showStaticMethods="true" showProtectedInnerClasses="true" showPublicInnerClasses="true" showPackageInnerClasses="true" showPrivateInnerClasses="true" showStaticInnerClasses="true" showInterfaceStereotype="true" showInnerEntity="true" showAttributeParameterType="true" showAttributeJavaStereotype="true" showMethodJavaStereotype="true" showAttributeDefaultValue="true"/>
+</editmodel:ClassDiagramEditModel>

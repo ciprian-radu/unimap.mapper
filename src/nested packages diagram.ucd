@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<editmodel:ClassDiagramEditModel xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:editmodel="editmodel.xmi" xmlns:options="options.xmi" name="nested packages diagram" foregroundRGB="255,255,255" description="" id="{UMLID=_LVrmcLveEd-5yacvcrPEqQ,JavaID=.}" metadata="uml2-1.0" initialized="true" scrolledY="101" tag="10" key="3230303730363239204D6170706572">
+  <children xsi:type="editmodel:PackageEditModel" name="ro" location="50,50" size="408,624" id="{UMLID=_LdTRYLveEd-5yacvcrPEqQ,JavaID=ro}">
+    <children xsi:type="editmodel:PackageEditModel" name="ro.ulbsibiu" location="50,50" size="328,538" id="{UMLID=_LdVGkLveEd-5yacvcrPEqQ,JavaID=ro.ulbsibiu}">
+      <children xsi:type="editmodel:PackageEditModel" name="ro.ulbsibiu.acaps" location="50,50" size="248,452" id="{UMLID=_k0GhkLveEd-5yacvcrPEqQ,JavaID=ro.ulbsibiu.acaps}">
+        <children xsi:type="editmodel:PackageEditModel" name="ro.ulbsibiu.acaps.mapper" location="50,50" size="168,366" id="{UMLID=_k0HIoLveEd-5yacvcrPEqQ,JavaID=ro.ulbsibiu.acaps.mapper}">
+          <children xsi:type="editmodel:PackageEditModel" name="ro.ulbsibiu.acaps.mapper.bb" location="50,270" size="80,60" id="{UMLID=_k0HvsLveEd-5yacvcrPEqQ,JavaID=ro.ulbsibiu.acaps.mapper.bb}">
+            <packagePreferences xsi:type="editmodel:UMLClassDiagramPackagePreference" shortPackageNameFormat="true"/>
+          </children>
+          <children xsi:type="editmodel:PackageEditModel" name="ro.ulbsibiu.acaps.mapper.sa" location="50,160" size="80,60" id="{UMLID=_k0Jk4LveEd-5yacvcrPEqQ,JavaID=ro.ulbsibiu.acaps.mapper.sa}">
+            <packagePreferences xsi:type="editmodel:UMLClassDiagramPackagePreference" shortPackageNameFormat="true"/>
+          </children>
+          <children xsi:type="editmodel:PackageEditModel" name="ro.ulbsibiu.acaps.mapper.random" location="50,50" size="88,60" id="{UMLID=_M-BAwLvfEd-5yacvcrPEqQ,JavaID=ro.ulbsibiu.acaps.mapper.random}">
+            <packagePreferences xsi:type="editmodel:UMLClassDiagramPackagePreference" shortPackageNameFormat="true"/>
+          </children>
+          <packagePreferences xsi:type="editmodel:UMLClassDiagramPackagePreference" shortPackageNameFormat="true"/>
+        </children>
+        <packagePreferences xsi:type="editmodel:UMLClassDiagramPackagePreference" shortPackageNameFormat="true"/>
+      </children>
+      <packagePreferences xsi:type="editmodel:UMLClassDiagramPackagePreference" shortPackageNameFormat="true"/>
+    </children>
+    <packagePreferences xsi:type="editmodel:UMLClassDiagramPackagePreference" shortPackageNameFormat="true"/>
+  </children>
+  <diagramOptions xsi:type="options:ClassDiagramOptions" level="4" properties="wireOptions=0" Nestedpackages="true" NestedpackagesDeep="9"/>
+  <boardSetting snapToGeometry="true" gridEnabled="true" gridSpacing="14,14" gridOrigin="196,196" rulerUnit="cm">
+    <leftRuler/>
+    <topRuler/>
+  </boardSetting>
+  <classDiagramPreferences xsi:type="editmodel:UMLClassDiagramPreference" attributeSorter="Natural" methodSorter="Natural" shortPackageNameFormat="true" showClassStereotype="true" showPackageStereotype="true" innerClassSorter="Natural" showPrivateAttributes="true" showProtectedAttributes="true" showPublicAttributes="true" showPackageAttributes="true" showStaticAttributes="true" showProtectedMethods="true" showPublicMethods="true" showPackageMethods="true" showPrivateMethods="true" showStaticMethods="true" showProtectedInnerClasses="true" showPublicInnerClasses="true" showPackageInnerClasses="true" showPrivateInnerClasses="true" showStaticInnerClasses="true" showInterfaceStereotype="true" showMethods="true" showAttributes="true" showLiterlas="true" showInnerEntity="true"/>
+</editmodel:ClassDiagramEditModel>

@@ -1,4 +1,4 @@
-package ro.ulbsibiu.acaps.mapper;
+package ro.ulbsibiu.acaps.mapper.random;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -22,6 +22,8 @@ import ro.ulbsibiu.acaps.ctg.xml.apcg.ApcgType;
 import ro.ulbsibiu.acaps.ctg.xml.mapping.MapType;
 import ro.ulbsibiu.acaps.ctg.xml.mapping.MappingType;
 import ro.ulbsibiu.acaps.ctg.xml.mapping.ObjectFactory;
+import ro.ulbsibiu.acaps.mapper.Mapper;
+import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
 
 /**
  * This @link{Mapper} maps the cores to nodes in a random fashion.
