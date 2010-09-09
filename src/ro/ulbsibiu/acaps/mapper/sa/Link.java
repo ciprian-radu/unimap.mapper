@@ -12,7 +12,7 @@ public class Link {
 	private int linkId = -1;
 
 	/** bandwidth's link */
-	private double bandwidth = -1;
+	private int bandwidth = -1;
 
 	/** the ID of the tile from which traffic is sent through this link */
 	private int fromTileId;
@@ -28,10 +28,10 @@ public class Link {
 	
 	private int toTileColumn;
 
-	private double cost;
+	private float cost;
 
-	public Link(int linkId, double bandwidth, int fromTileId, int toTileId,
-			double cost) {
+	public Link(int linkId, int bandwidth, int fromTileId, int toTileId,
+			float cost) {
 		super();
 		this.linkId = linkId;
 		this.bandwidth = bandwidth;
@@ -44,7 +44,7 @@ public class Link {
 		this.linkId = linkId;
 	}
 
-	public void setBandwidth(double bandwidth) {
+	public void setBandwidth(int bandwidth) {
 		this.bandwidth = bandwidth;
 	}
 
@@ -52,7 +52,7 @@ public class Link {
 		return linkId;
 	}
 
-	public double getBandwidth() {
+	public int getBandwidth() {
 		return bandwidth;
 	}
 
@@ -104,11 +104,11 @@ public class Link {
 		this.toTileId = toTileId;
 	}
 
-	public double getCost() {
+	public float getCost() {
 		return cost;
 	}
 
-	public void setCost(double cost) {
+	public void setCost(float cost) {
 		this.cost = cost;
 	}
 

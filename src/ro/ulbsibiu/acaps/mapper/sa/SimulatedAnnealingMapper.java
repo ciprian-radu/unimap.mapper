@@ -50,7 +50,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 * how costly is each unit of link overload (a link is overloaded when it
 	 * has to send more bits/s than its bandwidth)
 	 */
-	private final double OVERLOAD_UNIT_COST = 1000000000;
+	private final float OVERLOAD_UNIT_COST = 1000000000;
 
 	/**
 	 * whether or not to build routing table too. When the SA algorithm builds
@@ -226,8 +226,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 		}
 	}
 
-	public void initializeNocTopology(double bandwidth, double switchEBit,
-			double linkEBit) {
+	public void initializeNocTopology(int bandwidth, float switchEBit,
+			float linkEBit) {
 		// initialize nodes
 		for (int i = 0; i < gTile.length; i++) {
 			gTile[i] = new Tile(i, -1, i / gEdgeSize, i % gEdgeSize, switchEBit);
@@ -373,10 +373,12 @@ public class SimulatedAnnealingMapper implements Mapper {
 	}
 
 	private void printCurrentMapping() {
+		System.out.println();
 		for (int i = 0; i < gProcNum; i++) {
-			System.err.println("Core " + gProcess[i].getProcId()
+			System.out.println("Core " + gProcess[i].getProcId()
 					+ " is mapped to NoC node " + gProcess[i].getTileId());
 		}
+		System.out.println();
 	}
 
 	// ways to gen Random Vars with specific distributions
@@ -455,8 +457,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 				accept = false;
 			}
 		}
-		// System.out.println("deltac " + deltac + " temp " + temperature +
-		// " r " + r + " pa " + pa + " accept " + accept);
+//		System.out.println("deltac " + deltac + " temp " + temperature + " r "
+//				+ r + " pa " + pa + " accept " + accept);
 		return accept;
 	}
 
@@ -483,8 +485,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 			int tile2 = tiles[1];
 			double newCost = calculateTotalCost();
 			double deltaCost = newCost - currentCost;
-			// System.out.println("deltaCost " + deltaCost + " newCost " +
-			// newCost + " currentCost " + currentCost);
+//			System.out.println("deltaCost " + deltaCost + " newCost " + newCost
+//					+ " currentCost " + currentCost);
 			if (accept(deltaCost / currentCost * 100, t)) {
 				acceptCount++;
 				totalDeltaCost += deltaCost;
@@ -568,6 +570,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 			System.out.println("total delta cost " + deltaCost);
 			System.out.println("Current cost " + currentCost);
 			System.out.println("Accept ratio " + acceptRatio);
+			
+			printCurrentMapping();
 
 			// OK, if we got here the cost function is working fine. We can
 			// now look at whether we are frozen, or whether we should cool some
@@ -666,19 +670,19 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 * 
 	 * @return the total cost
 	 */
-	private double calculateTotalCost() {
+	private float calculateTotalCost() {
 		// the communication energy part
-		double energyCost = calculateCommunicationEnergy();
-		double overloadCost;
+		float energyCost = calculateCommunicationEnergy();
+		float overloadCost;
 		// now calculate the overloaded BW cost
 		if (!buildRoutingTable) {
 			overloadCost = calculateOverloadWithFixedRouting();
 		} else {
 			overloadCost = calculateOverloadWithAdaptiveRouting();
 		}
-		// System.out.println("energy cost " + energyCost);
-		// System.out.println("overload cost " + overloadCost);
-		// System.out.println("total cost " + (energyCost + overloadCost));
+//		System.out.println("energy cost " + energyCost);
+//		System.out.println("overload cost " + overloadCost);
+//		System.out.println("total cost " + (energyCost + overloadCost));
 		return energyCost + overloadCost;
 	}
 
@@ -687,7 +691,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 * 
 	 * @return the overload
 	 */
-	private double calculateOverloadWithFixedRouting() {
+	private float calculateOverloadWithFixedRouting() {
 		Arrays.fill(linkBandwidthUsage, 0);
 		for (int proc1 = 0; proc1 < gProcNum; proc1++) {
 			for (int proc2 = proc1 + 1; proc2 < gProcNum; proc2++) {
@@ -711,11 +715,11 @@ public class SimulatedAnnealingMapper implements Mapper {
 				}
 			}
 		}
-		double overloadCost = 0;
+		float overloadCost = 0;
 		for (int i = 0; i < gLinkNum; i++) {
 			if (linkBandwidthUsage[i] > gLink[i].getBandwidth())
-				overloadCost = ((double) linkBandwidthUsage[i])
-						/ gLink[i].getBandwidth() - 1.0;
+				overloadCost = ((float) linkBandwidthUsage[i])
+						/ gLink[i].getBandwidth() - 1.0f;
 		}
 		overloadCost *= OVERLOAD_UNIT_COST;
 		return overloadCost;
@@ -726,8 +730,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 * 
 	 * @return the overload
 	 */
-	private double calculateOverloadWithAdaptiveRouting() {
-		double overloadCost = 0.0;
+	private float calculateOverloadWithAdaptiveRouting() {
+		float overloadCost = 0.0f;
 
 		// Clear the link usage
 		for (int i = 0; i < gEdgeSize; i++) {
@@ -750,7 +754,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 		for (int i = 0; i < gEdgeSize; i++) {
 			for (int j = 0; j < gEdgeSize; j++) {
 				for (int k = 0; k < 4; k++) {
-					overloadCost += ((double) synLinkBandwithUsage[i][j][k])
+					overloadCost += ((float) synLinkBandwithUsage[i][j][k])
 							/ gLink[0].getBandwidth() - 1.0;
 				}
 			}
@@ -914,15 +918,15 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 * 
 	 * @return the communication energy
 	 */
-	private double calculateCommunicationEnergy() {
-		double switchEnergy = calculateSwitchEnergy();
-		double linkEnergy = calculateLinkEnergy();
-		double bufferEnergy = calculateBufferEnergy();
+	private float calculateCommunicationEnergy() {
+		float switchEnergy = calculateSwitchEnergy();
+		float linkEnergy = calculateLinkEnergy();
+		float bufferEnergy = calculateBufferEnergy();
 		return switchEnergy + linkEnergy + bufferEnergy;
 	}
 
-	private double calculateSwitchEnergy() {
-		double energy = 0;
+	private float calculateSwitchEnergy() {
+		float energy = 0;
 		for (int src = 0; src < gTileNum; src++) {
 			for (int dst = 0; dst < gTileNum; dst++) {
 				int srcProc = gTile[src].getProcId();
@@ -950,8 +954,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 		return energy;
 	}
 
-	private double calculateLinkEnergy() {
-		double energy = 0;
+	private float calculateLinkEnergy() {
+		float energy = 0;
 		for (int src = 0; src < gTileNum; src++) {
 			for (int dst = 0; dst < gTileNum; dst++) {
 				int srcProc = gTile[src].getProcId();
@@ -970,8 +974,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 		return energy;
 	}
 
-	private double calculateBufferEnergy() {
-		double energy = 0;
+	private float calculateBufferEnergy() {
+		float energy = 0;
 		for (int src = 0; src < gTileNum; src++) {
 			for (int dst = 0; dst < gTileNum; dst++) {
 				int srcProc = gTile[src].getProcId();
@@ -1115,19 +1119,19 @@ public class SimulatedAnnealingMapper implements Mapper {
 		// is not enough to have cores <= tiles)
 		int tiles = 16;
 		int cores = 16;
-		double linkBandwidth = 1000000;
-		double switchEBit = 0.284;
-		double linkEBit = 0.449;
-		double bufReadEBit = 1.056;
-		double burWriteEBit = 2.831;
+		int linkBandwidth = 1000000;
+		float switchEBit = 0.284f;
+		float linkEBit = 0.449f;
+		float bufReadEBit = 1.056f;
+		float burWriteEBit = 2.831f;
 
 		// SA without routing
-//		SimulatedAnnealingMapper saMapper = new SimulatedAnnealingMapper(tiles,
-//				cores);
+		SimulatedAnnealingMapper saMapper = new SimulatedAnnealingMapper(tiles,
+				cores);
 
 		// SA with routing
-		SimulatedAnnealingMapper saMapper = new SimulatedAnnealingMapper(tiles,
-				cores, true, LegalTurnSet.ODD_EVEN, bufReadEBit, burWriteEBit);
+//		SimulatedAnnealingMapper saMapper = new SimulatedAnnealingMapper(tiles,
+//				cores, true, LegalTurnSet.ODD_EVEN, bufReadEBit, burWriteEBit);
 
 		saMapper.initializeCores();
 		saMapper.initializeNocTopology(linkBandwidth, switchEBit, linkEBit);

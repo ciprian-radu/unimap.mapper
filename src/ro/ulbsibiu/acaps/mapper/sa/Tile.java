@@ -37,9 +37,9 @@ public class Tile {
 	 */
 	private int[][] routingTable;
 
-	private double cost;
+	private float cost;
 
-	public Tile(int tileId, int procId, int row, int column, double cost) {
+	public Tile(int tileId, int procId, int row, int column, float cost) {
 		super();
 		this.tileId = tileId;
 		this.procId = procId;
@@ -90,11 +90,11 @@ public class Tile {
 		return routingTable;
 	}
 
-	public double getCost() {
+	public float getCost() {
 		return cost;
 	}
 
-	public void setCost(double cost) {
+	public void setCost(float cost) {
 		this.cost = cost;
 	}
 
