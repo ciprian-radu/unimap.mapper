@@ -1,0 +1,103 @@
+Core 0 is mapped to NoC node 11
+Core 1 is mapped to NoC node 13
+Core 2 is mapped to NoC node 10
+Core 3 is mapped to NoC node 8
+Core 4 is mapped to NoC node 12
+Core 5 is mapped to NoC node 0
+Core 6 is mapped to NoC node 9
+Core 7 is mapped to NoC node 1
+Core 8 is mapped to NoC node 2
+Core 9 is mapped to NoC node 4
+Core 10 is mapped to NoC node 14
+Core 11 is mapped to NoC node 15
+Core 12 is mapped to NoC node 5
+Core 13 is mapped to NoC node 3
+Core 14 is mapped to NoC node 7
+Core 15 is mapped to NoC node 6
+Round 0:
+Current Annealing temperature 100.0
+#########
+total delta cost -9.78770125E8
+Current cost 2.1229874E7
+Accept ratio 0.87828125
+Round 1:
+Current Annealing temperature 90.0
+#########
+total delta cost 412480.0
+Current cost 2.1642354E7
+Accept ratio 0.8746484375
+Round 2:
+Current Annealing temperature 81.0
+#########
+total delta cost 5527472.0
+Current cost 2.7169826E7
+Accept ratio 0.87078125
+Round 3:
+Current Annealing temperature 72.9
+#########
+total delta cost 1897480.0
+Current cost 2.9067306E7
+Accept ratio 0.8651171875
+Round 4:
+Current Annealing temperature 65.61000000000001
+#########
+total delta cost -6847468.0
+Current cost 2.2219838E7
+Accept ratio 0.86078125
+Round 5:
+Current Annealing temperature 59.049000000000014
+#########
+total delta cost 1072506.0
+Current cost 2.3292344E7
+Accept ratio 0.8584765625
+Round 6:
+Current Annealing temperature 53.144100000000016
+#########
+total delta cost 3134988.0
+Current cost 2.6427332E7
+Accept ratio 0.8509765625
+Round 7:
+Current Annealing temperature 47.829690000000014
+#########
+total delta cost -1649978.0
+Current cost 2.4777354E7
+Accept ratio 0.8474609375
+Round 8:
+Current Annealing temperature 43.04672100000001
+#########
+total delta cost -2062486.0
+Current cost 2.2714868E7
+Accept ratio 0.8394921875
+Round 9:
+Current Annealing temperature 38.742048900000015
+#########
+total delta cost -2310004.0
+Current cost 2.0404864E7
+Accept ratio 0.8339453125
+Round 10:
+Current Annealing temperature 34.86784401000001
+#########
+total delta cost 4619960.0
+Current cost 2.5024824E7
+Accept ratio 0.825625
+Round 11:
+Current Annealing temperature 31.381059609000012
+#########
+total delta cost -4454970.0
+Current cost 2.0569854E7
+Accept ratio 0.8248046875
+Round 12:
+Current Annealing temperature 28.242953648100013
+#########
+total delta cost 2062502.0
+Current cost 2.2632356E7
+Accept ratio 0.815234375
+Round 13:
+Current Annealing temperature 25.41865828329001
+#########
+total delta cost 1072480.0
+Current cost 2.3704836E7
+Accept ratio 0.8065625
+Round 14:
+Current Annealing temperature 22.87679245496101
+#####

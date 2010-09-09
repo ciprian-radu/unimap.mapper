@@ -119,13 +119,13 @@ public class BranchAndBoundMapper implements Mapper {
 	 */
 	int[] procMapArray = null;
 
-	static final double MAX_VALUE = Integer.MAX_VALUE - 100;
+	static final float MAX_VALUE = Integer.MAX_VALUE - 100;
 
 	/**
 	 * each newly mapped communication transaction should be less than this
 	 * value. Useful for non-regular region mapping
 	 */
-	static final double MAX_PER_TRAN_COST = MAX_VALUE;
+	static final float MAX_PER_TRAN_COST = MAX_VALUE;
 
 	/**
 	 * @author cipi
@@ -135,7 +135,7 @@ public class BranchAndBoundMapper implements Mapper {
 		EASY, HARD
 	}
 
-	private double minUpperBound;
+	private float minUpperBound;
 
 	private int minUpperBoundHitCount;
 
@@ -143,7 +143,7 @@ public class BranchAndBoundMapper implements Mapper {
 
 	private int previousInsert;
 
-	private double minCost;
+	private float minCost;
 
 	private MappingNode bestMapping;
 
@@ -219,7 +219,7 @@ public class BranchAndBoundMapper implements Mapper {
 		}
 	}
 
-	public void initializeNocTopology(double switchEBit, double linkEBit) {
+	public void initializeNocTopology(float switchEBit, float linkEBit) {
 		// initialize nodes
 		for (int i = 0; i < gTile.length; i++) {
 			gTile[i] = new Tile(i, -1, i / gEdgeSize, i % gEdgeSize, switchEBit);
@@ -385,12 +385,12 @@ public class BranchAndBoundMapper implements Mapper {
 		// if (exist_non_regular_regions()) {
 		// // let's calculate the maximum ebit of sending a bit
 		// // from one tile to its neighboring tile
-		// double max_e = -1;
+		// float max_e = -1;
 		// for (int i = 0; i < gLinkNum; i++) {
 		// if (gLink[i].getCost() > max_e)
 		// max_e = gLink[i].getCost();
 		// }
-		// double eb = max_e;
+		// float eb = max_e;
 		// max_e = -1;
 		// for (int i = 0; i < gTileNum; i++) {
 		// if (gTile[i].getCost() > max_e)
@@ -815,18 +815,18 @@ public class BranchAndBoundMapper implements Mapper {
 		int cores = 16;
 		int linkBandwidth = 1000000;
 		int priorityQueueSize = 2000;
-		double switchEBit = 0.284;
-		double linkEBit = 0.449;
-		double bufReadEBit = 1.056;
-		double burWriteEBit = 2.831;
+		float switchEBit = 0.284f;
+		float linkEBit = 0.449f;
+		float bufReadEBit = 1.056f;
+		float burWriteEBit = 2.831f;
 
 		// Branch and Bound without routing
-//		BranchAndBoundMapper bbMapper = new BranchAndBoundMapper(tiles, cores,
-//				linkBandwidth, priorityQueueSize);
+		BranchAndBoundMapper bbMapper = new BranchAndBoundMapper(tiles, cores,
+				linkBandwidth, priorityQueueSize);
 
 		// Branch and Bound with routing
-		BranchAndBoundMapper bbMapper = new BranchAndBoundMapper(tiles, cores,
-				linkBandwidth, priorityQueueSize, true, LegalTurnSet.ODD_EVEN);
+//		BranchAndBoundMapper bbMapper = new BranchAndBoundMapper(tiles, cores,
+//				linkBandwidth, priorityQueueSize, true, LegalTurnSet.ODD_EVEN);
 
 		bbMapper.initializeCores();
 		bbMapper.initializeNocTopology(switchEBit, linkEBit);

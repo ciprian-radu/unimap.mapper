@@ -31,11 +31,11 @@ class MappingNode {
 
 	private boolean[] tileOccupancyTable;
 
-	double cost;
+	float cost;
 
-	double lowerBound;
+	float lowerBound;
 
-	double upperBound;
+	float upperBound;
 
 	private boolean occupancyTableReady;
 
@@ -382,7 +382,7 @@ class MappingNode {
 	 * This calculates the lower bound cost of the unmapped process nodes in the
 	 * current mapping
 	 */
-	private double LowerBound() {
+	private float LowerBound() {
 		for (int i = 0; i < bbMapper.gTileNum; i++)
 			tileOccupancyTable[i] = false;
 		for (int i = 0; i < stage; i++)
@@ -418,7 +418,7 @@ class MappingNode {
 	 * This calculates the upper bound cost of the this partial mapping in the
 	 * current mapping
 	 */
-	private double UpperBound() {
+	private float UpperBound() {
 		if (!occupancyTableReady) {
 			for (int i = 0; i < bbMapper.gTileNum; i++)
 				tileOccupancyTable[i] = false;
@@ -546,7 +546,7 @@ class MappingNode {
 	 *         smallest partial mapping cost
 	 */
 	int bestCostCandidate() {
-		double minimal = BranchAndBoundMapper.MAX_VALUE;
+		float minimal = BranchAndBoundMapper.MAX_VALUE;
 		for (int i = 0; i < bbMapper.gTileNum; i++)
 			tileOccupancyTable[i] = false;
 		for (int i = 0; i < stage; i++)
