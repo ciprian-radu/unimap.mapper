@@ -77,10 +77,10 @@ public class SimulatedAnnealingMapper implements Mapper {
 	private LegalTurnSet legalTurnSet;
 
 	/** energy consumption per bit read */
-	private double bufReadEBit;
+	private float bufReadEBit;
 
 	/** energy consumption per bit write */
-	private double bufWriteEBit;
+	private float bufWriteEBit;
 
 	/** the number of tiles (nodes) from the NoC */
 	private int gTileNum;
@@ -174,7 +174,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 *            one task associated to it
 	 */
 	public SimulatedAnnealingMapper(int gTileNum, int gProcNum) {
-		this(gTileNum, gProcNum, false, LegalTurnSet.WEST_FIRST, 1.056, 2.831);
+		this(gTileNum, gProcNum, false, LegalTurnSet.WEST_FIRST, 1.056f, 2.831f);
 	}
 
 	/**
@@ -197,7 +197,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 */
 	public SimulatedAnnealingMapper(int gTileNum, int gProcNum,
 			boolean buildRoutingTable, LegalTurnSet legalTurnSet,
-			double bufReadEBit, double bufWriteEBit) {
+			float bufReadEBit, float bufWriteEBit) {
 		this.gTileNum = gTileNum;
 		this.gEdgeSize = (int) Math.sqrt(gTileNum);
 		this.gProcNum = gProcNum;
@@ -366,7 +366,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 		// this maps the cores like NoCMap does
 		int[] coreMap = new int[] { 11, 13, 10, 8, 12, 0, 9, 1, 2, 4, 14, 15,
 				5, 3, 7, 6 };
-		for (int i = 0; i < gTileNum; i++) {
+		for (int i = 0; i < gProcNum; i++) {
 			gProcess[i].setTileId(coreMap[i]);
 			gTile[coreMap[i]].setProcId(i);
 		}
@@ -404,7 +404,9 @@ public class SimulatedAnnealingMapper implements Mapper {
 		if (seed < 0) {
 			seed = -seed;
 		}
-		return (((double) seed) / ((double) M));
+		double u = (((double) seed) / ((double) M));
+//		System.out.println("uniformRandomVariable() = " + u);
+		return u;
 	}
 
 	/**
@@ -416,6 +418,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 
 		u = uniformRandomVariable();
 		m = (int) imin + ((int) Math.floor((double) (imax + 1 - imin) * u));
+//		System.out.println("uniformIntegerRandomVariable(" + imin + ", " + imax
+//				+ ") = " + m);
 		return m;
 	}
 
@@ -487,11 +491,20 @@ public class SimulatedAnnealingMapper implements Mapper {
 			double deltaCost = newCost - currentCost;
 //			System.out.println("deltaCost " + deltaCost + " newCost " + newCost
 //					+ " currentCost " + currentCost);
-			if (accept(deltaCost / currentCost * 100, t)) {
+	        double deltac = deltaCost / currentCost;
+	        // 1.19209e-07 is numeric_limits<float>::epsilon() from C++
+	        if (Math.abs((float)deltac) < 1e-5/*1.19209e-07*/) {
+	            deltac = 0;
+	        } else {
+	            deltac = deltac * 100;
+	        }
+			if (accept(deltac, t)) {
+//				System.out.println("Accepting...");
 				acceptCount++;
 				totalDeltaCost += deltaCost;
 				currentCost = newCost;
 			} else {
+//				System.out.println("Rolling back tiles " + tile1 + " and " + tile2);
 				swapProcesses(tile1, tile2); // roll back
 			}
 			if (m % unit == 0) {
@@ -566,6 +579,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 			System.out.println("Current Annealing temperature " + temp);
 
 			deltaCost = annealAtTemperature(temp);
+			
+//			System.exit(-1);
 
 			System.out.println("total delta cost " + deltaCost);
 			System.out.println("Current cost " + currentCost);
@@ -644,6 +659,10 @@ public class SimulatedAnnealingMapper implements Mapper {
 
 		int p1 = tile1.getProcId();
 		int p2 = tile2.getProcId();
+		
+//		System.out.println("Swapping process " + p1 + " of tile " + t1
+//				+ " with process " + p2 + " of tile " + t2);
+		
 		tile1.setProcId(p2);
 		tile2.setProcId(p1);
 		if (p1 != -1) {
@@ -922,6 +941,9 @@ public class SimulatedAnnealingMapper implements Mapper {
 		float switchEnergy = calculateSwitchEnergy();
 		float linkEnergy = calculateLinkEnergy();
 		float bufferEnergy = calculateBufferEnergy();
+//		System.out.println("switch energy " + switchEnergy);
+//		System.out.println("link energy " + linkEnergy);
+//		System.out.println("buffer energy " + bufferEnergy);
 		return switchEnergy + linkEnergy + bufferEnergy;
 	}
 
@@ -935,18 +957,18 @@ public class SimulatedAnnealingMapper implements Mapper {
 				if (commVol > 0) {
 					energy += gTile[src].getCost() * commVol;
 					Tile currentTile = gTile[src];
-					// System.out.println("adding " + currentTile.getCost()
-					// + " * " + commVol + " (core " + srcProc
-					// + " to core " + dstProc + ") current tile "
-					// + currentTile.getTileId());
+//					 System.out.println("adding " + currentTile.getCost()
+//					 + " * " + commVol + " (core " + srcProc
+//					 + " to core " + dstProc + ") current tile "
+//					 + currentTile.getTileId());
 					while (currentTile.getTileId() != dst) {
 						int linkId = currentTile.getRoutingEntries()[src][dst];
 						currentTile = gTile[gLink[linkId].getToTileId()];
 						energy += currentTile.getCost() * commVol;
-						// System.out.println("adding " + currentTile.getCost()
-						// + " * " + commVol + " (core " + srcProc
-						// + " to core " + dstProc + ") current tile "
-						// + currentTile.getTileId() + " link ID " + linkId);
+//						 System.out.println("adding " + currentTile.getCost()
+//						 + " * " + commVol + " (core " + srcProc
+//						 + " to core " + dstProc + ") current tile "
+//						 + currentTile.getTileId() + " link ID " + linkId);
 					}
 				}
 			}
@@ -1040,6 +1062,61 @@ public class SimulatedAnnealingMapper implements Mapper {
 		return link_id;
 	}
 
+	private boolean verifyBandwidthRequirement() {
+//	    if (!param.link_usage_matrix) 
+//	        build_link_usage_matrix();
+
+	    for (int i=0; i<gLinkNum; i++) 
+	        gLink[i].setUsedBandwidth(0);
+
+	    for (int src=0; src<gTileNum; src++) {
+	        for (int dst=0; dst<gTileNum; dst++) {
+	            if (src == dst)
+	                continue;
+	            int src_proc = gTile[src].getProcId();
+	            int dst_proc = gTile[dst].getProcId();
+	            int comm_load = gProcess[src_proc].getToBandwidthRequirement()[dst_proc];
+	            if (comm_load == 0)
+	                continue;
+	            Tile current_tile = gTile[src];
+	            while (current_tile.getTileId() != dst) {
+	                int link_id = current_tile.routeToLink(src, dst);
+	                Link pL = gLink[link_id];
+	                current_tile = gTile[pL.getToTileId()];
+	                gLink[link_id].setUsedBandwidth(gLink[link_id].getUsedBandwidth() + comm_load);
+	            }
+	        }
+	    }
+	    //check for the overloaded links
+	    int violations = 0;
+	    for (int i=0; i<gLinkNum; i++) {
+	        if (gLink[i].getUsedBandwidth()> gLink[i].getBandwidth()) {
+	        	System.out.println("Link " + i + " is overloaded: " + gLink[i].getUsedBandwidth() + " > "
+	                 + gLink[i].getBandwidth());
+	            violations ++;
+	        }
+	    }
+	    if (violations > 0)
+	        return false;
+	    return true;
+	}
+	
+	public void analyzeIt() {
+	    System.out.print("Verify the communication load of each link...");
+	    if (verifyBandwidthRequirement()) {
+	    	System.out.println("Succeed.");
+	    }
+	    else {
+	    	System.out.println("Fail.");
+	    }
+	    System.out.println("Energy consumption estimation ");
+	    System.out.println("(note that this is not exact numbers, but serve as a relative energy indication) ");
+	    System.out.println("Energy consumed in link is " + calculateLinkEnergy());
+	    System.out.println("Energy consumed in switch is " + calculateSwitchEnergy());
+	    System.out.println("Energy consumed in buffer is " + calculateBufferEnergy());
+	    System.out.println("Total communication energy consumption is " + calculateCommunicationEnergy());
+	}
+	
 	@Override
 	public String map() throws TooFewNocNodesException {
 		if (gTileNum < gProcNum) {
@@ -1115,33 +1192,42 @@ public class SimulatedAnnealingMapper implements Mapper {
 
 	public static void main(String[] args) throws TooFewNocNodesException,
 			IOException {
-		// from the initial random mapping, I think tiles must equal cores (it
-		// is not enough to have cores <= tiles)
-		int tiles = 16;
-		int cores = 16;
-		int linkBandwidth = 1000000;
-		float switchEBit = 0.284f;
-		float linkEBit = 0.449f;
-		float bufReadEBit = 1.056f;
-		float burWriteEBit = 2.831f;
-
-		// SA without routing
-		SimulatedAnnealingMapper saMapper = new SimulatedAnnealingMapper(tiles,
-				cores);
-
-		// SA with routing
-//		SimulatedAnnealingMapper saMapper = new SimulatedAnnealingMapper(tiles,
-//				cores, true, LegalTurnSet.ODD_EVEN, bufReadEBit, burWriteEBit);
-
-		saMapper.initializeCores();
-		saMapper.initializeNocTopology(linkBandwidth, switchEBit, linkEBit);
-
-		saMapper.parseTrafficConfig(
-				"telecom-mocsyn-16tile-selectedpe.traffic.config",
-				linkBandwidth);
-
-		saMapper.map();
-
-		saMapper.printCurrentMapping();
+		if (args == null || args.length < 1) {
+			System.err.println("usage: SimulatedAnnealingMapper {routing}");
+			System.err.println("(where routing may be true or false; any other value means false)");
+		} else {
+			// from the initial random mapping, I think tiles must equal cores (it
+			// is not enough to have cores <= tiles)
+			int tiles = 16;
+			int cores = 16;
+			int linkBandwidth = 1000000;
+			float switchEBit = 0.284f;
+			float linkEBit = 0.449f;
+			float bufReadEBit = 1.056f;
+			float burWriteEBit = 2.831f;
+	
+			SimulatedAnnealingMapper saMapper;
+			if ("true".equals(args[0])) {
+				// SA with routing
+				saMapper = new SimulatedAnnealingMapper(tiles, cores, true,
+						LegalTurnSet.ODD_EVEN, bufReadEBit, burWriteEBit);
+			} else {
+				// SA without routing
+				saMapper = new SimulatedAnnealingMapper(tiles, cores);
+			}
+			saMapper.initializeCores();
+			saMapper.initializeNocTopology(linkBandwidth, switchEBit, linkEBit);
+			
+	
+			saMapper.parseTrafficConfig(
+					"telecom-mocsyn-16tile-selectedpe.traffic.config",
+					linkBandwidth);
+	
+			saMapper.map();
+	
+			saMapper.printCurrentMapping();
+			
+			saMapper.analyzeIt();
+		}
 	}
 }

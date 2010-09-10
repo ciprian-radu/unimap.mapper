@@ -359,7 +359,7 @@ public class BranchAndBoundMapper implements Mapper {
 		// this maps the cores like NoCMap does
 		int[] coreMap = new int[] { 11, 13, 10, 8, 12, 0, 9, 1, 2, 4, 14, 15,
 				5, 3, 7, 6 };
-		for (int i = 0; i < gTileNum; i++) {
+		for (int i = 0; i < gProcNum; i++) {
 			gProcess[i].setTileId(coreMap[i]);
 			gTile[coreMap[i]].setProcId(i);
 		}
