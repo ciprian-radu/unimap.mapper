@@ -29,6 +29,8 @@ public class Link {
 	private int toTileColumn;
 
 	private float cost;
+	
+	private int usedBandwidth = 0;
 
 	public Link(int linkId, int bandwidth, int fromTileId, int toTileId,
 			float cost) {
@@ -110,6 +112,14 @@ public class Link {
 
 	public void setCost(float cost) {
 		this.cost = cost;
+	}
+
+	public int getUsedBandwidth() {
+		return usedBandwidth;
+	}
+
+	public void setUsedBandwidth(int usedBandwidth) {
+		this.usedBandwidth = usedBandwidth;
 	}
 
 }
