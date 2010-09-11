@@ -773,8 +773,10 @@ public class SimulatedAnnealingMapper implements Mapper {
 		for (int i = 0; i < gEdgeSize; i++) {
 			for (int j = 0; j < gEdgeSize; j++) {
 				for (int k = 0; k < 4; k++) {
-					overloadCost += ((float) synLinkBandwithUsage[i][j][k])
-							/ gLink[0].getBandwidth() - 1.0;
+					if (synLinkBandwithUsage[i][j][k] > gLink[0].getBandwidth()) {
+						overloadCost += ((float) synLinkBandwithUsage[i][j][k])
+								/ gLink[0].getBandwidth() - 1.0;
+					}
 				}
 			}
 		}
@@ -1063,8 +1065,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 	}
 
 	private boolean verifyBandwidthRequirement() {
-//	    if (!param.link_usage_matrix) 
-//	        build_link_usage_matrix();
+		generateLinkUsageList();
 
 	    for (int i=0; i<gLinkNum; i++) 
 	        gLink[i].setUsedBandwidth(0);
