@@ -221,15 +221,15 @@ class MappingNode {
 
 		stage++;
 
-		if (!calcBound)
-			return;
-
-		tileOccupancyTable = new boolean[bbMapper.gTileNum];
-		for (int i = 0; i < bbMapper.gTileNum; i++)
-			tileOccupancyTable[i] = false;
-
-		lowerBound = LowerBound();
-		upperBound = UpperBound();
+		if (calcBound) {
+			tileOccupancyTable = new boolean[bbMapper.gTileNum];
+			for (int i = 0; i < bbMapper.gTileNum; i++)
+				tileOccupancyTable[i] = false;
+	
+			lowerBound = LowerBound();
+			upperBound = UpperBound();
+		}
+		
 	}
 
 	/**
@@ -691,6 +691,10 @@ class MappingNode {
 				return false;
 		}
 		return true;
+	}
+
+	public boolean isIllegal() {
+		return illegal;
 	}
 
 	int getStage() {
