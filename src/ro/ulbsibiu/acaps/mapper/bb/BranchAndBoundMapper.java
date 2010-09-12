@@ -11,9 +11,7 @@ import ro.ulbsibiu.acaps.mapper.Mapper;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
 import ro.ulbsibiu.acaps.mapper.sa.Link;
 import ro.ulbsibiu.acaps.mapper.sa.Process;
-import ro.ulbsibiu.acaps.mapper.sa.SimulatedAnnealingMapper;
 import ro.ulbsibiu.acaps.mapper.sa.Tile;
-import ro.ulbsibiu.acaps.mapper.sa.SimulatedAnnealingMapper.LegalTurnSet;
 
 /**
  * Branch-and-Bound algorithm for Network-on-Chip (NoC) application mapping. The
@@ -103,7 +101,11 @@ public class BranchAndBoundMapper implements Mapper {
 	RoutingEffort routingEffort;
 
 	int linkBandwidth;
-
+	
+	private float bufReadEBit;
+	
+	private float bufWriteEBit;
+	
 	/** the size of the Priority Queue */
 	private int priorityQueueSize;
 
@@ -159,11 +161,15 @@ public class BranchAndBoundMapper implements Mapper {
 	 *            the bandwidth of each network link
 	 * @param priorityQueueSize
 	 *            the size of the priority queue
+	 * @param bufReadEBit
+	 *            energy consumption per bit read
+	 * @param bufWriteEBit
+	 *            energy consumption per bit write
 	 */
 	public BranchAndBoundMapper(int gTileNum, int gProcNum, int linkBandwidth,
-			int priorityQueueSize) {
+			int priorityQueueSize, float bufReadEBit, float bufWriteEBit) {
 		this(gTileNum, gProcNum, linkBandwidth, priorityQueueSize, false,
-				LegalTurnSet.WEST_FIRST);
+				LegalTurnSet.WEST_FIRST, bufReadEBit, bufWriteEBit);
 	}
 
 	/**
@@ -190,7 +196,7 @@ public class BranchAndBoundMapper implements Mapper {
 	 */
 	public BranchAndBoundMapper(int gTileNum, int gProcNum, int linkBandwidth,
 			int priorityQueueSize, boolean buildRoutingTable,
-			LegalTurnSet legalTurnSet) {
+			LegalTurnSet legalTurnSet, float bufReadEBit, float bufWriteEBit) {
 		this.gTileNum = gTileNum;
 		this.gEdgeSize = (int) Math.sqrt(gTileNum);
 		this.gProcNum = gProcNum;
@@ -201,6 +207,8 @@ public class BranchAndBoundMapper implements Mapper {
 		this.gLinkNum = 2 * (gEdgeSize - 1) * gEdgeSize * 2;
 		this.buildRoutingTable = buildRoutingTable;
 		this.legalTurnSet = legalTurnSet;
+		this.bufReadEBit = bufReadEBit;
+		this.bufWriteEBit = bufWriteEBit;
 
 		gTile = new Tile[gTileNum];
 
@@ -533,9 +541,9 @@ public class BranchAndBoundMapper implements Mapper {
 			for (int i = 0; i < size; i++) {
 				for (int j = 0; j <= i; j++) {
 					MappingNode pNode = new MappingNode(this, i * gEdgeSize + j);
-					// if (!pNode.isIllegal()) {
-					Q.insert(pNode);
-					// }
+					if (!pNode.isIllegal()) {
+						Q.insert(pNode);
+					}
 				}
 			}
 		} else {
@@ -545,9 +553,9 @@ public class BranchAndBoundMapper implements Mapper {
 			for (int i = 0; i < size; i++) {
 				for (int j = 0; j < gEdgeSize; j++) {
 					MappingNode pNode = new MappingNode(this, i * gEdgeSize + j);
-					// if (!pNode.isIllegal()) {
-					Q.insert(pNode);
-					// }
+					if (!pNode.isIllegal()) {
+						Q.insert(pNode);
+					}
 				}
 			}
 		}
@@ -593,7 +601,7 @@ public class BranchAndBoundMapper implements Mapper {
 				MappingNode child = new MappingNode(this, pNode, i, true);
 				if (child.lowerBound > minUpperBound || child.cost > minCost
 						|| (child.cost == minCost && bestMapping != null)
-				/* || child.isIllegal() */) {
+						|| child.isIllegal()) {
 					;
 				} else {
 					if (child.upperBound < minUpperBound) {
@@ -807,37 +815,189 @@ public class BranchAndBoundMapper implements Mapper {
 		br.close();
 	}
 
+	private boolean verifyBandwidthRequirement() {
+		generateLinkUsageList();
+
+	    for (int i=0; i<gLinkNum; i++) 
+	        gLink[i].setUsedBandwidth(0);
+
+	    for (int src=0; src<gTileNum; src++) {
+	        for (int dst=0; dst<gTileNum; dst++) {
+	            if (src == dst)
+	                continue;
+	            int src_proc = gTile[src].getProcId();
+	            int dst_proc = gTile[dst].getProcId();
+	            int comm_load = gProcess[src_proc].getToBandwidthRequirement()[dst_proc];
+	            if (comm_load == 0)
+	                continue;
+	            Tile current_tile = gTile[src];
+	            while (current_tile.getTileId() != dst) {
+	                int link_id = current_tile.routeToLink(src, dst);
+	                Link pL = gLink[link_id];
+	                current_tile = gTile[pL.getToTileId()];
+	                gLink[link_id].setUsedBandwidth(gLink[link_id].getUsedBandwidth() + comm_load);
+	            }
+	        }
+	    }
+	    //check for the overloaded links
+	    int violations = 0;
+	    for (int i=0; i<gLinkNum; i++) {
+	        if (gLink[i].getUsedBandwidth()> gLink[i].getBandwidth()) {
+	        	System.out.println("Link " + i + " is overloaded: " + gLink[i].getUsedBandwidth() + " > "
+	                 + gLink[i].getBandwidth());
+	            violations ++;
+	        }
+	    }
+	    if (violations > 0)
+	        return false;
+	    return true;
+	}
+	
+	/**
+	 * Computes the communication energy
+	 * 
+	 * @return the communication energy
+	 */
+	private float calculateCommunicationEnergy() {
+		float switchEnergy = calculateSwitchEnergy();
+		float linkEnergy = calculateLinkEnergy();
+		float bufferEnergy = calculateBufferEnergy();
+//		System.out.println("switch energy " + switchEnergy);
+//		System.out.println("link energy " + linkEnergy);
+//		System.out.println("buffer energy " + bufferEnergy);
+		return switchEnergy + linkEnergy + bufferEnergy;
+	}
+	
+	private float calculateSwitchEnergy() {
+		float energy = 0;
+		for (int src = 0; src < gTileNum; src++) {
+			for (int dst = 0; dst < gTileNum; dst++) {
+				int srcProc = gTile[src].getProcId();
+				int dstProc = gTile[dst].getProcId();
+				int commVol = gProcess[srcProc].getToCommunication()[dstProc];
+				if (commVol > 0) {
+					energy += gTile[src].getCost() * commVol;
+					Tile currentTile = gTile[src];
+//					 System.out.println("adding " + currentTile.getCost()
+//					 + " * " + commVol + " (core " + srcProc
+//					 + " to core " + dstProc + ") current tile "
+//					 + currentTile.getTileId());
+					while (currentTile.getTileId() != dst) {
+						int linkId = currentTile.getRoutingEntries()[src][dst];
+						currentTile = gTile[gLink[linkId].getToTileId()];
+						energy += currentTile.getCost() * commVol;
+//						 System.out.println("adding " + currentTile.getCost()
+//						 + " * " + commVol + " (core " + srcProc
+//						 + " to core " + dstProc + ") current tile "
+//						 + currentTile.getTileId() + " link ID " + linkId);
+					}
+				}
+			}
+		}
+		return energy;
+	}
+
+	private float calculateLinkEnergy() {
+		float energy = 0;
+		for (int src = 0; src < gTileNum; src++) {
+			for (int dst = 0; dst < gTileNum; dst++) {
+				int srcProc = gTile[src].getProcId();
+				int dstProc = gTile[dst].getProcId();
+				int commVol = gProcess[srcProc].getToCommunication()[dstProc];
+				if (commVol > 0) {
+					Tile currentTile = gTile[src];
+					while (currentTile.getTileId() != dst) {
+						int linkId = currentTile.getRoutingEntries()[src][dst];
+						energy += gLink[linkId].getCost() * commVol;
+						currentTile = gTile[gLink[linkId].getToTileId()];
+					}
+				}
+			}
+		}
+		return energy;
+	}
+
+	private float calculateBufferEnergy() {
+		float energy = 0;
+		for (int src = 0; src < gTileNum; src++) {
+			for (int dst = 0; dst < gTileNum; dst++) {
+				int srcProc = gTile[src].getProcId();
+				int dstProc = gTile[dst].getProcId();
+				int commVol = gProcess[srcProc].getToCommunication()[dstProc];
+				if (commVol > 0) {
+					Tile currentTile = gTile[src];
+					while (currentTile.getTileId() != dst) {
+						int linkId = currentTile.getRoutingEntries()[src][dst];
+						energy += (bufReadEBit + bufWriteEBit) * commVol;
+						currentTile = gTile[gLink[linkId].getToTileId()];
+					}
+					energy += bufWriteEBit * commVol;
+				}
+			}
+		}
+		return energy;
+	}
+	
+	public void analyzeIt() {
+	    System.out.print("Verify the communication load of each link...");
+	    if (verifyBandwidthRequirement()) {
+	    	System.out.println("Succeed.");
+	    }
+	    else {
+	    	System.out.println("Fail.");
+	    }
+	    System.out.println("Energy consumption estimation ");
+	    System.out.println("(note that this is not exact numbers, but serve as a relative energy indication) ");
+	    System.out.println("Energy consumed in link is " + calculateLinkEnergy());
+	    System.out.println("Energy consumed in switch is " + calculateSwitchEnergy());
+	    System.out.println("Energy consumed in buffer is " + calculateBufferEnergy());
+	    System.out.println("Total communication energy consumption is " + calculateCommunicationEnergy());
+	}
+	
 	public static void main(String[] args) throws TooFewNocNodesException,
 			IOException {
-		// from the initial random mapping, I think tiles must equal cores (it
-		// is not enough to have cores <= tiles)
-		int tiles = 16;
-		int cores = 16;
-		int linkBandwidth = 1000000;
-		int priorityQueueSize = 2000;
-		float switchEBit = 0.284f;
-		float linkEBit = 0.449f;
-		float bufReadEBit = 1.056f;
-		float burWriteEBit = 2.831f;
+		if (args == null || args.length < 1) {
+			System.err.println("usage: BranchAndBoundMapper {routing}");
+			System.err
+					.println("(where routing may be true or false; any other value means false)");
+		} else {
+			// from the initial random mapping, I think tiles must equal cores
+			// (it
+			// is not enough to have cores <= tiles)
+			int tiles = 16;
+			int cores = 16;
+			int linkBandwidth = 1000000;
+			int priorityQueueSize = 2000;
+			float switchEBit = 0.284f;
+			float linkEBit = 0.449f;
+			float bufReadEBit = 1.056f;
+			float bufWriteEBit = 2.831f;
 
-		// Branch and Bound without routing
-		BranchAndBoundMapper bbMapper = new BranchAndBoundMapper(tiles, cores,
-				linkBandwidth, priorityQueueSize);
+			BranchAndBoundMapper bbMapper;
+			if ("true".equals(args[0])) {
+				// Branch and Bound with routing
+				bbMapper = new BranchAndBoundMapper(tiles, cores,
+						linkBandwidth, priorityQueueSize, true,
+						LegalTurnSet.ODD_EVEN, bufReadEBit, bufWriteEBit);
+			} else {
+				// Branch and Bound without routing
+				bbMapper = new BranchAndBoundMapper(tiles, cores,
+						linkBandwidth, priorityQueueSize, bufReadEBit, bufWriteEBit);
+			}
 
-		// Branch and Bound with routing
-//		BranchAndBoundMapper bbMapper = new BranchAndBoundMapper(tiles, cores,
-//				linkBandwidth, priorityQueueSize, true, LegalTurnSet.ODD_EVEN);
+			bbMapper.initializeCores();
+			bbMapper.initializeNocTopology(switchEBit, linkEBit);
 
-		bbMapper.initializeCores();
-		bbMapper.initializeNocTopology(switchEBit, linkEBit);
+			bbMapper.parseTrafficConfig(
+					"telecom-mocsyn-16tile-selectedpe.traffic.config",
+					linkBandwidth);
 
-		bbMapper.parseTrafficConfig(
-				"telecom-mocsyn-16tile-selectedpe.traffic.config",
-				linkBandwidth);
+			bbMapper.map();
 
-		bbMapper.map();
-
-		bbMapper.printCurrentMapping();
+			bbMapper.printCurrentMapping();
+			
+			bbMapper.analyzeIt();
+		}
 	}
 
 }
