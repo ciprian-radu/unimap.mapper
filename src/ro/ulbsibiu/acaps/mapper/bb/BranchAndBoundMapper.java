@@ -12,6 +12,7 @@ import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
 import ro.ulbsibiu.acaps.mapper.sa.Link;
 import ro.ulbsibiu.acaps.mapper.sa.Process;
 import ro.ulbsibiu.acaps.mapper.sa.Tile;
+import ro.ulbsibiu.acaps.mapper.util.MathUtils;
 
 /**
  * Branch-and-Bound algorithm for Network-on-Chip (NoC) application mapping. The
@@ -375,7 +376,7 @@ public class BranchAndBoundMapper implements Mapper {
 
 	private void printCurrentMapping() {
 		for (int i = 0; i < gProcNum; i++) {
-			System.err.println("Core " + gProcess[i].getProcId()
+			System.out.println("Core " + gProcess[i].getProcId()
 					+ " is mapped to NoC node " + gProcess[i].getTileId());
 		}
 	}
@@ -578,6 +579,7 @@ public class BranchAndBoundMapper implements Mapper {
 			 **********************************************************************/
 			if (Q.length() < priorityQueueSize) {
 				insertAll(pNode, Q);
+//				System.exit(-1);
 				continue;
 			} else {
 				selectiveInsert(pNode, Q);
@@ -593,18 +595,27 @@ public class BranchAndBoundMapper implements Mapper {
 	}
 
 	private void insertAll(MappingNode pNode, PriorityQueue Q) {
-		if (pNode.upperBound == minUpperBound && minUpperBound < MAX_VALUE
-				&& minUpperBoundHitCount <= minHitThreshold)
+//		System.out.println("insertAll cnt " + MappingNode.cnt
+//				+ " queue length " + Q.length() + " previous insert "
+//				+ previousInsert + " minUpperBound " + minUpperBound);
+		if (MathUtils.approximatelyEqual(pNode.upperBound, minUpperBound)
+				&& MathUtils.definitelyLessThan(minUpperBound, MAX_VALUE)
+				&& minUpperBoundHitCount <= minHitThreshold) {
 			insertAllFlag = true;
+		}
 		for (int i = previousInsert; i < gTileNum; i++) {
+//			System.out.println("Node expandable at " + i + " " + pNode.isExpandable(i));
 			if (pNode.isExpandable(i)) {
 				MappingNode child = new MappingNode(this, pNode, i, true);
-				if (child.lowerBound > minUpperBound || child.cost > minCost
-						|| (child.cost == minCost && bestMapping != null)
+				if (MathUtils.definitelyGreaterThan(child.lowerBound, minUpperBound)
+						|| MathUtils.definitelyGreaterThan(child.cost, minCost)
+						|| (MathUtils.approximatelyEqual(child.cost, minCost) && bestMapping != null)
 						|| child.isIllegal()) {
 					;
 				} else {
-					if (child.upperBound < minUpperBound) {
+//					System.out.println("Child upper upper bound is "
+//							+ child.upperBound);
+					if (MathUtils.definitelyLessThan(child.upperBound, minUpperBound)) {
 						minUpperBound = child.upperBound;
 						System.out
 								.println("Current minimum cost upper bound is "
@@ -614,10 +625,10 @@ public class BranchAndBoundMapper implements Mapper {
 						// some new stuff here: we keep the mapping with
 						// min upperBound
 						if (buildRoutingTable) {
-							if (child.upperBound < minCost) {
+							if (MathUtils.definitelyLessThan(child.upperBound, minCost)) {
 								bestMapping = new MappingNode(this, child);
 								minCost = child.upperBound;
-							} else if (child.upperBound < minUpperBound
+							} else if (MathUtils.definitelyLessThan(child.upperBound, minUpperBound)
 									&& bestMapping != null)
 								bestMapping = new MappingNode(this, child);
 						}
@@ -626,10 +637,10 @@ public class BranchAndBoundMapper implements Mapper {
 						minCost = child.cost;
 						if (child.stage < gProcNum)
 							minCost = child.upperBound;
-						if (minCost < minUpperBound)
+						if (MathUtils.definitelyLessThan(minCost, minUpperBound))
 							minUpperBound = minCost;
-						System.out
-								.println("Current minimum cost is " + minCost);
+//						System.out
+//								.println("Current minimum cost is " + minCost);
 						bestMapping = child;
 					} else {
 						Q.insert(child);
@@ -644,8 +655,9 @@ public class BranchAndBoundMapper implements Mapper {
 	}
 
 	private void selectiveInsert(MappingNode pNode, PriorityQueue Q) {
-		if ((Math.abs(pNode.upperBound - minUpperBound) == 0.01)
-				&& minUpperBound < MAX_VALUE
+//		System.out.println("selectiveInsert " + MappingNode.cnt + " " + Q.length());
+		if ((MathUtils.approximatelyEqual(Math.abs(pNode.upperBound - minUpperBound), 0.01f))
+				&& MathUtils.definitelyLessThan(minUpperBound, MAX_VALUE)
 				&& minUpperBoundHitCount <= minHitThreshold) {
 			minUpperBoundHitCount++;
 			insertAll(pNode, Q);
@@ -657,20 +669,21 @@ public class BranchAndBoundMapper implements Mapper {
 		// also generated
 		int index = pNode.bestCostCandidate();
 		MappingNode child = new MappingNode(this, pNode, index, true);
-		if (child.lowerBound > minUpperBound || child.cost > minCost
-				|| (child.cost == minCost && bestMapping != null))
+		if (MathUtils.definitelyGreaterThan(child.lowerBound, minUpperBound)
+				|| MathUtils.definitelyGreaterThan(child.cost, minCost)
+				|| (MathUtils.approximatelyEqual(child.cost, minCost) && bestMapping != null))
 			return;
 		else {
-			if (child.upperBound < minUpperBound - 0.01) {
+			if (MathUtils.definitelyLessThan(child.upperBound, minUpperBound - 0.01f)) {
 				// In this case, we should also insert other children
 				insertAllFlag = true;
 				insertAll(pNode, Q);
 			}
-			if (child.stage == gProcNum || child.lowerBound == child.upperBound) {
+			if (child.stage == gProcNum || MathUtils.approximatelyEqual(child.lowerBound, child.upperBound)) {
 				minCost = child.cost;
 				if (child.stage < gProcNum)
 					minCost = child.upperBound;
-				if (minCost < minUpperBound)
+				if (MathUtils.definitelyLessThan(minCost, minUpperBound))
 					minUpperBound = minCost;
 				System.out.println("Current minimum cost is " + minCost);
 				bestMapping = child;
@@ -678,7 +691,8 @@ public class BranchAndBoundMapper implements Mapper {
 				Q.insert(child);
 		}
 
-		if (pNode.upperBound > minUpperBound || pNode.upperBound == MAX_VALUE) {
+		if (MathUtils.definitelyGreaterThan(pNode.upperBound, minUpperBound)
+				|| MathUtils.approximatelyEqual(pNode.upperBound, MAX_VALUE)) {
 			return;
 		}
 
@@ -694,23 +708,25 @@ public class BranchAndBoundMapper implements Mapper {
 			System.exit(-1);
 		}
 		child = new MappingNode(this, pNode, index, true);
-		if (child.lowerBound > minUpperBound || child.cost > minCost)
+		if (MathUtils.definitelyGreaterThan(child.lowerBound, minUpperBound)
+				|| MathUtils.definitelyGreaterThan(child.cost, minCost))
 			return;
 		else {
-			if (child.upperBound < minUpperBound) {
+			if (MathUtils.definitelyLessThan(child.upperBound, minUpperBound)) {
 				minUpperBound = child.upperBound;
 				System.out.println("Current minimum cost upper bound is "
 						+ minUpperBound);
 				minUpperBoundHitCount = 0;
 			}
-			if (child.stage == gProcNum || child.lowerBound == child.upperBound) {
-				if (minCost == child.cost && bestMapping != null)
+			if (child.stage == gProcNum
+					|| MathUtils.approximatelyEqual(child.lowerBound, child.upperBound)) {
+				if (MathUtils.approximatelyEqual(minCost, child.cost) && bestMapping != null)
 					return;
 				else {
 					minCost = child.cost;
 					if (child.stage < gProcNum)
 						minCost = child.upperBound;
-					if (minCost < minUpperBound)
+					if (MathUtils.definitelyLessThan(minCost, minUpperBound))
 						minUpperBound = minCost;
 					System.out.println("Current minimum cost is " + minCost);
 					bestMapping = child;
