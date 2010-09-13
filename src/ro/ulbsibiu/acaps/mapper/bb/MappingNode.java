@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import ro.ulbsibiu.acaps.mapper.bb.BranchAndBoundMapper.RoutingEffort;
+import ro.ulbsibiu.acaps.mapper.util.MathUtils;
 
 /**
  * Represents a node from the search tree of the Branch-and-Bound algorithm
@@ -427,6 +428,7 @@ class MappingNode {
 		}
 
 		greedyMapping();
+//		System.out.println("Initial upper bound is " + cost);
 		upperBound = cost;
 
 		illegalChildMapping = false;
@@ -435,11 +437,13 @@ class MappingNode {
 			createBandwidthTempMemory();
 			if (!routeTraffics(stage, bbMapper.gProcNum - 1, false, true)) {
 				illegalChildMapping = true;
+//				System.out.println("Upper bound is the max value " + BranchAndBoundMapper.MAX_VALUE);
 				upperBound = BranchAndBoundMapper.MAX_VALUE;
 				return upperBound;
 			}
 		} else if (!fixedVerifyBandwidthUsage()) {
 			illegalChildMapping = true;
+//			System.out.println("Upper bound is the max value " + BranchAndBoundMapper.MAX_VALUE);
 			upperBound = BranchAndBoundMapper.MAX_VALUE;
 			return upperBound;
 		}
@@ -448,6 +452,12 @@ class MappingNode {
 			int tile1 = mappingSequency[i];
 			for (int j = stage; j < bbMapper.gProcNum; j++) {
 				int tile2 = mappingSequency[j];
+//				System.out.println("Adding to the upper bound "
+//						+ bbMapper.procMatrix[i][j]
+//						* bbMapper.archMatrix[tile1][tile2] + "(procMatrix["
+//						+ i + "][" + j + "] = " + bbMapper.procMatrix[i][j]
+//						+ " archMatrix[" + tile1 + "][" + tile2 + "] = "
+//						+ bbMapper.archMatrix[tile1][tile2] + ")");
 				upperBound += bbMapper.procMatrix[i][j]
 						* bbMapper.archMatrix[tile1][tile2];
 			}
@@ -456,10 +466,17 @@ class MappingNode {
 			int tile1 = mappingSequency[i];
 			for (int j = i + 1; j < bbMapper.gProcNum; j++) {
 				int tile2 = mappingSequency[j];
+//				System.out.println("Adding to the upper bound "
+//						+ bbMapper.procMatrix[i][j]
+//						* bbMapper.archMatrix[tile1][tile2] + "(procMatrix["
+//						+ i + "][" + j + "] = " + bbMapper.procMatrix[i][j]
+//						+ " archMatrix[" + tile1 + "][" + tile2 + "] = "
+//						+ bbMapper.archMatrix[tile1][tile2] + ")");
 				upperBound += bbMapper.procMatrix[i][j]
 						* bbMapper.archMatrix[tile1][tile2];
 			}
 		}
+//		System.out.println("Upper bound is " + upperBound);
 		return upperBound;
 	}
 
@@ -562,10 +579,11 @@ class MappingNode {
 				int tile2 = mappingSequency[i];
 				additionalCost += bbMapper.procMatrix[i][stage]
 						* bbMapper.archMatrix[tile1][tile2];
-				if (additionalCost >= minimal)
+				if (MathUtils.definitelyGreaterThan(additionalCost, minimal)
+						|| MathUtils.approximatelyEqual(additionalCost, minimal))
 					break;
 			}
-			if (additionalCost < minimal)
+			if (MathUtils.definitelyLessThan(additionalCost, minimal))
 				minimal = additionalCost;
 			index = tileId;
 		}
@@ -594,7 +612,7 @@ class MappingNode {
 				continue;
 			if (tileOccupancyTable[i])
 				continue;
-			if (bbMapper.archMatrix[tileId][i] < min)
+			if (MathUtils.definitelyLessThan(bbMapper.archMatrix[tileId][i], min))
 				min = bbMapper.archMatrix[tileId][i];
 		}
 		return min;
@@ -612,7 +630,7 @@ class MappingNode {
 			for (int j = i + 1; j < bbMapper.gTileNum; j++) {
 				if (tileOccupancyTable[j])
 					continue;
-				if (bbMapper.archMatrix[i][j] < min)
+				if (MathUtils.definitelyLessThan(bbMapper.archMatrix[i][j], min))
 					min = bbMapper.archMatrix[i][j];
 			}
 		}
@@ -665,21 +683,27 @@ class MappingNode {
 		float minDist = 10000;
 		int bestId = -1;
 		for (int i = 0; i < bbMapper.gTileNum; i++) {
+//			System.out.println("tileOccupancyTable[" + i + "] = " + tileOccupancyTable[i]);
 			if (tileOccupancyTable[i])
 				continue;
 			if (goodRow < 0) {
 				bestId = i;
+//				System.out.println("bestId " + bestId);
 				break;
 			}
 			int row = i / bbMapper.gEdgeSize;
 			int col = i % bbMapper.gEdgeSize;
 			float dist = Math.abs(goodRow - row) + Math.abs(goodCol - col);
-			if (dist < minDist) {
+			// Note that we use machine epsilon to perform the following
+			// comparison between the float numbers
+			if (MathUtils.definitelyLessThan(dist, minDist)) {
+//				System.out.println("bestId " + i + " dist " + dist + " (old) minDist " + minDist);
 				minDist = dist;
 				bestId = i;
 			}
 		}
 		mappingSequency[procId] = bestId;
+//		System.out.println("mappingSequency[" + procId + "] = " + bestId + "(goodRow " + goodRow + " goodCol " + goodCol + ")");
 		tileOccupancyTable[bestId] = true;
 	}
 
@@ -815,7 +839,7 @@ class MappingNode {
 			return adaptivity;
 		}
 
-		int[][][] bandwidthUusage = rSynLinkBandwidthUsage;
+		int[][][] bandwidthUsage = rSynLinkBandwidthUsage;
 
 		adaptivity = 1;
 		int row = bbMapper.gTile[srcTile].getRow();
@@ -837,11 +861,11 @@ class MappingNode {
 				else {
 					int direction1 = (row < bbMapper.gTile[dstTile].getRow()) ? BranchAndBoundMapper.NORTH
 							: BranchAndBoundMapper.SOUTH;
-					if (bandwidthUusage[row][col][direction1] + bandwidth < bbMapper.linkBandwidth
-							&& bandwidthUusage[row][col][BranchAndBoundMapper.EAST]
+					if (bandwidthUsage[row][col][direction1] + bandwidth < bbMapper.linkBandwidth
+							&& bandwidthUsage[row][col][BranchAndBoundMapper.EAST]
 									+ bandwidth < bbMapper.linkBandwidth)
 						return 1;
-					direction = (bandwidthUusage[row][col][direction1] < bandwidthUusage[row][col][BranchAndBoundMapper.EAST]) ? direction1
+					direction = (bandwidthUsage[row][col][direction1] < bandwidthUsage[row][col][BranchAndBoundMapper.EAST]) ? direction1
 							: BranchAndBoundMapper.EAST;
 				}
 			}
@@ -872,12 +896,12 @@ class MappingNode {
 							else if (direction2 == -1)
 								direction = direction1;
 							else {// we have two choices
-								if (bandwidthUusage[row][col][direction1]
+								if (bandwidthUsage[row][col][direction1]
 										+ bandwidth < bbMapper.linkBandwidth
-										&& bandwidthUusage[row][col][direction2]
+										&& bandwidthUsage[row][col][direction2]
 												+ bandwidth < bbMapper.linkBandwidth)
 									return 1;
-								direction = (bandwidthUusage[row][col][direction1] < bandwidthUusage[row][col][direction2]) ? direction1
+								direction = (bandwidthUsage[row][col][direction1] < bandwidthUsage[row][col][direction2]) ? direction1
 										: direction2;
 							}
 						}
@@ -887,12 +911,12 @@ class MappingNode {
 						else {
 							int direction1 = (e1 > 0) ? BranchAndBoundMapper.NORTH
 									: BranchAndBoundMapper.SOUTH;
-							if (bandwidthUusage[row][col][direction1]
+							if (bandwidthUsage[row][col][direction1]
 									+ bandwidth < bbMapper.linkBandwidth
-									&& bandwidthUusage[row][col][BranchAndBoundMapper.WEST]
+									&& bandwidthUsage[row][col][BranchAndBoundMapper.WEST]
 											+ bandwidth < bbMapper.linkBandwidth)
 								return 1;
-							direction = (bandwidthUusage[row][col][BranchAndBoundMapper.WEST] < bandwidthUusage[row][col][direction1]) ? BranchAndBoundMapper.WEST
+							direction = (bandwidthUsage[row][col][BranchAndBoundMapper.WEST] < bandwidthUsage[row][col][direction1]) ? BranchAndBoundMapper.WEST
 									: direction1;
 						}
 					}

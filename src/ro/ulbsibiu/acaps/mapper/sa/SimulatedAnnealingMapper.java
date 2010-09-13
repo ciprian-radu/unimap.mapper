@@ -11,6 +11,7 @@ import java.util.Random;
 
 import ro.ulbsibiu.acaps.mapper.Mapper;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
+import ro.ulbsibiu.acaps.mapper.util.MathUtils;
 
 /**
  * Simulated Annealing algorithm for Network-on-Chip (NoC) application mapping.
@@ -445,17 +446,19 @@ public class SimulatedAnnealingMapper implements Mapper {
 		boolean accept = false;
 		double r = -1;
 		// annealing accept criterion
-		if (deltac == 0) {
+		if (MathUtils.approximatelyEqual((float) deltac, 0)) {
 			// accept it, but record the number of zero cost acceptance
 			zeroCostAcceptance++;
 		}
 
-		if (deltac <= 0) {
+		if (MathUtils.definitelyLessThan((float) deltac, 0)
+				|| MathUtils.approximatelyEqual((float) deltac, 0)) {
 			accept = true;
 		} else {
 			pa = Math.exp((double) (-deltac) / temperature);
 			r = uniformRandomVariable();
-			if (r <= pa) {
+			if (MathUtils.definitelyLessThan((float) r, (float)pa)
+					|| MathUtils.approximatelyEqual((float) r, (float)pa)) {
 				accept = true;
 			} else {
 				accept = false;
@@ -492,8 +495,9 @@ public class SimulatedAnnealingMapper implements Mapper {
 //			System.out.println("deltaCost " + deltaCost + " newCost " + newCost
 //					+ " currentCost " + currentCost);
 	        double deltac = deltaCost / currentCost;
-	        // 1.19209e-07 is numeric_limits<float>::epsilon() from C++
-	        if (Math.abs((float)deltac) < 1e-5/*1.19209e-07*/) {
+			// Note that we use machine epsilon to perform the following
+			// comparison between the float numbers
+	        if (MathUtils.approximatelyEqual((float)deltac, 0)) {
 	            deltac = 0;
 	        } else {
 	            deltac = deltac * 100;
@@ -603,8 +607,11 @@ public class SimulatedAnnealingMapper implements Mapper {
 			if (tol2 < 0)
 				tol2 = -tol2;
 
-			if (tol3 < TOLERANCE && tol2 < TOLERANCE && tempCount > TEMPS
-					&& (acceptRatio < MINACCEPT || needStop)) {
+			if (MathUtils.definitelyLessThan((float) tol3, TOLERANCE)
+					&& MathUtils.definitelyLessThan((float) tol3, TOLERANCE)
+					&& tempCount > TEMPS
+					&& (MathUtils.definitelyLessThan((float) acceptRatio,
+							(float) MINACCEPT) || needStop)) {
 				done = true;
 			} else {
 				// save the relevant info to test for frozen after the NEXT
