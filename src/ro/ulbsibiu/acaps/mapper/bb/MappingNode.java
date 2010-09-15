@@ -18,6 +18,9 @@ class MappingNode {
 
 	/** the Branch-and-Bound mapper */
 	private BranchAndBoundMapper bbMapper;
+	
+	/** the unique identifier of this node */
+	private int id;
 
 	/** It is an illegal node if it violates the spec constructor will init this */
 	private boolean illegal;
@@ -26,7 +29,7 @@ class MappingNode {
 	static int cnt;
 
 	/** How many processes have been mapped */
-	int stage;
+	private int stage;
 
 	private int[] mappingSequency;
 
@@ -94,6 +97,9 @@ class MappingNode {
 			final MappingNode parent, int tileId, boolean calcBound) {
 		assert bbMapper != null;
 		this.bbMapper = bbMapper;
+		id = cnt;
+//		System.out.println("Creating mapping node with ID " + id
+//				+ ", having parent " + parent.id + " (tileId " + tileId + ")");
 
 		illegal = false;
 
@@ -169,7 +175,8 @@ class MappingNode {
 			float thisTranCost = bbMapper.procMatrix[i][stage];
 			thisTranCost = thisTranCost * bbMapper.archMatrix[tile1][tile2];
 			cost += thisTranCost;
-			if (thisTranCost > BranchAndBoundMapper.MAX_PER_TRAN_COST) {
+			if (MathUtils.definitelyGreaterThan(thisTranCost,
+					BranchAndBoundMapper.MAX_PER_TRAN_COST)) {
 				illegal = true;
 				return;
 			}
@@ -245,6 +252,8 @@ class MappingNode {
 	public MappingNode(final BranchAndBoundMapper bbMapper, int tileId) {
 		assert bbMapper != null;
 		this.bbMapper = bbMapper;
+		id = cnt;
+//		System.out.println("Creating mapping node with ID " + id + " (tileId " + tileId + ")");
 
 		illegal = false;
 		tileOccupancyTable = null;
@@ -331,6 +340,9 @@ class MappingNode {
 			final MappingNode origin) {
 		assert bbMapper != null;
 		this.bbMapper = bbMapper;
+		id = cnt;
+//		System.out.println("Creating mapping node with ID " + id
+//				+ ", as copy of node " + origin.id);
 
 		tileOccupancyTable = null;
 		mappingSequency = null;
@@ -412,6 +424,7 @@ class MappingNode {
 				vol += bbMapper.procMatrix[i][j];
 		}
 		lowerBound += vol * lowestUnmappedUnitCost();
+//		System.out.println("Lower bound " + lowerBound);
 		return lowerBound;
 	}
 
@@ -476,7 +489,7 @@ class MappingNode {
 						* bbMapper.archMatrix[tile1][tile2];
 			}
 		}
-//		System.out.println("Upper bound is " + upperBound);
+//		System.out.println("Upper bound " + upperBound);
 		return upperBound;
 	}
 
@@ -683,10 +696,10 @@ class MappingNode {
 		float minDist = 10000;
 		int bestId = -1;
 		for (int i = 0; i < bbMapper.gTileNum; i++) {
-//			System.out.println("tileOccupancyTable[" + i + "] = " + tileOccupancyTable[i]);
+//			System.out.println("tileOccupancyTable[" + i + "] = " + (tileOccupancyTable[i] ? "1" : "0"));
 			if (tileOccupancyTable[i])
 				continue;
-			if (goodRow < 0) {
+			if (MathUtils.definitelyLessThan(goodRow, 0)) {
 				bestId = i;
 //				System.out.println("bestId " + bestId);
 				break;
@@ -723,6 +736,13 @@ class MappingNode {
 
 	int getStage() {
 		return stage;
+	}
+	
+	/**
+	 * @return the unique identifier of this node
+	 */
+	public int getId() {
+		return id;
 	}
 
 	private void createBandwidthTempMemory() {

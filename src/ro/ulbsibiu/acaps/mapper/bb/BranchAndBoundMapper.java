@@ -567,7 +567,8 @@ public class BranchAndBoundMapper implements Mapper {
 
 		while (!Q.empty()) {
 			MappingNode pNode = Q.next();
-			if (pNode.cost > minCost || pNode.lowerBound > minUpperBound) {
+			if (MathUtils.definitelyGreaterThan(pNode.cost, minCost)
+					|| MathUtils.definitelyGreaterThan(pNode.lowerBound, minUpperBound)) {
 				continue;
 			}
 
@@ -633,20 +634,21 @@ public class BranchAndBoundMapper implements Mapper {
 								bestMapping = new MappingNode(this, child);
 						}
 					}
-					if (child.stage == gProcNum) {
+					if (child.getStage() == gProcNum) {
 						minCost = child.cost;
-						if (child.stage < gProcNum)
+						if (child.getStage() < gProcNum)
 							minCost = child.upperBound;
 						if (MathUtils.definitelyLessThan(minCost, minUpperBound))
 							minUpperBound = minCost;
-//						System.out
-//								.println("Current minimum cost is " + minCost);
+						System.out
+								.println("Current minimum cost is " + minCost);
 						bestMapping = child;
 					} else {
 						Q.insert(child);
 						if (Q.length() >= priorityQueueSize && !insertAllFlag) {
 							previousInsert = i;
 							selectiveInsert(pNode, Q);
+							return;
 						}
 					}
 				}
@@ -661,6 +663,7 @@ public class BranchAndBoundMapper implements Mapper {
 				&& minUpperBoundHitCount <= minHitThreshold) {
 			minUpperBoundHitCount++;
 			insertAll(pNode, Q);
+			return;
 		}
 		// In this case, we only select one child which has the
 		// smallest partial cost. However, if the node is currently
@@ -678,10 +681,11 @@ public class BranchAndBoundMapper implements Mapper {
 				// In this case, we should also insert other children
 				insertAllFlag = true;
 				insertAll(pNode, Q);
+				return;
 			}
-			if (child.stage == gProcNum || MathUtils.approximatelyEqual(child.lowerBound, child.upperBound)) {
+			if (child.getStage() == gProcNum || MathUtils.approximatelyEqual(child.lowerBound, child.upperBound)) {
 				minCost = child.cost;
-				if (child.stage < gProcNum)
+				if (child.getStage() < gProcNum)
 					minCost = child.upperBound;
 				if (MathUtils.definitelyLessThan(minCost, minUpperBound))
 					minUpperBound = minCost;
@@ -718,13 +722,13 @@ public class BranchAndBoundMapper implements Mapper {
 						+ minUpperBound);
 				minUpperBoundHitCount = 0;
 			}
-			if (child.stage == gProcNum
+			if (child.getStage() == gProcNum
 					|| MathUtils.approximatelyEqual(child.lowerBound, child.upperBound)) {
 				if (MathUtils.approximatelyEqual(minCost, child.cost) && bestMapping != null)
 					return;
 				else {
 					minCost = child.cost;
-					if (child.stage < gProcNum)
+					if (child.getStage() < gProcNum)
 						minCost = child.upperBound;
 					if (MathUtils.definitelyLessThan(minCost, minUpperBound))
 						minUpperBound = minCost;
@@ -858,7 +862,7 @@ public class BranchAndBoundMapper implements Mapper {
 	    //check for the overloaded links
 	    int violations = 0;
 	    for (int i=0; i<gLinkNum; i++) {
-	        if (gLink[i].getUsedBandwidth()> gLink[i].getBandwidth()) {
+	        if (gLink[i].getUsedBandwidth() > gLink[i].getBandwidth()) {
 	        	System.out.println("Link " + i + " is overloaded: " + gLink[i].getUsedBandwidth() + " > "
 	                 + gLink[i].getBandwidth());
 	            violations ++;
