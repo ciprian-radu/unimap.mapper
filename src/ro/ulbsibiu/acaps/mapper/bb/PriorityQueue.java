@@ -1,5 +1,7 @@
 package ro.ulbsibiu.acaps.mapper.bb;
 
+import ro.ulbsibiu.acaps.mapper.util.MathUtils;
+
 /**
  * The Priority Queue used with the Branch-and-Bound algorithm. It is used for
  * prioritizing the mapping nodes.
@@ -60,6 +62,7 @@ class PriorityQueue {
 	public void insert(MappingNode node) {
 		// here we should insert the node at the position which
 		// is decided by the cost of the node
+//		System.out.println("Inserting node " + node.getId());
 		if (length == 0) {
 			head = node;
 			node.next = null;
@@ -68,9 +71,8 @@ class PriorityQueue {
 		}
 		MappingNode parentNode = null;
 		MappingNode curNode = head;
-		int i = 0;
-		for (i = 0; i < length; i++) {
-			if (curNode.cost > node.cost) {
+		for (int i = 0; i < length; i++) {
+			if (MathUtils.definitelyGreaterThan(curNode.cost, node.cost)) {
 				break;
 			}
 			parentNode = curNode;
@@ -100,6 +102,7 @@ class PriorityQueue {
 		MappingNode oldHead = head;
 		head = oldHead.next;
 		length--;
+//		System.out.println("Removing node " + oldHead.getId());
 		return oldHead;
 	}
 
