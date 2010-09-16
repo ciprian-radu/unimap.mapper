@@ -104,10 +104,10 @@ public class SimulatedAnnealingMapper implements Mapper {
 	private int gLinkNum;
 
 	/** the tiles from the Network-on-Chip (NoC) */
-	private Tile[] gTile;
+	private Node[] gTile;
 
 	/** the processes (tasks, cores) */
-	private Process[] gProcess;
+	private Core[] gProcess;
 
 	/** the communication channels from the NoC */
 	private Link[] gLink;
@@ -210,16 +210,16 @@ public class SimulatedAnnealingMapper implements Mapper {
 		this.bufReadEBit = bufReadEBit;
 		this.bufWriteEBit = bufWriteEBit;
 
-		gTile = new Tile[gTileNum];
+		gTile = new Node[gTileNum];
 
-		gProcess = new Process[gProcNum];
+		gProcess = new Core[gProcNum];
 
 		gLink = new Link[gLinkNum];
 	}
 
 	public void initializeCores() {
 		for (int i = 0; i < gProcess.length; i++) {
-			gProcess[i] = new Process(i, -1);
+			gProcess[i] = new Core(i, -1);
 			gProcess[i].setFromCommunication(new int[gTileNum]);
 			gProcess[i].setToCommunication(new int[gTileNum]);
 			gProcess[i].setFromBandwidthRequirement(new int[gTileNum]);
@@ -231,7 +231,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 			float linkEBit) {
 		// initialize nodes
 		for (int i = 0; i < gTile.length; i++) {
-			gTile[i] = new Tile(i, -1, i / gEdgeSize, i % gEdgeSize, switchEBit);
+			gTile[i] = new Node(i, -1, i / gEdgeSize, i % gEdgeSize, switchEBit);
 		}
 		// initialize links
 		for (int i = 0; i < gLink.length; i++) {
@@ -277,25 +277,25 @@ public class SimulatedAnnealingMapper implements Mapper {
 			int toTileId = toTileRow * gEdgeSize + toTileColumn;
 
 			gLink[i] = new Link(i, bandwidth, fromTileId, toTileId, linkEBit);
-			gLink[i].setFromTileRow(fromTileRow);
-			gLink[i].setFromTileColumn(fromTileColumn);
-			gLink[i].setToTileRow(toTileRow);
-			gLink[i].setToTileColumn(toTileColumn);
+			gLink[i].setFromNodeRow(fromTileRow);
+			gLink[i].setFromNodeColumn(fromTileColumn);
+			gLink[i].setToNodeRow(toTileRow);
+			gLink[i].setToNodeColumn(toTileColumn);
 		}
 		// attach the links to the NoC nodes
 		for (int i = 0; i < gTileNum; i++) {
 			for (int j = 0; j < gLink.length; j++) {
-				if (gLink[j].getFromTileRow() == gTile[i].getRow()
-						&& gLink[j].getFromTileColumn() == gTile[i].getColumn()) {
+				if (gLink[j].getFromNodeRow() == gTile[i].getRow()
+						&& gLink[j].getFromNodeColumn() == gTile[i].getColumn()) {
 					gTile[i].addOutLink(gLink[j].getLinkId());
 				}
 				if (gLink[j].getToTileRow() == gTile[i].getRow()
-						&& gLink[j].getToTileColumn() == gTile[i].getColumn()) {
+						&& gLink[j].getToNodeColumn() == gTile[i].getColumn()) {
 					gTile[i].addInLink(gLink[j].getLinkId());
 				}
 			}
-			assert gTile[i].getInLinkList().size() > 0;
-			assert gTile[i].getOutLinkList().size() > 0;
+			assert gTile[i].getInLinks().size() > 0;
+			assert gTile[i].getOutLinks().size() > 0;
 		}
 		// for each router generate a routing table provided by the XY routing
 		// protocol
@@ -319,7 +319,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 					if (srcId == dstId) {
 						continue;
 					}
-					Tile currentTile = gTile[srcId];
+					Node currentTile = gTile[srcId];
 					while (currentTile.getTileId() != dstId) {
 						int linkId = currentTile.routeToLink(srcId, dstId);
 						Link link = gLink[linkId];
@@ -357,11 +357,11 @@ public class SimulatedAnnealingMapper implements Mapper {
 		Random rand = new Random();
 		for (int i = 0; i < gTileNum; i++) {
 			int k = Math.abs(rand.nextInt()) % gTileNum;
-			while (gTile[k].getProcId() != -1) {
+			while (gTile[k].getCoreId() != -1) {
 				k = Math.abs(rand.nextInt()) % gTileNum;
 			}
-			gProcess[i].setTileId(k);
-			gTile[k].setProcId(i);
+			gProcess[i].setNodeId(k);
+			gTile[k].setCoreId(i);
 		}
 
 		// // this maps the cores like NoCMap does
@@ -376,8 +376,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 	private void printCurrentMapping() {
 		System.out.println();
 		for (int i = 0; i < gProcNum; i++) {
-			System.out.println("Core " + gProcess[i].getProcId()
-					+ " is mapped to NoC node " + gProcess[i].getTileId());
+			System.out.println("Core " + gProcess[i].getCoreId()
+					+ " is mapped to NoC node " + gProcess[i].getNodeId());
 		}
 		System.out.println();
 	}
@@ -664,33 +664,33 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 *            the ID of the second tile
 	 */
 	private void swapProcesses(int t1, int t2) {
-		Tile tile1 = gTile[t1];
-		Tile tile2 = gTile[t2];
+		Node tile1 = gTile[t1];
+		Node tile2 = gTile[t2];
 		assert tile1 != null;
 		assert tile2 != null;
 
-		int p1 = tile1.getProcId();
-		int p2 = tile2.getProcId();
+		int p1 = tile1.getCoreId();
+		int p2 = tile2.getCoreId();
 		
 //		System.out.println("Swapping process " + p1 + " of tile " + t1
 //				+ " with process " + p2 + " of tile " + t2);
 		
-		tile1.setProcId(p2);
-		tile2.setProcId(p1);
+		tile1.setCoreId(p2);
+		tile2.setCoreId(p1);
 		if (p1 != -1) {
-			Process process = gProcess[p1];
+			Core process = gProcess[p1];
 			if (process == null) {
-				process = new Process(p1, t2);
+				process = new Core(p1, t2);
 			} else {
-				process.setTileId(t2);
+				process.setNodeId(t2);
 			}
 		}
 		if (p2 != -1) {
-			Process process = gProcess[p2];
+			Core process = gProcess[p2];
 			if (process == null) {
-				process = new Process(p2, t1);
+				process = new Core(p2, t1);
 			} else {
-				process.setTileId(t1);
+				process.setNodeId(t1);
 			}
 		}
 	}
@@ -727,8 +727,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 		for (int proc1 = 0; proc1 < gProcNum; proc1++) {
 			for (int proc2 = proc1 + 1; proc2 < gProcNum; proc2++) {
 				if (gProcess[proc1].getToBandwidthRequirement()[proc2] > 0) {
-					int tile1 = gProcess[proc1].getTileId();
-					int tile2 = gProcess[proc2].getTileId();
+					int tile1 = gProcess[proc1].getNodeId();
+					int tile2 = gProcess[proc2].getNodeId();
 					for (int i = 0; i < linkUsageList[tile1][tile2].size(); i++) {
 						int linkId = linkUsageList[tile1][tile2].get(i);
 						linkBandwidthUsage[linkId] += gProcess[proc1]
@@ -736,8 +736,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 					}
 				}
 				if (gProcess[proc1].getFromBandwidthRequirement()[proc2] > 0) {
-					int tile1 = gProcess[proc1].getTileId();
-					int tile2 = gProcess[proc2].getTileId();
+					int tile1 = gProcess[proc1].getNodeId();
+					int tile2 = gProcess[proc2].getNodeId();
 					for (int i = 0; i < linkUsageList[tile1][tile2].size(); i++) {
 						int linkId = linkUsageList[tile2][tile1].get(i);
 						linkBandwidthUsage[linkId] += gProcess[proc1]
@@ -774,8 +774,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 
 		for (int src = 0; src < gProcNum; src++) {
 			for (int dst = 0; dst < gProcNum; dst++) {
-				int tile1 = gProcess[src].getTileId();
-				int tile2 = gProcess[dst].getTileId();
+				int tile1 = gProcess[src].getNodeId();
+				int tile2 = gProcess[dst].getNodeId();
 				if (gProcess[src].getToBandwidthRequirement()[dst] > 0) {
 					routeTraffic(tile1, tile2,
 							gProcess[src].getToBandwidthRequirement()[dst]);
@@ -985,12 +985,12 @@ public class SimulatedAnnealingMapper implements Mapper {
 		float energy = 0;
 		for (int src = 0; src < gTileNum; src++) {
 			for (int dst = 0; dst < gTileNum; dst++) {
-				int srcProc = gTile[src].getProcId();
-				int dstProc = gTile[dst].getProcId();
+				int srcProc = gTile[src].getCoreId();
+				int dstProc = gTile[dst].getCoreId();
 				int commVol = gProcess[srcProc].getToCommunication()[dstProc];
 				if (commVol > 0) {
 					energy += gTile[src].getCost() * commVol;
-					Tile currentTile = gTile[src];
+					Node currentTile = gTile[src];
 //					 System.out.println("adding " + currentTile.getCost()
 //					 + " * " + commVol + " (core " + srcProc
 //					 + " to core " + dstProc + ") current tile "
@@ -1014,11 +1014,11 @@ public class SimulatedAnnealingMapper implements Mapper {
 		float energy = 0;
 		for (int src = 0; src < gTileNum; src++) {
 			for (int dst = 0; dst < gTileNum; dst++) {
-				int srcProc = gTile[src].getProcId();
-				int dstProc = gTile[dst].getProcId();
+				int srcProc = gTile[src].getCoreId();
+				int dstProc = gTile[dst].getCoreId();
 				int commVol = gProcess[srcProc].getToCommunication()[dstProc];
 				if (commVol > 0) {
-					Tile currentTile = gTile[src];
+					Node currentTile = gTile[src];
 					while (currentTile.getTileId() != dst) {
 						int linkId = currentTile.getRoutingEntries()[src][dst];
 						energy += gLink[linkId].getCost() * commVol;
@@ -1034,11 +1034,11 @@ public class SimulatedAnnealingMapper implements Mapper {
 		float energy = 0;
 		for (int src = 0; src < gTileNum; src++) {
 			for (int dst = 0; dst < gTileNum; dst++) {
-				int srcProc = gTile[src].getProcId();
-				int dstProc = gTile[dst].getProcId();
+				int srcProc = gTile[src].getCoreId();
+				int dstProc = gTile[dst].getCoreId();
 				int commVol = gProcess[srcProc].getToCommunication()[dstProc];
 				if (commVol > 0) {
-					Tile currentTile = gTile[src];
+					Node currentTile = gTile[src];
 					while (currentTile.getTileId() != dst) {
 						int linkId = currentTile.getRoutingEntries()[src][dst];
 						energy += (bufReadEBit + bufWriteEBit) * commVol;
@@ -1083,8 +1083,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 		}
 		int linkId;
 		for (linkId = 0; linkId < gLinkNum; linkId++) {
-			if (gTile[gLink[linkId].getFromTileId()].getRow() == origRow
-					&& gTile[gLink[linkId].getFromTileId()].getColumn() == origColumn
+			if (gTile[gLink[linkId].getFromNodeId()].getRow() == origRow
+					&& gTile[gLink[linkId].getFromNodeId()].getColumn() == origColumn
 					&& gTile[gLink[linkId].getToTileId()].getRow() == row
 					&& gTile[gLink[linkId].getToTileId()].getColumn() == column)
 				break;
@@ -1108,13 +1108,13 @@ public class SimulatedAnnealingMapper implements Mapper {
 	            if (src == dst) {
 	                continue;
 	            }
-	            int srcProc = gTile[src].getProcId();
-	            int dstProc = gTile[dst].getProcId();
+	            int srcProc = gTile[src].getCoreId();
+	            int dstProc = gTile[dst].getCoreId();
 	            int commLoad = gProcess[srcProc].getToBandwidthRequirement()[dstProc];
 	            if (commLoad == 0) {
 	                continue;
 	            }
-	            Tile currentTile = gTile[src];
+	            Node currentTile = gTile[src];
 	            while (currentTile.getTileId() != dst) {
 	                int linkId = currentTile.routeToLink(src, dst);
 	                Link link = gLink[linkId];
