@@ -6,9 +6,11 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import ro.ulbsibiu.acaps.mapper.Mapper;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
+import ro.ulbsibiu.acaps.mapper.bb.MappingNode.RoutingEffort;
 import ro.ulbsibiu.acaps.mapper.sa.Link;
 import ro.ulbsibiu.acaps.mapper.sa.Process;
 import ro.ulbsibiu.acaps.mapper.sa.Tile;
@@ -23,12 +25,12 @@ import ro.ulbsibiu.acaps.mapper.util.MathUtils;
  * Note that currently, this algorithm works only with N x N 2D mesh NoCs
  * </p>
  * 
+ * @see MappingNode
+ * 
  * @author cipi
  * 
  */
 public class BranchAndBoundMapper implements Mapper {
-
-	// private static final int DUMMY_VOL = Integer.MAX_VALUE / 100;
 
 	static final int NORTH = 0;
 
@@ -99,21 +101,38 @@ public class BranchAndBoundMapper implements Mapper {
 	 */
 	LegalTurnSet legalTurnSet;
 
+	/**
+	 * the routing effort
+	 * 
+	 * @see RoutingEffort
+	 */
 	RoutingEffort routingEffort;
 
+	/** the link bandwidth */
 	int linkBandwidth;
 	
+	/** the energy consumption per bit read */
 	private float bufReadEBit;
 	
+	/** the energy consumption per bit write */
 	private float bufWriteEBit;
 	
 	/** the size of the Priority Queue */
 	private int priorityQueueSize;
 
+	/** minimum hit threshold */
 	private int minHitThreshold;
 
+	/**
+	 * the processes matrix holds the sum of the communication volumes from two
+	 * processes (both ways)
+	 */
 	int[][] procMatrix = null;
 
+	/**
+	 * the NoC architecture's matrix holds the energy required to transfer data
+	 * from one node to another
+	 */
 	float[][] archMatrix = null;
 
 	/**
@@ -130,24 +149,20 @@ public class BranchAndBoundMapper implements Mapper {
 	 */
 	static final float MAX_PER_TRAN_COST = MAX_VALUE;
 
-	/**
-	 * @author cipi
-	 * 
-	 */
-	public enum RoutingEffort {
-		EASY, HARD
-	}
-
+	/** the minimum upper bound */
 	private float minUpperBound;
 
+	/** counts how many times the upper bound was computed */
 	private int minUpperBoundHitCount;
 
 	private boolean insertAllFlag;
 
 	private int previousInsert;
 
+	/** the current minimum cost of the mapping */
 	private float minCost;
 
+	/** the best mapping */
 	private MappingNode bestMapping;
 
 	/**
@@ -355,23 +370,23 @@ public class BranchAndBoundMapper implements Mapper {
 	}
 
 	private void mapCoresToNocNodesRandomly() {
-		// Random rand = new Random();
-		// for (int i = 0; i < gTileNum; i++) {
-		// int k = Math.abs(rand.nextInt()) % gTileNum;
-		// while (gTile[k].getProcId() != -1) {
-		// k = Math.abs(rand.nextInt()) % gTileNum;
-		// }
-		// gProcess[i].setTileId(k);
-		// gTile[k].setProcId(i);
-		// }
-
-		// this maps the cores like NoCMap does
-		int[] coreMap = new int[] { 11, 13, 10, 8, 12, 0, 9, 1, 2, 4, 14, 15,
-				5, 3, 7, 6 };
-		for (int i = 0; i < gProcNum; i++) {
-			gProcess[i].setTileId(coreMap[i]);
-			gTile[coreMap[i]].setProcId(i);
+		Random rand = new Random();
+		for (int i = 0; i < gTileNum; i++) {
+			int k = Math.abs(rand.nextInt()) % gTileNum;
+			while (gTile[k].getProcId() != -1) {
+				k = Math.abs(rand.nextInt()) % gTileNum;
+			}
+			gProcess[i].setTileId(k);
+			gTile[k].setProcId(i);
 		}
+
+		// // this maps the cores like NoCMap does
+		// int[] coreMap = new int[] { 11, 13, 10, 8, 12, 0, 9, 1, 2, 4, 14, 15,
+		// 5, 3, 7, 6 };
+		// for (int i = 0; i < gProcNum; i++) {
+		// gProcess[i].setTileId(coreMap[i]);
+		// gTile[coreMap[i]].setProcId(i);
+		// }
 	}
 
 	private void printCurrentMapping() {
@@ -446,9 +461,9 @@ public class BranchAndBoundMapper implements Mapper {
 				energy += currentTile.getCost();
 				while (currentTile.getTileId() != dst) {
 					int linkId = currentTile.routeToLink(src, dst);
-					Link pL = gLink[linkId];
-					energy += pL.getCost();
-					currentTile = gTile[pL.getToTileId()];
+					Link link = gLink[linkId];
+					energy += link.getCost();
+					currentTile = gTile[link.getToTileId()];
 					energy += currentTile.getCost();
 				}
 				archMatrix[src][dst] = energy;
@@ -482,7 +497,7 @@ public class BranchAndBoundMapper implements Mapper {
 			}
 		}
 		// Now rank them
-		int cur_rank = 0;
+		int currentRank = 0;
 		// locked PEs have the highest priority
 		// for (int i=0; i<gProcess.length; i++) {
 		// if (gProcess[i].isLocked()) {
@@ -494,7 +509,7 @@ public class BranchAndBoundMapper implements Mapper {
 		// }
 		// }
 		// the remaining PEs are sorted based on their comm volume
-		for (int i = cur_rank; i < gProcess.length; i++) {
+		for (int i = currentRank; i < gProcess.length; i++) {
 			int max = -1;
 			int maxid = -1;
 			for (int k = 0; k < gProcNum; k++) {
@@ -533,10 +548,8 @@ public class BranchAndBoundMapper implements Mapper {
 		// To exploit the symmetric structure of the system, we only need
 		// to map the first processes to one corner of the chip, as shown
 		// in the following code.
-		/*****************************************************************
-		 * And if we need to synthesize the routing table, then there is not
-		 * much symmetry property to be exploited
-		 *****************************************************************/
+		// And if we need to synthesize the routing table, then there is not
+		// much symmetry property to be exploited
 		if (!buildRoutingTable) {
 			int size = (gEdgeSize + 1) / 2;
 			for (int i = 0; i < size; i++) {
@@ -674,8 +687,9 @@ public class BranchAndBoundMapper implements Mapper {
 		MappingNode child = new MappingNode(this, pNode, index, true);
 		if (MathUtils.definitelyGreaterThan(child.lowerBound, minUpperBound)
 				|| MathUtils.definitelyGreaterThan(child.cost, minCost)
-				|| (MathUtils.approximatelyEqual(child.cost, minCost) && bestMapping != null))
+				|| (MathUtils.approximatelyEqual(child.cost, minCost) && bestMapping != null)) {
 			return;
+		}
 		else {
 			if (MathUtils.definitelyLessThan(child.upperBound, minUpperBound - 0.01f)) {
 				// In this case, we should also insert other children
@@ -685,14 +699,17 @@ public class BranchAndBoundMapper implements Mapper {
 			}
 			if (child.getStage() == gProcNum || MathUtils.approximatelyEqual(child.lowerBound, child.upperBound)) {
 				minCost = child.cost;
-				if (child.getStage() < gProcNum)
+				if (child.getStage() < gProcNum) {
 					minCost = child.upperBound;
-				if (MathUtils.definitelyLessThan(minCost, minUpperBound))
+				}
+				if (MathUtils.definitelyLessThan(minCost, minUpperBound)) {
 					minUpperBound = minCost;
+				}
 				System.out.println("Current minimum cost is " + minCost);
 				bestMapping = child;
-			} else
+			} else {
 				Q.insert(child);
+			}
 		}
 
 		if (MathUtils.definitelyGreaterThan(pNode.upperBound, minUpperBound)
@@ -713,8 +730,9 @@ public class BranchAndBoundMapper implements Mapper {
 		}
 		child = new MappingNode(this, pNode, index, true);
 		if (MathUtils.definitelyGreaterThan(child.lowerBound, minUpperBound)
-				|| MathUtils.definitelyGreaterThan(child.cost, minCost))
+				|| MathUtils.definitelyGreaterThan(child.cost, minCost)) {
 			return;
+		}
 		else {
 			if (MathUtils.definitelyLessThan(child.upperBound, minUpperBound)) {
 				minUpperBound = child.upperBound;
@@ -724,34 +742,41 @@ public class BranchAndBoundMapper implements Mapper {
 			}
 			if (child.getStage() == gProcNum
 					|| MathUtils.approximatelyEqual(child.lowerBound, child.upperBound)) {
-				if (MathUtils.approximatelyEqual(minCost, child.cost) && bestMapping != null)
+				if (MathUtils.approximatelyEqual(minCost, child.cost) && bestMapping != null) {
 					return;
+				}
 				else {
 					minCost = child.cost;
-					if (child.getStage() < gProcNum)
+					if (child.getStage() < gProcNum) {
 						minCost = child.upperBound;
-					if (MathUtils.definitelyLessThan(minCost, minUpperBound))
+					}
+					if (MathUtils.definitelyLessThan(minCost, minUpperBound)) {
 						minUpperBound = minCost;
+					}
 					System.out.println("Current minimum cost is " + minCost);
 					bestMapping = child;
 				}
-			} else
+			} else {
 				Q.insert(child);
+			}
 		}
 	}
 
 	private void applyMapping(MappingNode bestMapping) {
-		for (int i = 0; i < gProcNum; i++)
+		for (int i = 0; i < gProcNum; i++) {
 			gProcess[i].setTileId(-1);
-		for (int i = 0; i < gTileNum; i++)
+		}
+		for (int i = 0; i < gTileNum; i++) {
 			gTile[i].setProcId(-1);
+		}
 		for (int i = 0; i < gProcNum; i++) {
 			int procId = procMapArray[i];
 			gProcess[procId].setTileId(bestMapping.mapToTile(i));
 			gTile[bestMapping.mapToTile(i)].setProcId(procId);
 		}
-		if (buildRoutingTable)
+		if (buildRoutingTable) {
 			bestMapping.programRouters();
+		}
 	}
 
 	@Override
@@ -845,17 +870,17 @@ public class BranchAndBoundMapper implements Mapper {
 	        for (int dst=0; dst<gTileNum; dst++) {
 	            if (src == dst)
 	                continue;
-	            int src_proc = gTile[src].getProcId();
-	            int dst_proc = gTile[dst].getProcId();
-	            int comm_load = gProcess[src_proc].getToBandwidthRequirement()[dst_proc];
-	            if (comm_load == 0)
+	            int srcProc = gTile[src].getProcId();
+	            int dstProc = gTile[dst].getProcId();
+	            int commLoad = gProcess[srcProc].getToBandwidthRequirement()[dstProc];
+	            if (commLoad == 0)
 	                continue;
-	            Tile current_tile = gTile[src];
-	            while (current_tile.getTileId() != dst) {
-	                int link_id = current_tile.routeToLink(src, dst);
-	                Link pL = gLink[link_id];
-	                current_tile = gTile[pL.getToTileId()];
-	                gLink[link_id].setUsedBandwidth(gLink[link_id].getUsedBandwidth() + comm_load);
+	            Tile currentTile = gTile[src];
+	            while (currentTile.getTileId() != dst) {
+	                int linkId = currentTile.routeToLink(src, dst);
+	                Link link = gLink[linkId];
+	                currentTile = gTile[link.getToTileId()];
+	                gLink[linkId].setUsedBandwidth(gLink[linkId].getUsedBandwidth() + commLoad);
 	            }
 	        }
 	    }
@@ -874,7 +899,11 @@ public class BranchAndBoundMapper implements Mapper {
 	}
 	
 	/**
-	 * Computes the communication energy
+	 * Computes the communication energy as switch energy + link energy + buffer energy.
+	 * 
+	 * @see #calculateSwitchEnergy()
+	 * @see #calculateLinkEnergy()
+	 * @see #calculateBufferEnergy()
 	 * 
 	 * @return the communication energy
 	 */
@@ -957,7 +986,13 @@ public class BranchAndBoundMapper implements Mapper {
 		}
 		return energy;
 	}
-	
+
+	/**
+	 * Performs an analysis of the mapping. It verifies if bandwidth
+	 * requirements are met and computes the link, switch and buffer energy.
+	 * The communication energy is also computed (as a sum of the three energy
+	 * components).
+	 */
 	public void analyzeIt() {
 	    System.out.print("Verify the communication load of each link...");
 	    if (verifyBandwidthRequirement()) {

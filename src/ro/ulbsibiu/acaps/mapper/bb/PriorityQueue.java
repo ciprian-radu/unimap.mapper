@@ -19,12 +19,6 @@ class PriorityQueue {
 	/** the head element */
 	private MappingNode head;
 
-	// private int minCost;
-
-	// private int minLowerBound;
-
-	// private int minUpperBound;
-
 	/**
 	 * Default constructor
 	 */
