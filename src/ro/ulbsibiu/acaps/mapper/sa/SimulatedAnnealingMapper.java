@@ -354,23 +354,23 @@ public class SimulatedAnnealingMapper implements Mapper {
 	}
 
 	private void mapCoresToNocNodesRandomly() {
-		// Random rand = new Random();
-		// for (int i = 0; i < gTileNum; i++) {
-		// int k = Math.abs(rand.nextInt()) % gTileNum;
-		// while (gTile[k].getProcId() != -1) {
-		// k = Math.abs(rand.nextInt()) % gTileNum;
-		// }
-		// gProcess[i].setTileId(k);
-		// gTile[k].setProcId(i);
-		// }
-
-		// this maps the cores like NoCMap does
-		int[] coreMap = new int[] { 11, 13, 10, 8, 12, 0, 9, 1, 2, 4, 14, 15,
-				5, 3, 7, 6 };
-		for (int i = 0; i < gProcNum; i++) {
-			gProcess[i].setTileId(coreMap[i]);
-			gTile[coreMap[i]].setProcId(i);
+		Random rand = new Random();
+		for (int i = 0; i < gTileNum; i++) {
+			int k = Math.abs(rand.nextInt()) % gTileNum;
+			while (gTile[k].getProcId() != -1) {
+				k = Math.abs(rand.nextInt()) % gTileNum;
+			}
+			gProcess[i].setTileId(k);
+			gTile[k].setProcId(i);
 		}
+
+		// // this maps the cores like NoCMap does
+		// int[] coreMap = new int[] { 11, 13, 10, 8, 12, 0, 9, 1, 2, 4, 14, 15,
+		// 5, 3, 7, 6 };
+		// for (int i = 0; i < gProcNum; i++) {
+		// gProcess[i].setTileId(coreMap[i]);
+		// gTile[coreMap[i]].setProcId(i);
+		// }
 	}
 
 	private void printCurrentMapping() {
@@ -590,7 +590,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 			System.out.println("Current cost " + currentCost);
 			System.out.println("Accept ratio " + acceptRatio);
 			
-			printCurrentMapping();
+//			printCurrentMapping();
 
 			// OK, if we got here the cost function is working fine. We can
 			// now look at whether we are frozen, or whether we should cool some
