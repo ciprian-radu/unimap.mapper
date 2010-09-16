@@ -1555,9 +1555,9 @@ class MappingNode {
 		}
 		int link_id;
 		for (link_id = 0; link_id < bbMapper.gLinkNum; link_id++) {
-			if (bbMapper.gTile[bbMapper.gLink[link_id].getFromTileId()]
+			if (bbMapper.gTile[bbMapper.gLink[link_id].getFromNodeId()]
 					.getRow() == origRow
-					&& bbMapper.gTile[bbMapper.gLink[link_id].getFromTileId()]
+					&& bbMapper.gTile[bbMapper.gLink[link_id].getFromNodeId()]
 							.getColumn() == origColumn
 					&& bbMapper.gTile[bbMapper.gLink[link_id].getToTileId()]
 							.getRow() == row

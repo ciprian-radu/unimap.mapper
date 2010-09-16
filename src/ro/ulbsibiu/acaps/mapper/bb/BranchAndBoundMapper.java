@@ -12,8 +12,8 @@ import ro.ulbsibiu.acaps.mapper.Mapper;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
 import ro.ulbsibiu.acaps.mapper.bb.MappingNode.RoutingEffort;
 import ro.ulbsibiu.acaps.mapper.sa.Link;
-import ro.ulbsibiu.acaps.mapper.sa.Process;
-import ro.ulbsibiu.acaps.mapper.sa.Tile;
+import ro.ulbsibiu.acaps.mapper.sa.Core;
+import ro.ulbsibiu.acaps.mapper.sa.Node;
 import ro.ulbsibiu.acaps.mapper.util.MathUtils;
 
 /**
@@ -61,10 +61,10 @@ public class BranchAndBoundMapper implements Mapper {
 	int gLinkNum;
 
 	/** the tiles from the Network-on-Chip (NoC) */
-	Tile[] gTile;
+	Node[] gTile;
 
 	/** the processes (tasks, cores) */
-	Process[] gProcess;
+	Core[] gProcess;
 
 	/** the communication channels from the NoC */
 	Link[] gLink;
@@ -226,16 +226,16 @@ public class BranchAndBoundMapper implements Mapper {
 		this.bufReadEBit = bufReadEBit;
 		this.bufWriteEBit = bufWriteEBit;
 
-		gTile = new Tile[gTileNum];
+		gTile = new Node[gTileNum];
 
-		gProcess = new Process[gProcNum];
+		gProcess = new Core[gProcNum];
 
 		gLink = new Link[gLinkNum];
 	}
 
 	public void initializeCores() {
 		for (int i = 0; i < gProcess.length; i++) {
-			gProcess[i] = new Process(i, -1);
+			gProcess[i] = new Core(i, -1);
 			gProcess[i].setFromCommunication(new int[gTileNum]);
 			gProcess[i].setToCommunication(new int[gTileNum]);
 			gProcess[i].setFromBandwidthRequirement(new int[gTileNum]);
@@ -246,7 +246,7 @@ public class BranchAndBoundMapper implements Mapper {
 	public void initializeNocTopology(float switchEBit, float linkEBit) {
 		// initialize nodes
 		for (int i = 0; i < gTile.length; i++) {
-			gTile[i] = new Tile(i, -1, i / gEdgeSize, i % gEdgeSize, switchEBit);
+			gTile[i] = new Node(i, -1, i / gEdgeSize, i % gEdgeSize, switchEBit);
 		}
 		// initialize links
 		for (int i = 0; i < gLink.length; i++) {
@@ -293,25 +293,25 @@ public class BranchAndBoundMapper implements Mapper {
 
 			gLink[i] = new Link(i, linkBandwidth, fromTileId, toTileId,
 					linkEBit);
-			gLink[i].setFromTileRow(fromTileRow);
-			gLink[i].setFromTileColumn(fromTileColumn);
-			gLink[i].setToTileRow(toTileRow);
-			gLink[i].setToTileColumn(toTileColumn);
+			gLink[i].setFromNodeRow(fromTileRow);
+			gLink[i].setFromNodeColumn(fromTileColumn);
+			gLink[i].setToNodeRow(toTileRow);
+			gLink[i].setToNodeColumn(toTileColumn);
 		}
 		// attach the links to the NoC nodes
 		for (int i = 0; i < gTileNum; i++) {
 			for (int j = 0; j < gLink.length; j++) {
-				if (gLink[j].getFromTileRow() == gTile[i].getRow()
-						&& gLink[j].getFromTileColumn() == gTile[i].getColumn()) {
+				if (gLink[j].getFromNodeRow() == gTile[i].getRow()
+						&& gLink[j].getFromNodeColumn() == gTile[i].getColumn()) {
 					gTile[i].addOutLink(gLink[j].getLinkId());
 				}
 				if (gLink[j].getToTileRow() == gTile[i].getRow()
-						&& gLink[j].getToTileColumn() == gTile[i].getColumn()) {
+						&& gLink[j].getToNodeColumn() == gTile[i].getColumn()) {
 					gTile[i].addInLink(gLink[j].getLinkId());
 				}
 			}
-			assert gTile[i].getInLinkList().size() > 0;
-			assert gTile[i].getOutLinkList().size() > 0;
+			assert gTile[i].getInLinks().size() > 0;
+			assert gTile[i].getOutLinks().size() > 0;
 		}
 		// for each router generate a routing table provided by the XY routing
 		// protocol
@@ -335,7 +335,7 @@ public class BranchAndBoundMapper implements Mapper {
 					if (srcId == dstId) {
 						continue;
 					}
-					Tile currentTile = gTile[srcId];
+					Node currentTile = gTile[srcId];
 					while (currentTile.getTileId() != dstId) {
 						int linkId = currentTile.routeToLink(srcId, dstId);
 						Link link = gLink[linkId];
@@ -373,11 +373,11 @@ public class BranchAndBoundMapper implements Mapper {
 		Random rand = new Random();
 		for (int i = 0; i < gTileNum; i++) {
 			int k = Math.abs(rand.nextInt()) % gTileNum;
-			while (gTile[k].getProcId() != -1) {
+			while (gTile[k].getCoreId() != -1) {
 				k = Math.abs(rand.nextInt()) % gTileNum;
 			}
-			gProcess[i].setTileId(k);
-			gTile[k].setProcId(i);
+			gProcess[i].setNodeId(k);
+			gTile[k].setCoreId(i);
 		}
 
 		// // this maps the cores like NoCMap does
@@ -391,8 +391,8 @@ public class BranchAndBoundMapper implements Mapper {
 
 	private void printCurrentMapping() {
 		for (int i = 0; i < gProcNum; i++) {
-			System.out.println("Core " + gProcess[i].getProcId()
-					+ " is mapped to NoC node " + gProcess[i].getTileId());
+			System.out.println("Core " + gProcess[i].getCoreId()
+					+ " is mapped to NoC node " + gProcess[i].getNodeId());
 		}
 	}
 
@@ -457,7 +457,7 @@ public class BranchAndBoundMapper implements Mapper {
 		for (int src = 0; src < gTileNum; src++) {
 			for (int dst = 0; dst < gTileNum; dst++) {
 				float energy = 0;
-				Tile currentTile = gTile[src];
+				Node currentTile = gTile[src];
 				energy += currentTile.getCost();
 				while (currentTile.getTileId() != dst) {
 					int linkId = currentTile.routeToLink(src, dst);
@@ -764,15 +764,15 @@ public class BranchAndBoundMapper implements Mapper {
 
 	private void applyMapping(MappingNode bestMapping) {
 		for (int i = 0; i < gProcNum; i++) {
-			gProcess[i].setTileId(-1);
+			gProcess[i].setNodeId(-1);
 		}
 		for (int i = 0; i < gTileNum; i++) {
-			gTile[i].setProcId(-1);
+			gTile[i].setCoreId(-1);
 		}
 		for (int i = 0; i < gProcNum; i++) {
 			int procId = procMapArray[i];
-			gProcess[procId].setTileId(bestMapping.mapToTile(i));
-			gTile[bestMapping.mapToTile(i)].setProcId(procId);
+			gProcess[procId].setNodeId(bestMapping.mapToTile(i));
+			gTile[bestMapping.mapToTile(i)].setCoreId(procId);
 		}
 		if (buildRoutingTable) {
 			bestMapping.programRouters();
@@ -870,12 +870,12 @@ public class BranchAndBoundMapper implements Mapper {
 	        for (int dst=0; dst<gTileNum; dst++) {
 	            if (src == dst)
 	                continue;
-	            int srcProc = gTile[src].getProcId();
-	            int dstProc = gTile[dst].getProcId();
+	            int srcProc = gTile[src].getCoreId();
+	            int dstProc = gTile[dst].getCoreId();
 	            int commLoad = gProcess[srcProc].getToBandwidthRequirement()[dstProc];
 	            if (commLoad == 0)
 	                continue;
-	            Tile currentTile = gTile[src];
+	            Node currentTile = gTile[src];
 	            while (currentTile.getTileId() != dst) {
 	                int linkId = currentTile.routeToLink(src, dst);
 	                Link link = gLink[linkId];
@@ -921,12 +921,12 @@ public class BranchAndBoundMapper implements Mapper {
 		float energy = 0;
 		for (int src = 0; src < gTileNum; src++) {
 			for (int dst = 0; dst < gTileNum; dst++) {
-				int srcProc = gTile[src].getProcId();
-				int dstProc = gTile[dst].getProcId();
+				int srcProc = gTile[src].getCoreId();
+				int dstProc = gTile[dst].getCoreId();
 				int commVol = gProcess[srcProc].getToCommunication()[dstProc];
 				if (commVol > 0) {
 					energy += gTile[src].getCost() * commVol;
-					Tile currentTile = gTile[src];
+					Node currentTile = gTile[src];
 //					 System.out.println("adding " + currentTile.getCost()
 //					 + " * " + commVol + " (core " + srcProc
 //					 + " to core " + dstProc + ") current tile "
@@ -950,11 +950,11 @@ public class BranchAndBoundMapper implements Mapper {
 		float energy = 0;
 		for (int src = 0; src < gTileNum; src++) {
 			for (int dst = 0; dst < gTileNum; dst++) {
-				int srcProc = gTile[src].getProcId();
-				int dstProc = gTile[dst].getProcId();
+				int srcProc = gTile[src].getCoreId();
+				int dstProc = gTile[dst].getCoreId();
 				int commVol = gProcess[srcProc].getToCommunication()[dstProc];
 				if (commVol > 0) {
-					Tile currentTile = gTile[src];
+					Node currentTile = gTile[src];
 					while (currentTile.getTileId() != dst) {
 						int linkId = currentTile.getRoutingEntries()[src][dst];
 						energy += gLink[linkId].getCost() * commVol;
@@ -970,11 +970,11 @@ public class BranchAndBoundMapper implements Mapper {
 		float energy = 0;
 		for (int src = 0; src < gTileNum; src++) {
 			for (int dst = 0; dst < gTileNum; dst++) {
-				int srcProc = gTile[src].getProcId();
-				int dstProc = gTile[dst].getProcId();
+				int srcProc = gTile[src].getCoreId();
+				int dstProc = gTile[dst].getCoreId();
 				int commVol = gProcess[srcProc].getToCommunication()[dstProc];
 				if (commVol > 0) {
-					Tile currentTile = gTile[src];
+					Node currentTile = gTile[src];
 					while (currentTile.getTileId() != dst) {
 						int linkId = currentTile.getRoutingEntries()[src][dst];
 						energy += (bufReadEBit + bufWriteEBit) * commVol;

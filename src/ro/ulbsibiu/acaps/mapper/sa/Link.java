@@ -11,34 +11,53 @@ public class Link {
 	/** the ID of the link */
 	private int linkId = -1;
 
-	/** bandwidth's link */
+	/** link's bandwidth */
 	private int bandwidth = -1;
 
 	/** the ID of the tile from which traffic is sent through this link */
-	private int fromTileId;
+	private int fromNodeId;
 	
-	private int fromTileRow;
+	private int fromNodeRow;
 	
-	private int fromTileColumn;
+	private int fromNodeColumn;
 
 	/** the ID of the tile to which traffic is sent through this link */
-	private int toTileId;
+	private int toNodeId;
 	
-	private int toTileRow;
+	private int toNodeRow;
 	
-	private int toTileColumn;
+	private int toNodeColumn;
 
+	/**
+	 * A cost attached to this link. It may for example be something like energy
+	 * consumption.
+	 */
 	private float cost;
 	
 	private int usedBandwidth = 0;
 
-	public Link(int linkId, int bandwidth, int fromTileId, int toTileId,
+	/**
+	 * Constructor
+	 * 
+	 * @param linkId
+	 *            the ID of the link
+	 * @param bandwidth
+	 *            the bandwidth
+	 * @param fromNodeId
+	 *            from what tile this link transmits data
+	 * @param toNodeId
+	 *            to what tile this link transmits data
+	 * @param cost
+	 *            the cost attached to this link (it may for example be
+	 *            something like energy consumption)
+	 */
+	public Link(int linkId, int bandwidth, int fromNodeId, int toNodeId,
 			float cost) {
 		super();
 		this.linkId = linkId;
 		this.bandwidth = bandwidth;
-		this.fromTileId = fromTileId;
-		this.toTileId = toTileId;
+		this.fromNodeId = fromNodeId;
+		this.toNodeId = toNodeId;
 		this.cost = cost;
 	}
 
@@ -58,52 +77,52 @@ public class Link {
 		return bandwidth;
 	}
 
-	public int getFromTileId() {
-		return fromTileId;
+	public int getFromNodeId() {
+		return fromNodeId;
 	}
 
-	public void setFromTileId(int fromTileId) {
-		this.fromTileId = fromTileId;
+	public void setFromNodeId(int fromNodeId) {
+		this.fromNodeId = fromNodeId;
 	}
 
-	public int getFromTileRow() {
-		return fromTileRow;
+	public int getFromNodeRow() {
+		return fromNodeRow;
 	}
 
-	public void setFromTileRow(int fromTileRow) {
-		this.fromTileRow = fromTileRow;
+	public void setFromNodeRow(int fromNodeRow) {
+		this.fromNodeRow = fromNodeRow;
 	}
 
-	public int getFromTileColumn() {
-		return fromTileColumn;
+	public int getFromNodeColumn() {
+		return fromNodeColumn;
 	}
 
-	public void setFromTileColumn(int fromTileColumn) {
-		this.fromTileColumn = fromTileColumn;
+	public void setFromNodeColumn(int fromNodeColumn) {
+		this.fromNodeColumn = fromNodeColumn;
 	}
 
 	public int getToTileId() {
-		return toTileId;
+		return toNodeId;
 	}
 
 	public int getToTileRow() {
-		return toTileRow;
+		return toNodeRow;
 	}
 
-	public void setToTileRow(int toTileRow) {
-		this.toTileRow = toTileRow;
+	public void setToNodeRow(int toNodeRow) {
+		this.toNodeRow = toNodeRow;
 	}
 
-	public int getToTileColumn() {
-		return toTileColumn;
+	public int getToNodeColumn() {
+		return toNodeColumn;
 	}
 
-	public void setToTileColumn(int toTileColumn) {
-		this.toTileColumn = toTileColumn;
+	public void setToNodeColumn(int toNodeColumn) {
+		this.toNodeColumn = toNodeColumn;
 	}
 
-	public void setToTileId(int toTileId) {
-		this.toTileId = toTileId;
+	public void setToNodeId(int toNodeId) {
+		this.toNodeId = toNodeId;
 	}
 
 	public float getCost() {

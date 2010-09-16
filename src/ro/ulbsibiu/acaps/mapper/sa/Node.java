@@ -1,69 +1,85 @@
 package ro.ulbsibiu.acaps.mapper.sa;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
- * Holds data regarding a Network-on-Chip tile
+ * Holds data regarding a Network-on-Chip node
  * 
  * @author cipi
  * 
  */
-public class Tile {
+public class Node {
 
-	/** the ID of this NoC tile */
-	private int tileId = -1;
+	/** the ID of this NoC node */
+	private int nodeId = -1;
 
-	/** the ID of the process mapped to this NoC tile */
-	private int procId = -1;
+	/** the ID of the core mapped to this NoC node */
+	private int coreId = -1;
 
-	/** the 2D mesh row of this tile */
+	/** the 2D mesh row of this node */
 	private int row;
 
-	/** the 2D mesh column of this tile */
+	/** the 2D mesh column of this node */
 	private int column;
 
-	/** a list with the IDs of link that enter this tile */
-	private List<Integer> inLinkList;
+	/** a list with the IDs of link that enter this node */
+	private List<Integer> inLinks;
 
-	/** a list with the IDs of link that exit this tile */
-	private List<Integer> outLinkList;
+	/** a list with the IDs of link that exit this node */
+	private List<Integer> outLinks;
 
 	/**
-	 * routingTable[i][j] shows how to which link to send data from tile i to
-	 * tile j. If it's -2, means not reachable. If it's -1, means the
-	 * destination is the current tile.
+	 * routingTable[i][j] shows the ID of the link to which data must be sent
+	 * from node i, so that it reaches node j. If it's -2, means not reachable.
+	 * If it's -1, means the destination is the current node.
 	 */
 	private int[][] routingTable;
 
+	/**
+	 * A cost attached to this node. It may for example be something like energy
+	 * consumption.
+	 */
 	private float cost;
 
-	public Tile(int tileId, int procId, int row, int column, float cost) {
+	/**
+	 * Constructor
+	 * 
+	 * @param nodeId
+	 *            the ID of this node
+	 * @param coreId
+	 *            the ID of the core mapped to this node
+	 * @param row
+	 * @param column
+	 * @param cost
+	 *            the cost of this node (it may for example be something like
+	 *            energy consumption)
+	 */
+	public Node(int nodeId, int coreId, int row, int column, float cost) {
 		super();
-		this.tileId = tileId;
-		this.procId = procId;
+		this.nodeId = nodeId;
+		this.coreId = coreId;
 		this.row = row;
 		this.column = column;
 		this.cost = cost;
-		inLinkList = new ArrayList<Integer>();
-		outLinkList = new ArrayList<Integer>();
+		inLinks = new ArrayList<Integer>();
+		outLinks = new ArrayList<Integer>();
 	}
 
-	public void setTileId(int tileId) {
-		this.tileId = tileId;
+	public void setTileId(int nodeId) {
+		this.nodeId = nodeId;
 	}
 
-	public void setProcId(int procId) {
-		this.procId = procId;
+	public void setCoreId(int coreId) {
+		this.coreId = coreId;
 	}
 
 	public int getTileId() {
-		return tileId;
+		return nodeId;
 	}
 
-	public int getProcId() {
-		return procId;
+	public int getCoreId() {
+		return coreId;
 	}
 
 	public void setRow(int row) {
@@ -86,6 +102,9 @@ public class Tile {
 		routingTable[srcTileId][dstTileId] = linkId;
 	}
 
+	/**
+	 * @return the routing table
+	 */
 	public int[][] getRoutingEntries() {
 		return routingTable;
 	}
@@ -99,19 +118,19 @@ public class Tile {
 	}
 
 	public void addInLink(int linkId) {
-		inLinkList.add(linkId);
+		inLinks.add(linkId);
 	}
 
-	public List<Integer> getInLinkList() {
-		return inLinkList;
+	public List<Integer> getInLinks() {
+		return inLinks;
 	}
 
 	public void addOutLink(int linkId) {
-		outLinkList.add(linkId);
+		outLinks.add(linkId);
 	}
 
-	public List<Integer> getOutLinkList() {
-		return outLinkList;
+	public List<Integer> getOutLinks() {
+		return outLinks;
 	}
 
 	public void generateXYRoutingTable(int gTileNum, int gEdgeSize, Link[] gLink) {
@@ -123,7 +142,7 @@ public class Tile {
 		}
 
 		for (int dstTile = 0; dstTile < gTileNum; dstTile++) {
-			if (dstTile == tileId) { // deliver to me
+			if (dstTile == nodeId) { // deliver to me
 				routingTable[0][dstTile] = -1;
 				continue;
 			}
@@ -149,10 +168,10 @@ public class Tile {
 				}
 			}
 
-			for (int i = 0; i < outLinkList.size(); i++) {
-				if (gLink[outLinkList.get(i)].getToTileRow() == nextStepRow
-						&& gLink[outLinkList.get(i)].getToTileColumn() == nextStepCol) {
-					routingTable[0][dstTile] = gLink[outLinkList.get(i)]
+			for (int i = 0; i < outLinks.size(); i++) {
+				if (gLink[outLinks.get(i)].getToTileRow() == nextStepRow
+						&& gLink[outLinks.get(i)].getToNodeColumn() == nextStepCol) {
+					routingTable[0][dstTile] = gLink[outLinks.get(i)]
 							.getLinkId();
 					break;
 				}
@@ -168,13 +187,13 @@ public class Tile {
 	}
 
 	/**
-	 * Accesses the routing table of of this tile in order to retrieve the ID of
+	 * Accesses the routing table of of this node in order to retrieve the ID of
 	 * the link used for routing from src to dst.
 	 * 
 	 * @param src
-	 *            the ID of the source tile
+	 *            the ID of the source node
 	 * @param dst
-	 *            the ID of the destination tile
+	 *            the ID of the destination node
 	 * @return the ID of the link used for this routing
 	 */
 	public int routeToLink(int src, int dst) {

@@ -1,22 +1,24 @@
 package ro.ulbsibiu.acaps.mapper.sa;
 
 /**
- * Holds data regarding a process attached to a NoC tile. Note that each process
+ * Holds data regarding a core attached to a NoC node. Note that each core
  * is uniquely assigned to an IP core.
  * 
  * @author cipi
  * 
  */
-public class Process {
+public class Core {
 
-	/** the ID of this process */
-	private int procId = -1;
+	/** the ID of this core */
+	private int coreId = -1;
 
-	/** the ID of the NoC tile to which this process is mapped to */
-	private int tileId = -1;
+	/** the ID of the NoC node to which this core is mapped to */
+	private int nodeId = -1;
 
+	/** the volumes of communication which will be sent by this core */
 	private int[] toCommunication = null;
 
+	/** the volumes of communication which will be received by this core */
 	private int[] fromCommunication = null;
 
 	/** the bandwidth requirement of the out-going traffic */
@@ -25,30 +27,40 @@ public class Process {
 	/** the bandwidth requirement of the incoming traffic */
 	private int[] fromBandwidthRequirement = null;
 
+	/** a rank may be used at ordering the cores (by different criteria) */
 	private int rank = -1;
 	
+	/** the total communication volume */
 	private int totalCommVol;
 	
-	public Process(int procId, int tileId) {
+	/**
+	 * Constructor
+	 * 
+	 * @param coreId
+	 *            the ID of the core
+	 * @param nodeId
+	 *            the ID of the node to which this core is assigned to
+	 */
+	public Core(int coreId, int nodeId) {
 		super();
-		this.procId = procId;
-		this.tileId = tileId;
+		this.coreId = coreId;
+		this.nodeId = nodeId;
 	}
 
-	public int getProcId() {
-		return procId;
+	public int getCoreId() {
+		return coreId;
 	}
 
-	public void setProcId(int procId) {
-		this.procId = procId;
+	public void setCoreId(int coreId) {
+		this.coreId = coreId;
 	}
 
-	public int getTileId() {
-		return tileId;
+	public int getNodeId() {
+		return nodeId;
 	}
 
-	public void setTileId(int tileId) {
-		this.tileId = tileId;
+	public void setNodeId(int nodeId) {
+		this.nodeId = nodeId;
 	}
 
 	public int[] getToCommunication() {
