@@ -329,7 +329,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 				}
 			}
 
-			// Now build the g_link_usage_list
+			// Now build the link usage list
 			linkUsageList = new ArrayList[gTileNum][gTileNum];
 			for (int src = 0; src < gTileNum; src++) {
 				for (int dst = 0; dst < gTileNum; dst++) {
@@ -515,19 +515,22 @@ public class SimulatedAnnealingMapper implements Mapper {
 				// This is just to print out the process of the algorithm
 				System.err.print("#");
 				// System.out.println("Current cost = " + currentCost);
-				// System.out.println("Delta cost = " + delta_cost);
+				// System.out.println("Delta cost = " + deltaCost);
 			}
 		}
 		System.out.println();
 		acceptRatio = ((double) acceptCount) / attempts;
 
-		if (zeroCostAcceptance == acceptCount)
+		if (zeroCostAcceptance == acceptCount) {
 			zeroTempCnt++;
-		else
+		}
+		else {
 			zeroTempCnt = 0;
+		}
 
-		if (zeroTempCnt == 10)
+		if (zeroTempCnt == 10) {
 			needStop = true;
+		}
 
 		return totalDeltaCost;
 	}
@@ -601,11 +604,13 @@ public class SimulatedAnnealingMapper implements Mapper {
 			// the MINACCEPT test). If all are satisfied, we quit.
 
 			tol3 = ((double) cost3 - (double) cost2) / (double) cost3;
-			if (tol3 < 0)
+			if (tol3 < 0) {
 				tol3 = -tol3;
+			}
 			tol2 = ((double) cost2 - (double) currentCost) / (double) cost2;
-			if (tol2 < 0)
+			if (tol2 < 0) {
 				tol2 = -tol2;
+			}
 
 			if (MathUtils.definitelyLessThan((float) tol3, TOLERANCE)
 					&& MathUtils.definitelyLessThan((float) tol3, TOLERANCE)
@@ -725,8 +730,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 					int tile1 = gProcess[proc1].getTileId();
 					int tile2 = gProcess[proc2].getTileId();
 					for (int i = 0; i < linkUsageList[tile1][tile2].size(); i++) {
-						int link_id = linkUsageList[tile1][tile2].get(i);
-						linkBandwidthUsage[link_id] += gProcess[proc1]
+						int linkId = linkUsageList[tile1][tile2].get(i);
+						linkBandwidthUsage[linkId] += gProcess[proc1]
 								.getToBandwidthRequirement()[proc2];
 					}
 				}
@@ -734,8 +739,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 					int tile1 = gProcess[proc1].getTileId();
 					int tile2 = gProcess[proc2].getTileId();
 					for (int i = 0; i < linkUsageList[tile1][tile2].size(); i++) {
-						int link_id = linkUsageList[tile2][tile1].get(i);
-						linkBandwidthUsage[link_id] += gProcess[proc1]
+						int linkId = linkUsageList[tile2][tile1].get(i);
+						linkBandwidthUsage[linkId] += gProcess[proc1]
 								.getFromBandwidthRequirement()[proc2];
 					}
 				}
@@ -743,9 +748,10 @@ public class SimulatedAnnealingMapper implements Mapper {
 		}
 		float overloadCost = 0;
 		for (int i = 0; i < gLinkNum; i++) {
-			if (linkBandwidthUsage[i] > gLink[i].getBandwidth())
+			if (linkBandwidthUsage[i] > gLink[i].getBandwidth()) {
 				overloadCost = ((float) linkBandwidthUsage[i])
 						/ gLink[i].getBandwidth() - 1.0f;
+			}
 		}
 		overloadCost *= OVERLOAD_UNIT_COST;
 		return overloadCost;
@@ -796,20 +802,20 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 * Routes the traffic. Hence, the routing table is computed here by the
 	 * algorithm.
 	 * 
-	 * @param src_tile
+	 * @param srcTile
 	 *            the source tile
-	 * @param dst_tile
+	 * @param dstTile
 	 *            the destination tile
-	 * @param BW
+	 * @param bandwidth
 	 *            the bandwidth
 	 */
-	private void routeTraffic(int src_tile, int dst_tile, int BW) {
+	private void routeTraffic(int srcTile, int dstTile, int bandwidth) {
 		boolean commit = true;
 
-		int srcRow = gTile[src_tile].getRow();
-		int srcColumn = gTile[src_tile].getColumn();
-		int dstRow = gTile[dst_tile].getRow();
-		int dstColumn = gTile[dst_tile].getColumn();
+		int srcRow = gTile[srcTile].getRow();
+		int srcColumn = gTile[srcTile].getColumn();
+		int dstRow = gTile[dstTile].getRow();
+		int dstColumn = gTile[dstTile].getColumn();
 
 		int row = srcRow;
 		int col = srcColumn;
@@ -818,77 +824,96 @@ public class SimulatedAnnealingMapper implements Mapper {
 		while (row != dstRow || col != dstColumn) {
 			// For west-first routing
 			if (LegalTurnSet.WEST_FIRST.equals(legalTurnSet)) {
-				if (col > dstColumn) // step west
+				if (col > dstColumn) {
+					// step west
 					direction = WEST;
-				else if (col == dstColumn)
-					direction = (row < dstRow) ? NORTH : SOUTH;
-				else if (row == dstRow)
-					direction = EAST;
-				// Here comes the flexibility. We can choose whether to go
-				// vertical or horizontal
-				else {
-					int direction1 = (row < dstRow) ? NORTH : SOUTH;
-					if (synLinkBandwithUsage[row][col][direction1] < synLinkBandwithUsage[row][col][EAST])
-						direction = direction1;
-					else if (synLinkBandwithUsage[row][col][direction1] > synLinkBandwithUsage[row][col][EAST])
-						direction = EAST;
-					else {
-						// In this case, we select the direction which has the
-						// longest
-						// distance to the destination
-						if ((dstColumn - col) * (dstColumn - col) <= (dstRow - row)
-								* (dstRow - row))
-							direction = direction1;
-						else
-							// Horizontal move
+				} else {
+					if (col == dstColumn) {
+						direction = (row < dstRow) ? NORTH : SOUTH;
+					} else {
+						if (row == dstRow) {
 							direction = EAST;
+						}
+						else {
+							// Here comes the flexibility. We can choose whether to
+							// go
+							// vertical or horizontal
+							int direction1 = (row < dstRow) ? NORTH : SOUTH;
+							if (synLinkBandwithUsage[row][col][direction1] < synLinkBandwithUsage[row][col][EAST]) {
+								direction = direction1;
+							} else {
+								if (synLinkBandwithUsage[row][col][direction1] > synLinkBandwithUsage[row][col][EAST]) {
+									direction = EAST;
+								} else {
+									// In this case, we select the direction
+									// which has the
+									// longest
+									// distance to the destination
+									if ((dstColumn - col) * (dstColumn - col) <= (dstRow - row)
+											* (dstRow - row)) {
+										direction = direction1;
+									} else {
+										// Horizontal move
+										direction = EAST;
+									}
+								}
+							}
+						}
 					}
 				}
 			}
 			// For odd-even routing
-			else if (LegalTurnSet.ODD_EVEN.equals(legalTurnSet)) {
-				int e0 = dstColumn - col;
-				int e1 = dstRow - row;
-				if (e0 == 0) // currently the same column as destination
-					direction = (e1 > 0) ? NORTH : SOUTH;
-				else {
-					if (e0 > 0) { // eastbound messages
-						if (e1 == 0)
-							direction = EAST;
-						else {
-							int direction1 = -1, direction2 = -1;
-							if (col % 2 == 1 || col == srcColumn)
-								direction1 = (e1 > 0) ? NORTH : SOUTH;
-							if (dstColumn % 2 == 1 || e0 != 1)
-								direction2 = EAST;
-							if (direction1 == -1 && direction2 == -1) {
-								System.err.println("Error. Exiting...");
-								System.exit(0);
+			else {
+				if (LegalTurnSet.ODD_EVEN.equals(legalTurnSet)) {
+					int e0 = dstColumn - col;
+					int e1 = dstRow - row;
+					if (e0 == 0) {
+						// currently the same column as destination
+						direction = (e1 > 0) ? NORTH : SOUTH;
+					} else {
+						if (e0 > 0) { // eastbound messages
+							if (e1 == 0) {
+								direction = EAST;
+							} else {
+								int direction1 = -1, direction2 = -1;
+								if (col % 2 == 1 || col == srcColumn) {
+									direction1 = (e1 > 0) ? NORTH : SOUTH;
+								}
+								if (dstColumn % 2 == 1 || e0 != 1) {
+									direction2 = EAST;
+								}
+								if (direction1 == -1 && direction2 == -1) {
+									System.err.println("Error. Exiting...");
+									System.exit(0);
+								}
+								if (direction1 == -1) {
+									direction = direction2;
+								} else {
+									if (direction2 == -1) {
+										direction = direction1;
+									} else {
+										// we have two choices
+										direction = (synLinkBandwithUsage[row][col][direction1] < synLinkBandwithUsage[row][col][direction2]) ? direction1
+												: direction2;
+									}
+								}
 							}
-							if (direction1 == -1)
-								direction = direction2;
-							else if (direction2 == -1)
-								direction = direction1;
-							else
-								// we have two choices
-								direction = (synLinkBandwithUsage[row][col][direction1] < synLinkBandwithUsage[row][col][direction2]) ? direction1
-										: direction2;
-						}
-					} else { // westbound messages
-						if (col % 2 != 0 || e1 == 0)
-							direction = WEST;
-						else {
-							int direction1 = (e1 > 0) ? NORTH : SOUTH;
-							direction = (synLinkBandwithUsage[row][col][WEST] < synLinkBandwithUsage[row][col][direction1]) ? WEST
-									: direction1;
+						} else { // westbound messages
+							if (col % 2 != 0 || e1 == 0) {
+								direction = WEST;
+							} else {
+								int direction1 = (e1 > 0) ? NORTH : SOUTH;
+								direction = (synLinkBandwithUsage[row][col][WEST] < synLinkBandwithUsage[row][col][direction1]) ? WEST
+										: direction1;
+							}
 						}
 					}
 				}
 			}
-			synLinkBandwithUsage[row][col][direction] += BW;
+			synLinkBandwithUsage[row][col][direction] += bandwidth;
 
 			if (commit) {
-				saRoutingTable[row][col][src_tile][dst_tile] = direction;
+				saRoutingTable[row][col][srcTile][dstTile] = direction;
 			}
 			switch (direction) {
 			case SOUTH:
@@ -912,13 +937,13 @@ public class SimulatedAnnealingMapper implements Mapper {
 
 	private void programRouters() {
 		// clean all the old routing table
-		for (int tile_id = 0; tile_id < gTileNum; tile_id++) {
-			for (int src_tile = 0; src_tile < gTileNum; src_tile++) {
-				for (int dst_tile = 0; dst_tile < gTileNum; dst_tile++) {
-					if (tile_id == dst_tile) {
-						gTile[tile_id].setRoutingEntry(src_tile, dst_tile, -1);
+		for (int tileId = 0; tileId < gTileNum; tileId++) {
+			for (int srcTile = 0; srcTile < gTileNum; srcTile++) {
+				for (int dstTile = 0; dstTile < gTileNum; dstTile++) {
+					if (tileId == dstTile) {
+						gTile[tileId].setRoutingEntry(srcTile, dstTile, -1);
 					} else {
-						gTile[tile_id].setRoutingEntry(src_tile, dst_tile, -2);
+						gTile[tileId].setRoutingEntry(srcTile, dstTile, -2);
 					}
 				}
 			}
@@ -926,14 +951,14 @@ public class SimulatedAnnealingMapper implements Mapper {
 
 		for (int row = 0; row < gEdgeSize; row++) {
 			for (int col = 0; col < gEdgeSize; col++) {
-				int tile_id = row * gEdgeSize + col;
-				for (int src_tile = 0; src_tile < gTileNum; src_tile++) {
-					for (int dst_tile = 0; dst_tile < gTileNum; dst_tile++) {
-						int link_id = locateLink(row, col,
-								saRoutingTable[row][col][src_tile][dst_tile]);
-						if (link_id != -1) {
-							gTile[tile_id].setRoutingEntry(src_tile, dst_tile,
-									link_id);
+				int tileId = row * gEdgeSize + col;
+				for (int srcTile = 0; srcTile < gTileNum; srcTile++) {
+					for (int dstTile = 0; dstTile < gTileNum; dstTile++) {
+						int linkId = locateLink(row, col,
+								saRoutingTable[row][col][srcTile][dstTile]);
+						if (linkId != -1) {
+							gTile[tileId].setRoutingEntry(srcTile, dstTile,
+									linkId);
 						}
 					}
 				}
@@ -1056,57 +1081,58 @@ public class SimulatedAnnealingMapper implements Mapper {
 		default:
 			return -1;
 		}
-		int link_id;
-		for (link_id = 0; link_id < gLinkNum; link_id++) {
-			if (gTile[gLink[link_id].getFromTileId()].getRow() == origRow
-					&& gTile[gLink[link_id].getFromTileId()].getColumn() == origColumn
-					&& gTile[gLink[link_id].getToTileId()].getRow() == row
-					&& gTile[gLink[link_id].getToTileId()].getColumn() == column)
+		int linkId;
+		for (linkId = 0; linkId < gLinkNum; linkId++) {
+			if (gTile[gLink[linkId].getFromTileId()].getRow() == origRow
+					&& gTile[gLink[linkId].getFromTileId()].getColumn() == origColumn
+					&& gTile[gLink[linkId].getToTileId()].getRow() == row
+					&& gTile[gLink[linkId].getToTileId()].getColumn() == column)
 				break;
 		}
-		if (link_id == gLinkNum) {
+		if (linkId == gLinkNum) {
 			System.err.println("Error in locating link");
 			System.exit(-1);
 		}
-		return link_id;
+		return linkId;
 	}
 
 	private boolean verifyBandwidthRequirement() {
 		generateLinkUsageList();
 
-	    for (int i=0; i<gLinkNum; i++) 
-	        gLink[i].setUsedBandwidth(0);
+		for (int i = 0; i < gLinkNum; i++) {
+			gLink[i].setUsedBandwidth(0);
+		}
 
-	    for (int src=0; src<gTileNum; src++) {
-	        for (int dst=0; dst<gTileNum; dst++) {
-	            if (src == dst)
+		for (int src = 0; src < gTileNum; src++) {
+			for (int dst = 0; dst < gTileNum; dst++) {
+	            if (src == dst) {
 	                continue;
-	            int src_proc = gTile[src].getProcId();
-	            int dst_proc = gTile[dst].getProcId();
-	            int comm_load = gProcess[src_proc].getToBandwidthRequirement()[dst_proc];
-	            if (comm_load == 0)
+	            }
+	            int srcProc = gTile[src].getProcId();
+	            int dstProc = gTile[dst].getProcId();
+	            int commLoad = gProcess[srcProc].getToBandwidthRequirement()[dstProc];
+	            if (commLoad == 0) {
 	                continue;
-	            Tile current_tile = gTile[src];
-	            while (current_tile.getTileId() != dst) {
-	                int link_id = current_tile.routeToLink(src, dst);
-	                Link pL = gLink[link_id];
-	                current_tile = gTile[pL.getToTileId()];
-	                gLink[link_id].setUsedBandwidth(gLink[link_id].getUsedBandwidth() + comm_load);
+	            }
+	            Tile currentTile = gTile[src];
+	            while (currentTile.getTileId() != dst) {
+	                int linkId = currentTile.routeToLink(src, dst);
+	                Link link = gLink[linkId];
+	                currentTile = gTile[link.getToTileId()];
+	                gLink[linkId].setUsedBandwidth(gLink[linkId].getUsedBandwidth() + commLoad);
 	            }
 	        }
 	    }
 	    //check for the overloaded links
 	    int violations = 0;
-	    for (int i=0; i<gLinkNum; i++) {
+		for (int i = 0; i < gLinkNum; i++) {
 	        if (gLink[i].getUsedBandwidth()> gLink[i].getBandwidth()) {
 	        	System.out.println("Link " + i + " is overloaded: " + gLink[i].getUsedBandwidth() + " > "
 	                 + gLink[i].getBandwidth());
 	            violations ++;
 	        }
 	    }
-	    if (violations > 0)
-	        return false;
-	    return true;
+		return violations == 0;
 	}
 	
 	public void analyzeIt() {
