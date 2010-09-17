@@ -1,5 +1,7 @@
 package ro.ulbsibiu.acaps.mapper.bb;
 
+import org.apache.log4j.Logger;
+
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -31,6 +33,12 @@ import ro.ulbsibiu.acaps.mapper.util.MathUtils;
  * 
  */
 public class BranchAndBoundMapper implements Mapper {
+	
+	/**
+	 * Logger for this class
+	 */
+	private static final Logger logger = Logger
+			.getLogger(BranchAndBoundMapper.class);
 
 	static final int NORTH = 0;
 
@@ -310,8 +318,8 @@ public class BranchAndBoundMapper implements Mapper {
 					gTile[i].addInLink(gLink[j].getLinkId());
 				}
 			}
-			assert gTile[i].getInLinks().size() > 0;
-			assert gTile[i].getOutLinks().size() > 0;
+			logger.assertLog(gTile[i].getInLinks().size() > 0, null);
+			logger.assertLog(gTile[i].getOutLinks().size() > 0, null);
 		}
 		// for each router generate a routing table provided by the XY routing
 		// protocol
@@ -361,10 +369,10 @@ public class BranchAndBoundMapper implements Mapper {
 				}
 			}
 
-			assert this.linkUsageList != null;
-			assert linkUsageList.length == gTileNum;
+			logger.assertLog(this.linkUsageList != null, null);
+			logger.assertLog(linkUsageList.length == gTileNum, null);
 			for (int i = 0; i < linkUsageList.length; i++) {
-				assert linkUsageList[i].length == gTileNum;
+				logger.assertLog(linkUsageList[i].length == gTileNum, null);
 			}
 		}
 	}
@@ -400,7 +408,9 @@ public class BranchAndBoundMapper implements Mapper {
 	 * Initialization function for Branch-and-Bound mapping
 	 */
 	private void init() {
-		System.out.println("Initialize for branch-and-bound");
+		if (logger.isInfoEnabled()) {
+			logger.info("Initialize for branch-and-bound");
+		}
 		procMapArray = new int[gProcNum];
 		sortProcesses();
 		buildProcessMatrix();
@@ -440,12 +450,11 @@ public class BranchAndBoundMapper implements Mapper {
 		for (int i = 0; i < gProcNum; i++) {
 			for (int j = 0; j < gProcNum; j++) {
 				if (procMatrix[i][j] < 0) {
-					System.err.println("Error for < 0");
+					logger.fatal("Error for < 0");
 					System.exit(1);
 				}
 				if (procMatrix[i][j] != procMatrix[j][i]) {
-					System.err
-							.println("Error. The process matrix is not symetric.");
+					logger.fatal("Error. The process matrix is not symetric.");
 					System.exit(1);
 				}
 			}
@@ -473,8 +482,7 @@ public class BranchAndBoundMapper implements Mapper {
 		for (int i = 0; i < gTileNum; i++) {
 			for (int j = 0; j < gTileNum; j++) {
 				if (archMatrix[i][j] != archMatrix[j][i]) {
-					System.err
-							.println("Error. The architecture matrix is not symetric.");
+					logger.fatal("Error. The architecture matrix is not symetric.");
 					System.exit(1);
 				}
 			}
@@ -609,16 +617,20 @@ public class BranchAndBoundMapper implements Mapper {
 	}
 
 	private void insertAll(MappingNode pNode, PriorityQueue Q) {
-//		System.out.println("insertAll cnt " + MappingNode.cnt
-//				+ " queue length " + Q.length() + " previous insert "
-//				+ previousInsert + " minUpperBound " + minUpperBound);
+		if (logger.isDebugEnabled()) {
+			logger.debug("insertAll cnt " + MappingNode.cnt + " queue length "
+					+ Q.length() + " previous insert " + previousInsert
+					+ " minUpperBound " + minUpperBound);
+		}
 		if (MathUtils.approximatelyEqual(pNode.upperBound, minUpperBound)
 				&& MathUtils.definitelyLessThan(minUpperBound, MAX_VALUE)
 				&& minUpperBoundHitCount <= minHitThreshold) {
 			insertAllFlag = true;
 		}
 		for (int i = previousInsert; i < gTileNum; i++) {
-//			System.out.println("Node expandable at " + i + " " + pNode.isExpandable(i));
+			if (logger.isTraceEnabled()) {
+				logger.trace("Node expandable at " + i + " " + pNode.isExpandable(i));
+			}
 			if (pNode.isExpandable(i)) {
 				MappingNode child = new MappingNode(this, pNode, i, true);
 				if (MathUtils.definitelyGreaterThan(child.lowerBound, minUpperBound)
@@ -627,8 +639,10 @@ public class BranchAndBoundMapper implements Mapper {
 						|| child.isIllegal()) {
 					;
 				} else {
-//					System.out.println("Child upper upper bound is "
-//							+ child.upperBound);
+					if (logger.isTraceEnabled()) {
+						logger.trace("Child upper upper bound is "
+								+ child.upperBound);
+					}
 					if (MathUtils.definitelyLessThan(child.upperBound, minUpperBound)) {
 						minUpperBound = child.upperBound;
 						System.out
@@ -670,7 +684,9 @@ public class BranchAndBoundMapper implements Mapper {
 	}
 
 	private void selectiveInsert(MappingNode pNode, PriorityQueue Q) {
-//		System.out.println("selectiveInsert " + MappingNode.cnt + " " + Q.length());
+		if (logger.isDebugEnabled()) {
+			logger.debug("selectiveInsert " + MappingNode.cnt + " " + Q.length());
+		}
 		if ((MathUtils.approximatelyEqual(Math.abs(pNode.upperBound - minUpperBound), 0.01f))
 				&& MathUtils.definitelyLessThan(minUpperBound, MAX_VALUE)
 				&& minUpperBoundHitCount <= minHitThreshold) {
@@ -723,9 +739,8 @@ public class BranchAndBoundMapper implements Mapper {
 
 		index = pNode.bestUpperBoundCandidate();
 		if (!pNode.isExpandable(index)) {
-			System.err.println("Error in expanding at stage "
-					+ pNode.getStage());
-			System.err.println("index = " + index);
+			logger.fatal("Error in expanding at stage " + pNode.getStage());
+			logger.fatal("index = " + index);
 			System.exit(-1);
 		}
 		child = new MappingNode(this, pNode, index, true);
@@ -792,7 +807,7 @@ public class BranchAndBoundMapper implements Mapper {
 		long start = System.currentTimeMillis();
 		System.out.println("Start mapping...");
 
-		assert (gProcNum == ((int) gProcess.length));
+		logger.assertLog((gProcNum == ((int) gProcess.length)), null);
 
 		branchAndBoundMapping();
 		long end = System.currentTimeMillis();
@@ -820,9 +835,12 @@ public class BranchAndBoundMapper implements Mapper {
 				try {
 					id = Integer.valueOf(line.substring("@NODE".length() + 1));
 				} catch (NumberFormatException e) {
-					e.printStackTrace();
+					logger.error("The node from line '" + line
+							+ "' is not a number", e);
 				}
-				// System.err.print("ID = " + id);
+				if (logger.isTraceEnabled()) {
+					logger.trace("ID = " + id);
+				}
 			}
 
 			if (line.contains("packet_to_destination_rate")) {
@@ -832,28 +850,33 @@ public class BranchAndBoundMapper implements Mapper {
 				try {
 					dstId = Integer.valueOf(substring.substring(0,
 							substring.indexOf("\t")));
-					// System.err.print(" dst ID = " + dstId);
+					if (logger.isTraceEnabled()) {
+						logger.trace(" dst ID = " + dstId);
+					}
 				} catch (NumberFormatException e) {
-					e.printStackTrace();
+					logger.error("The destination from line '" + line
+							+ "' is not a number", e);
 				}
 				double rate = 0;
 				try {
 					rate = Double.valueOf(substring.substring(substring
 							.indexOf("\t") + 1));
-					// System.err.print(" rate = " + rate);
+					if (logger.isTraceEnabled()) {
+						logger.trace(" rate = " + rate);
+					}
 				} catch (NumberFormatException e) {
-					e.printStackTrace();
+					logger.error("The rate from line '" + line
+							+ "' is not a number", e);
 				}
 
 				if (rate > 1) {
-					System.err.println("Invalid rate!");
+					logger.fatal("Invalid rate!");
 					System.exit(0);
 				}
 				gProcess[id].getToCommunication()[dstId] = (int) (rate * 1000000);
 				gProcess[id].getToBandwidthRequirement()[dstId] = (int) (rate * 3 * linkBandwidth);
 				gProcess[dstId].getFromCommunication()[id] = (int) (rate * 1000000);
 				gProcess[dstId].getFromBandwidthRequirement()[id] = (int) (rate * 3 * linkBandwidth);
-				// System.err.println();
 			}
 		}
 
@@ -863,18 +886,21 @@ public class BranchAndBoundMapper implements Mapper {
 	private boolean verifyBandwidthRequirement() {
 		generateLinkUsageList();
 
-	    for (int i=0; i<gLinkNum; i++) 
-	        gLink[i].setUsedBandwidth(0);
+		for (int i = 0; i < gLinkNum; i++) {
+			gLink[i].setUsedBandwidth(0);
+		}
 
-	    for (int src=0; src<gTileNum; src++) {
-	        for (int dst=0; dst<gTileNum; dst++) {
-	            if (src == dst)
+		for (int src = 0; src < gTileNum; src++) {
+			for (int dst = 0; dst < gTileNum; dst++) {
+	            if (src == dst) {
 	                continue;
+	            }
 	            int srcProc = gTile[src].getCoreId();
 	            int dstProc = gTile[dst].getCoreId();
 	            int commLoad = gProcess[srcProc].getToBandwidthRequirement()[dstProc];
-	            if (commLoad == 0)
+	            if (commLoad == 0) {
 	                continue;
+	            }
 	            Node currentTile = gTile[src];
 	            while (currentTile.getTileId() != dst) {
 	                int linkId = currentTile.routeToLink(src, dst);
@@ -886,16 +912,14 @@ public class BranchAndBoundMapper implements Mapper {
 	    }
 	    //check for the overloaded links
 	    int violations = 0;
-	    for (int i=0; i<gLinkNum; i++) {
-	        if (gLink[i].getUsedBandwidth() > gLink[i].getBandwidth()) {
+		for (int i = 0; i < gLinkNum; i++) {
+	        if (gLink[i].getUsedBandwidth()> gLink[i].getBandwidth()) {
 	        	System.out.println("Link " + i + " is overloaded: " + gLink[i].getUsedBandwidth() + " > "
 	                 + gLink[i].getBandwidth());
 	            violations ++;
 	        }
 	    }
-	    if (violations > 0)
-	        return false;
-	    return true;
+		return violations == 0;
 	}
 	
 	/**
@@ -911,9 +935,11 @@ public class BranchAndBoundMapper implements Mapper {
 		float switchEnergy = calculateSwitchEnergy();
 		float linkEnergy = calculateLinkEnergy();
 		float bufferEnergy = calculateBufferEnergy();
-//		System.out.println("switch energy " + switchEnergy);
-//		System.out.println("link energy " + linkEnergy);
-//		System.out.println("buffer energy " + bufferEnergy);
+		if (logger.isTraceEnabled()) {
+			logger.trace("switch energy " + switchEnergy);
+			logger.trace("link energy " + linkEnergy);
+			logger.trace("buffer energy " + bufferEnergy);
+		}
 		return switchEnergy + linkEnergy + bufferEnergy;
 	}
 	
@@ -927,18 +953,23 @@ public class BranchAndBoundMapper implements Mapper {
 				if (commVol > 0) {
 					energy += gTile[src].getCost() * commVol;
 					Node currentTile = gTile[src];
-//					 System.out.println("adding " + currentTile.getCost()
-//					 + " * " + commVol + " (core " + srcProc
-//					 + " to core " + dstProc + ") current tile "
-//					 + currentTile.getTileId());
+					if (logger.isTraceEnabled()) {
+						logger.trace("adding " + currentTile.getCost() + " * "
+								+ commVol + " (core " + srcProc + " to core "
+								+ dstProc + ") current tile "
+								+ currentTile.getTileId());
+					}
 					while (currentTile.getTileId() != dst) {
 						int linkId = currentTile.getRoutingEntries()[src][dst];
 						currentTile = gTile[gLink[linkId].getToTileId()];
 						energy += currentTile.getCost() * commVol;
-//						 System.out.println("adding " + currentTile.getCost()
-//						 + " * " + commVol + " (core " + srcProc
-//						 + " to core " + dstProc + ") current tile "
-//						 + currentTile.getTileId() + " link ID " + linkId);
+						if (logger.isTraceEnabled()) {
+							logger.trace("adding " + currentTile.getCost()
+									+ " * " + commVol + " (core " + srcProc
+									+ " to core " + dstProc + ") current tile "
+									+ currentTile.getTileId() + " link ID "
+									+ linkId);
+						}
 					}
 				}
 			}

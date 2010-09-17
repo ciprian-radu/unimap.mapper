@@ -1,5 +1,7 @@
 package ro.ulbsibiu.acaps.mapper.bb;
 
+import org.apache.log4j.Logger;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -16,6 +18,11 @@ import ro.ulbsibiu.acaps.mapper.util.MathUtils;
  * 
  */
 class MappingNode {
+	
+	/**
+	 * Logger for this class
+	 */
+	private static final Logger logger = Logger.getLogger(MappingNode.class);
 
 	/**
 	 * The routing can be made either "easy" or "hard".
@@ -121,11 +128,15 @@ class MappingNode {
 	 */
 	public MappingNode(final BranchAndBoundMapper bbMapper,
 			final MappingNode parent, int tileId, boolean calcBound) {
-		assert bbMapper != null;
+		logger.assertLog(bbMapper != null,
+				"The mapping node must be associated to a BranchAndBoundMapper");
 		this.bbMapper = bbMapper;
 		id = cnt;
-//		System.out.println("Creating mapping node with ID " + id
-//				+ ", having parent " + parent.id + " (tileId " + tileId + ")");
+		if (logger.isDebugEnabled()) {
+			logger.debug("Creating mapping node with ID " + id
+					+ ", having parent " + parent.id + " (tileId " + tileId
+					+ ")");
+		}
 
 		illegal = false;
 
@@ -277,10 +288,13 @@ class MappingNode {
 	 *            the ID of the tile to which this node is attached to
 	 */
 	public MappingNode(final BranchAndBoundMapper bbMapper, int tileId) {
-		assert bbMapper != null;
+		logger.assertLog(bbMapper != null,
+				"The mapping node must be associated to a BranchAndBoundMapper");
 		this.bbMapper = bbMapper;
 		id = cnt;
-//		System.out.println("Creating mapping node with ID " + id + " (tileId " + tileId + ")");
+		if (logger.isDebugEnabled()) {
+			logger.debug("Creating mapping node with ID " + id + " (tileId " + tileId + ")");
+		}
 
 		illegal = false;
 		tileOccupancyTable = null;
@@ -368,11 +382,14 @@ class MappingNode {
 	 */
 	public MappingNode(final BranchAndBoundMapper bbMapper,
 			final MappingNode origin) {
-		assert bbMapper != null;
+		logger.assertLog(bbMapper != null,
+				"The mapping node must be associated to a BranchAndBoundMapper");
 		this.bbMapper = bbMapper;
 		id = cnt;
-//		System.out.println("Creating mapping node with ID " + id
-//				+ ", as copy of node " + origin.id);
+		if (logger.isDebugEnabled()) {
+			logger.debug("Creating mapping node with ID " + id
+					+ ", as copy of node " + origin.id);
+		}
 
 		tileOccupancyTable = null;
 		mapping = null;
@@ -461,7 +478,9 @@ class MappingNode {
 			}
 		}
 		lowerBound += vol * lowestUnmappedUnitCost();
-//		System.out.println("Lower bound " + lowerBound);
+		if (logger.isDebugEnabled()) {
+			logger.debug("Lower bound " + lowerBound);
+		}
 		return lowerBound;
 	}
 
@@ -480,7 +499,9 @@ class MappingNode {
 		}
 
 		greedyMapping();
-//		System.out.println("Initial upper bound is " + cost);
+		if (logger.isTraceEnabled()) {
+			logger.trace("Initial upper bound is " + cost);
+		}
 		upperBound = cost;
 
 		illegalChildMapping = false;
@@ -489,14 +510,18 @@ class MappingNode {
 			createBandwidthTempMemory();
 			if (!routeTraffics(stage, bbMapper.gProcNum - 1, false, true)) {
 				illegalChildMapping = true;
-//				System.out.println("Upper bound is the max value " + BranchAndBoundMapper.MAX_VALUE);
+				if (logger.isTraceEnabled()) {
+					logger.trace("Upper bound is the max value " + BranchAndBoundMapper.MAX_VALUE);
+				}
 				upperBound = BranchAndBoundMapper.MAX_VALUE;
 				return upperBound;
 			}
 		} else {
 			if (!fixedVerifyBandwidthUsage()) {
 				illegalChildMapping = true;
-//				System.out.println("Upper bound is the max value " + BranchAndBoundMapper.MAX_VALUE);
+				if (logger.isTraceEnabled()) {
+					logger.trace("Upper bound is the max value " + BranchAndBoundMapper.MAX_VALUE);
+				}
 				upperBound = BranchAndBoundMapper.MAX_VALUE;
 				return upperBound;
 			}
@@ -506,12 +531,15 @@ class MappingNode {
 			int tile1 = mapping[i];
 			for (int j = stage; j < bbMapper.gProcNum; j++) {
 				int tile2 = mapping[j];
-//				System.out.println("Adding to the upper bound "
-//						+ bbMapper.procMatrix[i][j]
-//						* bbMapper.archMatrix[tile1][tile2] + "(procMatrix["
-//						+ i + "][" + j + "] = " + bbMapper.procMatrix[i][j]
-//						+ " archMatrix[" + tile1 + "][" + tile2 + "] = "
-//						+ bbMapper.archMatrix[tile1][tile2] + ")");
+				if (logger.isTraceEnabled()) {
+					logger.trace("Adding to the upper bound "
+							+ bbMapper.procMatrix[i][j]
+							* bbMapper.archMatrix[tile1][tile2]
+							+ "(procMatrix[" + i + "][" + j + "] = "
+							+ bbMapper.procMatrix[i][j] + " archMatrix["
+							+ tile1 + "][" + tile2 + "] = "
+							+ bbMapper.archMatrix[tile1][tile2] + ")");
+				}
 				upperBound += bbMapper.procMatrix[i][j]
 						* bbMapper.archMatrix[tile1][tile2];
 			}
@@ -520,17 +548,22 @@ class MappingNode {
 			int tile1 = mapping[i];
 			for (int j = i + 1; j < bbMapper.gProcNum; j++) {
 				int tile2 = mapping[j];
-//				System.out.println("Adding to the upper bound "
-//						+ bbMapper.procMatrix[i][j]
-//						* bbMapper.archMatrix[tile1][tile2] + "(procMatrix["
-//						+ i + "][" + j + "] = " + bbMapper.procMatrix[i][j]
-//						+ " archMatrix[" + tile1 + "][" + tile2 + "] = "
-//						+ bbMapper.archMatrix[tile1][tile2] + ")");
+				if (logger.isTraceEnabled()) {
+					logger.trace("Adding to the upper bound "
+							+ bbMapper.procMatrix[i][j]
+							* bbMapper.archMatrix[tile1][tile2]
+							+ "(procMatrix[" + i + "][" + j + "] = "
+							+ bbMapper.procMatrix[i][j] + " archMatrix["
+							+ tile1 + "][" + tile2 + "] = "
+							+ bbMapper.archMatrix[tile1][tile2] + ")");
+				}
 				upperBound += bbMapper.procMatrix[i][j]
 						* bbMapper.archMatrix[tile1][tile2];
 			}
 		}
-//		System.out.println("Upper bound " + upperBound);
+		if (logger.isDebugEnabled()) {
+			logger.debug("Upper bound " + upperBound);
+		}
 		return upperBound;
 	}
 
@@ -748,13 +781,17 @@ class MappingNode {
 		float minDist = 10000;
 		int bestId = -1;
 		for (int i = 0; i < bbMapper.gTileNum; i++) {
-//			System.out.println("tileOccupancyTable[" + i + "] = " + (tileOccupancyTable[i] ? "1" : "0"));
+			if (logger.isTraceEnabled()) {
+				logger.trace("tileOccupancyTable[" + i + "] = " + (tileOccupancyTable[i] ? "1" : "0"));
+			}
 			if (tileOccupancyTable[i]) {
 				continue;
 			}
 			if (MathUtils.definitelyLessThan(goodRow, 0)) {
 				bestId = i;
-//				System.out.println("bestId " + bestId);
+				if (logger.isTraceEnabled()) {
+					logger.trace("bestId " + bestId);
+				}
 				break;
 			}
 			int row = i / bbMapper.gEdgeSize;
@@ -763,13 +800,17 @@ class MappingNode {
 			// Note that we use machine epsilon to perform the following
 			// comparison between the float numbers
 			if (MathUtils.definitelyLessThan(dist, minDist)) {
-//				System.out.println("bestId " + i + " dist " + dist + " (old) minDist " + minDist);
+				if (logger.isTraceEnabled()) {
+					logger.trace("bestId " + i + " dist " + dist + " (old) minDist " + minDist);
+				}
 				minDist = dist;
 				bestId = i;
 			}
 		}
 		mapping[procId] = bestId;
-//		System.out.println("mappingSequency[" + procId + "] = " + bestId + "(goodRow " + goodRow + " goodCol " + goodCol + ")");
+		if (logger.isTraceEnabled()) {
+			logger.trace("mappingSequency[" + procId + "] = " + bestId + "(goodRow " + goodRow + " goodCol " + goodCol + ")");
+		}
 		tileOccupancyTable[bestId] = true;
 	}
 
@@ -1023,8 +1064,7 @@ class MappingNode {
 				col--;
 				break;
 			default:
-				System.err.println("Error");
-				;
+				logger.error("Error: unknown direction");
 				break;
 			}
 		}
@@ -1114,7 +1154,7 @@ class MappingNode {
 									|| e0 != 1)
 								direction2 = BranchAndBoundMapper.EAST;
 							if (direction1 == -1 && direction2 == -1) {
-								System.err.println("Error");
+								logger.fatal("Error");
 								System.exit(1);
 							}
 							if (direction1 == -1)
@@ -1160,7 +1200,7 @@ class MappingNode {
 				col--;
 				break;
 			default:
-				System.err.println("Error");
+				logger.error("Error: unknown direction");
 				break;
 			}
 		}
@@ -1262,7 +1302,7 @@ class MappingNode {
 				col--;
 				break;
 			default:
-				System.err.println("Error");
+				logger.error("Error: unknown direction");
 				break;
 			}
 		}
@@ -1349,7 +1389,7 @@ class MappingNode {
 										: BranchAndBoundMapper.SOUTH;
 							if (dstColumn % 2 == 1 || e0 != 1)
 								direction2 = BranchAndBoundMapper.EAST;
-							assert (!(direction1 == -1 && direction2 == -1));
+							logger.assertLog((!(direction1 == -1 && direction2 == -1)), null);
 							if (direction1 == -1) {
 								direction = direction2;
 								if (routingBitArray[hop_id] != 0)
@@ -1399,7 +1439,7 @@ class MappingNode {
 				col--;
 				break;
 			default:
-				System.err.println("Error");
+				logger.error("Error: unknown direction");
 				break;
 			}
 			hop_id++;
@@ -1566,7 +1606,7 @@ class MappingNode {
 				break;
 		}
 		if (link_id == bbMapper.gLinkNum) {
-			System.err.println("Error in locating link");
+			logger.fatal("Error in locating link");
 			System.exit(-1);
 		}
 		return link_id;
@@ -1589,7 +1629,7 @@ class MappingNode {
 			}
 		}
 
-		// if it's a real child mappingnode.
+		// if it's a real child mapping node.
 		if (stage == bbMapper.gProcNum)
 			routeTraffics(0, bbMapper.gProcNum - 1, true, true);
 		// if it's the node which generate min upperBound

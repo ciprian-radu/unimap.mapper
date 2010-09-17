@@ -1,5 +1,7 @@
 package ro.ulbsibiu.acaps.mapper.sa;
 
+import org.apache.log4j.Logger;
+
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -26,6 +28,12 @@ import ro.ulbsibiu.acaps.mapper.util.MathUtils;
  * 
  */
 public class SimulatedAnnealingMapper implements Mapper {
+	
+	/**
+	 * Logger for this class
+	 */
+	private static final Logger logger = Logger
+			.getLogger(SimulatedAnnealingMapper.class);
 
 	private static final int NORTH = 0;
 
@@ -374,12 +382,10 @@ public class SimulatedAnnealingMapper implements Mapper {
 	}
 
 	private void printCurrentMapping() {
-		System.out.println();
 		for (int i = 0; i < gProcNum; i++) {
 			System.out.println("Core " + gProcess[i].getCoreId()
 					+ " is mapped to NoC node " + gProcess[i].getNodeId());
 		}
-		System.out.println();
 	}
 
 	// ways to gen Random Vars with specific distributions
@@ -406,7 +412,9 @@ public class SimulatedAnnealingMapper implements Mapper {
 			seed = -seed;
 		}
 		double u = (((double) seed) / ((double) M));
-//		System.out.println("uniformRandomVariable() = " + u);
+		if (logger.isTraceEnabled()) {
+			logger.trace(u);
+		}
 		return u;
 	}
 
@@ -419,8 +427,10 @@ public class SimulatedAnnealingMapper implements Mapper {
 
 		u = uniformRandomVariable();
 		m = (int) imin + ((int) Math.floor((double) (imax + 1 - imin) * u));
-//		System.out.println("uniformIntegerRandomVariable(" + imin + ", " + imax
-//				+ ") = " + m);
+		if (logger.isTraceEnabled()) {
+			logger.trace("Generated integer random number from interval [" + imin
+					+ ", " + imax + "] = " + m);
+		}
 		return m;
 	}
 
@@ -464,8 +474,10 @@ public class SimulatedAnnealingMapper implements Mapper {
 				accept = false;
 			}
 		}
-//		System.out.println("deltac " + deltac + " temp " + temperature + " r "
-//				+ r + " pa " + pa + " accept " + accept);
+		if (logger.isTraceEnabled()) {
+			logger.trace("deltac " + deltac + " temp " + temperature + " r " + r
+					+ " pa " + pa + " accept " + accept);
+		}
 		return accept;
 	}
 
@@ -485,15 +497,19 @@ public class SimulatedAnnealingMapper implements Mapper {
 		// this is the main loop doing moves. We do 'attempts' moves in all,
 		// then quit at this temperature
 
-		// System.out.println("attempts = " + attempts);
+		if (logger.isTraceEnabled()) {
+			logger.trace("attempts = " + attempts);
+		}
 		for (int m = 1; m < attempts; m++) {
 			int[] tiles = makeRandomSwap();
 			int tile1 = tiles[0];
 			int tile2 = tiles[1];
 			double newCost = calculateTotalCost();
 			double deltaCost = newCost - currentCost;
-//			System.out.println("deltaCost " + deltaCost + " newCost " + newCost
-//					+ " currentCost " + currentCost);
+			if (logger.isDebugEnabled()) {
+				logger.debug("deltaCost " + deltaCost + " newCost " + newCost
+						+ " currentCost " + currentCost);
+			}
 	        double deltac = deltaCost / currentCost;
 			// Note that we use machine epsilon to perform the following
 			// comparison between the float numbers
@@ -503,19 +519,21 @@ public class SimulatedAnnealingMapper implements Mapper {
 	            deltac = deltac * 100;
 	        }
 			if (accept(deltac, t)) {
-//				System.out.println("Accepting...");
+				if (logger.isTraceEnabled()) {
+					logger.trace("Accepting...");
+				}
 				acceptCount++;
 				totalDeltaCost += deltaCost;
 				currentCost = newCost;
 			} else {
-//				System.out.println("Rolling back tiles " + tile1 + " and " + tile2);
+				if (logger.isTraceEnabled()) {
+					logger.trace("Rolling back tiles " + tile1 + " and " + tile2);
+				}
 				swapProcesses(tile1, tile2); // roll back
 			}
 			if (m % unit == 0) {
 				// This is just to print out the process of the algorithm
-				System.err.print("#");
-				// System.out.println("Current cost = " + currentCost);
-				// System.out.println("Delta cost = " + deltaCost);
+				System.out.print("#");
 			}
 		}
 		System.out.println();
@@ -672,8 +690,10 @@ public class SimulatedAnnealingMapper implements Mapper {
 		int p1 = tile1.getCoreId();
 		int p2 = tile2.getCoreId();
 		
-//		System.out.println("Swapping process " + p1 + " of tile " + t1
-//				+ " with process " + p2 + " of tile " + t2);
+		if (logger.isTraceEnabled()) {
+			logger.trace("Swapping process " + p1 + " of tile " + t1
+					+ " with process " + p2 + " of tile " + t2);
+		}
 		
 		tile1.setCoreId(p2);
 		tile2.setCoreId(p1);
@@ -711,9 +731,11 @@ public class SimulatedAnnealingMapper implements Mapper {
 		} else {
 			overloadCost = calculateOverloadWithAdaptiveRouting();
 		}
-//		System.out.println("energy cost " + energyCost);
-//		System.out.println("overload cost " + overloadCost);
-//		System.out.println("total cost " + (energyCost + overloadCost));
+		if (logger.isTraceEnabled()) {
+			logger.trace("energy cost " + energyCost);
+			logger.trace("overload cost " + overloadCost);
+			logger.trace("total cost " + (energyCost + overloadCost));
+		}
 		return energyCost + overloadCost;
 	}
 
@@ -883,7 +905,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 									direction2 = EAST;
 								}
 								if (direction1 == -1 && direction2 == -1) {
-									System.err.println("Error. Exiting...");
+									logger.fatal("Error. Exiting...");
 									System.exit(0);
 								}
 								if (direction1 == -1) {
@@ -929,7 +951,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 				col--;
 				break;
 			default:
-				System.err.println("Error. Unknown direction!");
+				logger.error("Error. Unknown direction!");
 				break;
 			}
 		}
@@ -975,9 +997,11 @@ public class SimulatedAnnealingMapper implements Mapper {
 		float switchEnergy = calculateSwitchEnergy();
 		float linkEnergy = calculateLinkEnergy();
 		float bufferEnergy = calculateBufferEnergy();
-//		System.out.println("switch energy " + switchEnergy);
-//		System.out.println("link energy " + linkEnergy);
-//		System.out.println("buffer energy " + bufferEnergy);
+		if (logger.isTraceEnabled()) {
+			logger.trace("switch energy " + switchEnergy);
+			logger.trace("link energy " + linkEnergy);
+			logger.trace("buffer energy " + bufferEnergy);
+		}
 		return switchEnergy + linkEnergy + bufferEnergy;
 	}
 
@@ -991,18 +1015,23 @@ public class SimulatedAnnealingMapper implements Mapper {
 				if (commVol > 0) {
 					energy += gTile[src].getCost() * commVol;
 					Node currentTile = gTile[src];
-//					 System.out.println("adding " + currentTile.getCost()
-//					 + " * " + commVol + " (core " + srcProc
-//					 + " to core " + dstProc + ") current tile "
-//					 + currentTile.getTileId());
+					if (logger.isTraceEnabled()) {
+						logger.trace("adding " + currentTile.getCost() + " * "
+								+ commVol + " (core " + srcProc + " to core "
+								+ dstProc + ") current tile "
+								+ currentTile.getTileId());
+					}
 					while (currentTile.getTileId() != dst) {
 						int linkId = currentTile.getRoutingEntries()[src][dst];
 						currentTile = gTile[gLink[linkId].getToTileId()];
 						energy += currentTile.getCost() * commVol;
-//						 System.out.println("adding " + currentTile.getCost()
-//						 + " * " + commVol + " (core " + srcProc
-//						 + " to core " + dstProc + ") current tile "
-//						 + currentTile.getTileId() + " link ID " + linkId);
+						if (logger.isTraceEnabled()) {
+							logger.trace("adding " + currentTile.getCost()
+									+ " * " + commVol + " (core " + srcProc
+									+ " to core " + dstProc + ") current tile "
+									+ currentTile.getTileId() + " link ID "
+									+ linkId);
+						}
 					}
 				}
 			}
@@ -1052,7 +1081,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 	}
 
 	/**
-	 * find out the link ID. Ff the direction is not set, return -1
+	 * find out the link ID. If the direction is not set, return -1
 	 * 
 	 * @param row
 	 *            the row from the 2D mesh
@@ -1090,7 +1119,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 				break;
 		}
 		if (linkId == gLinkNum) {
-			System.err.println("Error in locating link");
+			logger.fatal("Error in locating link");
 			System.exit(-1);
 		}
 		return linkId;
@@ -1135,6 +1164,12 @@ public class SimulatedAnnealingMapper implements Mapper {
 		return violations == 0;
 	}
 	
+	/**
+	 * Performs an analysis of the mapping. It verifies if bandwidth
+	 * requirements are met and computes the link, switch and buffer energy.
+	 * The communication energy is also computed (as a sum of the three energy
+	 * components).
+	 */
 	public void analyzeIt() {
 	    System.out.print("Verify the communication load of each link...");
 	    if (verifyBandwidthRequirement()) {
@@ -1184,9 +1219,11 @@ public class SimulatedAnnealingMapper implements Mapper {
 				try {
 					id = Integer.valueOf(line.substring("@NODE".length() + 1));
 				} catch (NumberFormatException e) {
-					e.printStackTrace();
+					logger.error("The node from line '" + line + "' is not a number", e);
 				}
-				// System.err.print("ID = " + id);
+				if (logger.isTraceEnabled()) {
+					logger.trace("ID = " + id);
+				}
 			}
 
 			if (line.contains("packet_to_destination_rate")) {
@@ -1196,28 +1233,31 @@ public class SimulatedAnnealingMapper implements Mapper {
 				try {
 					dstId = Integer.valueOf(substring.substring(0,
 							substring.indexOf("\t")));
-					// System.err.print(" dst ID = " + dstId);
+					if (logger.isTraceEnabled()) {
+						logger.trace(" dst ID = " + dstId);
+					}
 				} catch (NumberFormatException e) {
-					e.printStackTrace();
+					logger.error("The destination from line '" + line + "' is not a number", e);
 				}
 				double rate = 0;
 				try {
 					rate = Double.valueOf(substring.substring(substring
 							.indexOf("\t") + 1));
-					// System.err.print(" rate = " + rate);
+					if (logger.isTraceEnabled()) {
+						logger.trace(" rate = " + rate);
+					}
 				} catch (NumberFormatException e) {
-					e.printStackTrace();
+					logger.error("The rate from line '" + line + "' is not a number", e);
 				}
 
 				if (rate > 1) {
-					System.err.println("Invalid rate!");
+					logger.fatal("Invalid rate!");
 					System.exit(0);
 				}
 				gProcess[id].getToCommunication()[dstId] = (int) (rate * 1000000);
 				gProcess[id].getToBandwidthRequirement()[dstId] = (int) (rate * 3 * linkBandwidth);
 				gProcess[dstId].getFromCommunication()[id] = (int) (rate * 1000000);
 				gProcess[dstId].getFromBandwidthRequirement()[id] = (int) (rate * 3 * linkBandwidth);
-				// System.err.println();
 			}
 		}
 

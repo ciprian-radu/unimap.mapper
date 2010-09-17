@@ -16,7 +16,8 @@ import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
-import javax.xml.crypto.NodeSetData;
+
+import org.apache.log4j.Logger;
 
 import ro.ulbsibiu.acaps.ctg.xml.apcg.ApcgType;
 import ro.ulbsibiu.acaps.ctg.xml.mapping.MapType;
@@ -33,6 +34,11 @@ import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
  */
 public class RandomMapper implements Mapper {
 
+	/**
+	 * Logger for this class
+	 */
+	private static final Logger logger = Logger.getLogger(RandomMapper.class);
+	
 	/** the APCG XML file */
 	private File apcgFile;
 	
@@ -51,11 +57,14 @@ public class RandomMapper implements Mapper {
 	 *            a list with the IDs of all of the NoC nodes (cannot be empty)
 	 */
 	public RandomMapper(String apcgFilePath, List<String> nodeIds) {
-		assert apcgFilePath != null && apcgFilePath.length() > 0;
-		assert nodeIds != null && nodeIds.size() > 0;
+		logger.assertLog(apcgFilePath != null && apcgFilePath.length() > 0, "Unspecified APCG");
+		logger.assertLog(apcgFilePath.endsWith(".xml"), "The APCG must be an XML file");
+		logger.assertLog(nodeIds != null && nodeIds.size() > 0, "The list of NoC nodes is not specified");
+		
+		logger.info("Working with the APCG from the XML " + apcgFilePath);
 		
 		apcgFile = new File(apcgFilePath);
-		assert apcgFile.isFile();
+		logger.assertLog(apcgFile.isFile(), "The APCG is not a file");
 		
 		this.nodeIds = nodeIds;
 	}
@@ -69,6 +78,10 @@ public class RandomMapper implements Mapper {
 	 */
 	@Override
 	public String map() throws TooFewNocNodesException {
+		if (logger.isDebugEnabled()) {
+			logger.debug("Random mapping started");
+		}
+		
 		String mappingXml = null;
 
 		try {
@@ -84,13 +97,17 @@ public class RandomMapper implements Mapper {
 			for (int i = 0; i < coreIds.length; i++) {
 				int k = random.nextInt(tempNodeIds.size());
 				coresToNodes.put(coreIds[i], tempNodeIds.get(k));
+				logger.info("Core " + coreIds[i] + " is mapped to node " + tempNodeIds.get(k));
 				tempNodeIds.remove(k);
 			}
 			mappingXml = generateMap();
 			
 		} catch (JAXBException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error("JAXB encountered an error", e);
+		}
+
+		if (logger.isDebugEnabled()) {
+			logger.debug("Random mapping finished");
 		}
 		
 		return mappingXml;
@@ -123,8 +140,12 @@ public class RandomMapper implements Mapper {
 	}
 
 	private String generateMap() throws JAXBException {
-		assert coresToNodes != null;
+		logger.assertLog(coresToNodes != null, "No core was mapped!");
 
+		if (logger.isDebugEnabled()) {
+			logger.debug("Generating an XML String with the mapping");
+		}
+		
 		ObjectFactory mappingFactory = new ObjectFactory();
 		MappingType mappingType = new MappingType();
 		String id = getApcgId();
@@ -165,6 +186,7 @@ public class RandomMapper implements Mapper {
 		String mappingXml = mapper.map();
 		PrintWriter pw = new PrintWriter(path + "ctg-" + ctgId + File.separator
 				+ "mapping-" + mappingId + ".xml");
+		logger.info("Saving the mapping XMl file");
 		pw.write(mappingXml);
 		pw.close();
 	}

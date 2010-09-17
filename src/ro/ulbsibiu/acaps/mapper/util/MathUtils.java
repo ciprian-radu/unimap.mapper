@@ -1,5 +1,7 @@
 package ro.ulbsibiu.acaps.mapper.util;
 
+import org.apache.log4j.Logger;
+
 /**
  * Utility class for mathematical operations.
  * 
@@ -7,6 +9,11 @@ package ro.ulbsibiu.acaps.mapper.util;
  * 
  */
 public class MathUtils {
+	
+	/**
+	 * Logger for this class
+	 */
+	private static final Logger logger = Logger.getLogger(MathUtils.class);
 
 	private static final float MACHINE_EPSILON_FLOAT;
 
@@ -32,6 +39,9 @@ public class MathUtils {
 	 * @return the machine epsilon
 	 */
 	public static float getMachineEpsilonFloat() {
+		if (logger.isTraceEnabled()) {
+			logger.trace("Machine epsilon is " + MACHINE_EPSILON_FLOAT);
+		}
 		return MACHINE_EPSILON_FLOAT;
 	}
 
@@ -42,8 +52,12 @@ public class MathUtils {
 	 *         <tt>false, otherwise</tt>
 	 */
 	public static boolean approximatelyEqual(float a, float b) {
-		return Math.abs(a - b) <= ((Math.abs(a) < Math.abs(b) ? Math.abs(b)
+		boolean apEqual = Math.abs(a - b) <= ((Math.abs(a) < Math.abs(b) ? Math.abs(b)
 				: Math.abs(a)) * MACHINE_EPSILON_FLOAT);
+		if (logger.isTraceEnabled()) {
+			logger.trace(a + " approximately equal " + b + " = " + apEqual);
+		}
+		return apEqual;
 	}
 
 	/**
@@ -53,8 +67,12 @@ public class MathUtils {
 	 *         <tt>false, otherwise</tt>
 	 */
 	public static boolean essentiallyEqual(float a, float b) {
-		return Math.abs(a - b) <= ((Math.abs(a) > Math.abs(b) ? Math.abs(b)
+		boolean esEqual = Math.abs(a - b) <= ((Math.abs(a) > Math.abs(b) ? Math.abs(b)
 				: Math.abs(a)) * MACHINE_EPSILON_FLOAT);
+		if (logger.isTraceEnabled()) {
+			logger.trace(a + " essentially equal " + b + " = " + esEqual);
+		}
+		return esEqual;
 	}
 
 	/**
@@ -65,8 +83,12 @@ public class MathUtils {
 	 *         <tt>false, otherwise</tt>
 	 */
 	public static boolean definitelyGreaterThan(float a, float b) {
-		return (a - b) > ((Math.abs(a) < Math.abs(b) ? Math.abs(b) : Math
+		boolean defGtThan = (a - b) > ((Math.abs(a) < Math.abs(b) ? Math.abs(b) : Math
 				.abs(a)) * MACHINE_EPSILON_FLOAT);
+		if (logger.isTraceEnabled()) {
+			logger.trace(a + " definitely greater than " + b + " = " + defGtThan);
+		}
+		return defGtThan;
 	}
 
 	/**
@@ -76,13 +98,12 @@ public class MathUtils {
 	 *         <tt>false, otherwise</tt>
 	 */
 	public static boolean definitelyLessThan(float a, float b) {
-		return (b - a) > ((Math.abs(a) < Math.abs(b) ? Math.abs(b) : Math
+		boolean defLsThan = (b - a) > ((Math.abs(a) < Math.abs(b) ? Math.abs(b) : Math
 				.abs(a)) * MACHINE_EPSILON_FLOAT);
-	}
-
-	public static void main(String[] args) {
-		System.out.println("Machine epsilon: "
-				+ MathUtils.getMachineEpsilonFloat());
+		if (logger.isTraceEnabled()) {
+			logger.trace(a + " definitely less than " + b + " = " + defLsThan);
+		}
+		return defLsThan;
 	}
 
 }
