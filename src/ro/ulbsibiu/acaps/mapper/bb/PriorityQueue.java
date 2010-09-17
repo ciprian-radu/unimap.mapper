@@ -1,5 +1,7 @@
 package ro.ulbsibiu.acaps.mapper.bb;
 
+import org.apache.log4j.Logger;
+
 import ro.ulbsibiu.acaps.mapper.util.MathUtils;
 
 /**
@@ -12,6 +14,11 @@ import ro.ulbsibiu.acaps.mapper.util.MathUtils;
  * 
  */
 class PriorityQueue {
+	
+	/**
+	 * Logger for this class
+	 */
+	private static final Logger logger = Logger.getLogger(PriorityQueue.class);
 
 	/** the length of the queue */
 	private int length;
@@ -31,6 +38,9 @@ class PriorityQueue {
 	 * @return the length of this queue
 	 */
 	public int length() {
+		if (logger.isTraceEnabled()) {
+			logger.trace("priority queue lenngth is " + length);
+		}
 		return length;
 	}
 
@@ -44,6 +54,11 @@ class PriorityQueue {
 			empty = true;
 		}
 
+		if (logger.isTraceEnabled()) {
+			logger.trace(empty == true ? "Priority queue is empty"
+					: "Priority queue is not empty");
+		}
+		
 		return empty;
 	}
 
@@ -56,7 +71,9 @@ class PriorityQueue {
 	public void insert(MappingNode node) {
 		// here we should insert the node at the position which
 		// is decided by the cost of the node
-//		System.out.println("Inserting node " + node.getId());
+		if (logger.isDebugEnabled()) {
+			logger.debug("Inserting node " + node.getId());
+		}
 		if (length == 0) {
 			head = node;
 			node.next = null;
@@ -96,7 +113,9 @@ class PriorityQueue {
 		MappingNode oldHead = head;
 		head = oldHead.next;
 		length--;
-//		System.out.println("Removing node " + oldHead.getId());
+		if (logger.isDebugEnabled()) {
+			logger.debug("Removing node " + oldHead.getId());
+		}
 		return oldHead;
 	}
 
