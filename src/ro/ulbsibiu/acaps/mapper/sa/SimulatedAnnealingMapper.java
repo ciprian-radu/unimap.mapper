@@ -302,8 +302,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 					gTile[i].addInLink(gLink[j].getLinkId());
 				}
 			}
-			assert gTile[i].getInLinks().size() > 0;
-			assert gTile[i].getOutLinks().size() > 0;
+			logger.assertLog(gTile[i].getInLinks().size() > 0, null);
+			logger.assertLog(gTile[i].getOutLinks().size() > 0, null);
 		}
 		// for each router generate a routing table provided by the XY routing
 		// protocol
@@ -353,10 +353,10 @@ public class SimulatedAnnealingMapper implements Mapper {
 				}
 			}
 
-			assert this.linkUsageList != null;
-			assert linkUsageList.length == gTileNum;
+			logger.assertLog(this.linkUsageList != null, null);
+			logger.assertLog(linkUsageList.length == gTileNum, null);
 			for (int i = 0; i < linkUsageList.length; i++) {
-				assert linkUsageList[i].length == gTileNum;
+				logger.assertLog(linkUsageList[i].length == gTileNum, null);
 			}
 		}
 	}
@@ -684,8 +684,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 	private void swapProcesses(int t1, int t2) {
 		Node tile1 = gTile[t1];
 		Node tile2 = gTile[t2];
-		assert tile1 != null;
-		assert tile2 != null;
+		logger.assertLog(tile1 != null, null);
+		logger.assertLog(tile2 != null, null);
 
 		int p1 = tile1.getCoreId();
 		int p2 = tile2.getCoreId();
