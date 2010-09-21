@@ -24,7 +24,4 @@ class ProcComm {
 	/** (only useful in routing synthesis) */
 	public int adaptivity;
 
-	/** the communication volume (only useful energy aware routing) */
-	public int volume;
-	
 }
