@@ -1,7 +1,5 @@
 package ro.ulbsibiu.acaps.mapper.sa;
 
-import org.apache.log4j.Logger;
-
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -11,9 +9,16 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.log4j.Logger;
+
 import ro.ulbsibiu.acaps.mapper.Mapper;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
 import ro.ulbsibiu.acaps.mapper.util.MathUtils;
+import ro.ulbsibiu.acaps.noc.xml.link.LinkType;
+import ro.ulbsibiu.acaps.noc.xml.node.NodeType;
+import ro.ulbsibiu.acaps.noc.xml.node.ObjectFactory;
+import ro.ulbsibiu.acaps.noc.xml.node.RoutingTableEntryType;
+import ro.ulbsibiu.acaps.noc.xml.node.TopologyParameterType;
 
 /**
  * Simulated Annealing algorithm for Network-on-Chip (NoC) application mapping.
@@ -91,39 +96,39 @@ public class SimulatedAnnealingMapper implements Mapper {
 	/** energy consumption per bit write */
 	private float bufWriteEBit;
 
-	/** the number of tiles (nodes) from the NoC */
-	private int gTileNum;
+	/** the number of nodes (nodes) from the NoC */
+	private int nodesNumber;
 
 	/**
-	 * the size of the 2D mesh, sqrt(gTileNum) (sqrt(gTileNum) * sqrt(gTileNum)
-	 * = gTileNum)
+	 * the size of the 2D mesh, sqrt(nodesNumber) (sqrt(nodesNumber) * sqrt(nodesNumber)
+	 * = nodesNumber)
 	 */
-	private int gEdgeSize;
+	private int edgeSize;
 
 	/**
 	 * the number of processes (tasks). Note that each core has only one task
 	 * associated to it.
 	 */
-	private int gProcNum;
+	private int coresNumber;
 
 	/**
 	 * the number of links from the NoC
 	 */
-	private int gLinkNum;
+	private int linksNumber;
 
-	/** the tiles from the Network-on-Chip (NoC) */
-	private Node[] gTile;
+	/** the nodes from the Network-on-Chip (NoC) */
+	private NodeType[] nodes;
 
 	/** the processes (tasks, cores) */
-	private Core[] gProcess;
+	private Core[] cores;
 
 	/** the communication channels from the NoC */
-	private Link[] gLink;
+	private ro.ulbsibiu.acaps.noc.xml.link.LinkType[] links;
 
 	/**
-	 * what links are used by tiles to communicate (each source - destination
-	 * tile pair has a list of link IDs). The matrix must have size
-	 * <tt>gTileNum x gTileNum</tt>. <b>This must be <tt>null</tt> when
+	 * what links are used by nodes to communicate (each source - destination
+	 * node pair has a list of link IDs). The matrix must have size
+	 * <tt>nodesNumber x nodesNumber</tt>. <b>This must be <tt>null</tt> when
 	 * <tt>buildRoutingTable</tt> is <tt>true</tt> </b>
 	 */
 	private List<Integer>[][] linkUsageList = null;
@@ -133,7 +138,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 
 	/**
 	 * how many mapping attempts the algorithm tries per iteration. A mapping
-	 * attempt means a random swap of processes (tasks) between to network tiles
+	 * attempt means a random swap of processes (tasks) between to network nodes
 	 */
 	private int attempts;
 
@@ -170,28 +175,154 @@ public class SimulatedAnnealingMapper implements Mapper {
 	/** holds the generated routing table */
 	private int[][][][] saRoutingTable = null;
 
+	/** the ID of the NoC topology used by this algorithm */
+	private String topologyId;
+	
+	private static enum TopologyParameter {
+		/** on what row of a 2D mesh the node is located */
+		ROW,
+		/** on what column of a 2D mesh the node is located */
+		COLUMN,
+		/** on what row of a 2D mesh the source node of a link is located */
+		ROW_TO,
+		/** on what row of a 2D mesh the destination node of a link is located */
+		ROW_FROM,
+		/** on what column of a 2D mesh the source node of a link is located */
+		COLUMN_TO,
+		/** on what column of a 2D mesh the destination node of a link is located */
+		COLUMN_FROM
+	};
+	
+	private static final String LINK_IN = "in";
+	
+	private static final String LINK_OUT = "out";
+	
+	private String getNodeTopologyParameter(NodeType node,
+			TopologyParameter parameter) {
+		String value = null;
+		List<TopologyParameterType> topologyParameters = node
+				.getTopologyParameter();
+		for (int i = 0; i < topologyParameters.size(); i++) {
+			if (parameter.toString().equalsIgnoreCase(
+					topologyParameters.get(i).getType())) {
+				value = topologyParameters.get(i).getValue();
+				break;
+			}
+		}
+		logger.assertLog(value != null,
+				"Couldn't find the topology parameter '" + parameter
+						+ "' in the node " + node.getId());
+		return value;
+	}
+	
+	private String getLinkTopologyParameter(LinkType link,
+			TopologyParameter parameter) {
+		String value = null;
+		List<ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType> topologyParameters = link
+				.getTopologyParameter();
+		for (int i = 0; i < topologyParameters.size(); i++) {
+			if (parameter.toString().equalsIgnoreCase(
+					topologyParameters.get(i).getType())) {
+				value = topologyParameters.get(i).getValue();
+				break;
+			}
+		}
+		logger.assertLog(value != null,
+				"Couldn't find the topology parameter '" + parameter
+						+ "' in the link " + link.getId());
+		return value;
+	}
+
+	/** routingTables[nodeId][sourceNode][destinationNode] = link ID */
+	private int[][][] routingTables;
+	
+	public void generateXYRoutingTable(NodeType node, int nodesNumber, int gEdgeSize, LinkType[] links) {
+		for (int i = 0; i < nodesNumber; i++) {
+			for (int j = 0; j < nodesNumber; j++) {
+				RoutingTableEntryType routingTableEntryType = new RoutingTableEntryType();
+				routingTableEntryType.setSource(Integer.toString(i));
+				routingTableEntryType.setDestination(Integer.toString(j));
+				routingTableEntryType.setLink(Integer.toString(-2));
+				node.getRoutingTableEntry().add(routingTableEntryType);
+			}
+		}
+
+		for (int dstNode = 0; dstNode < nodesNumber; dstNode++) {
+			if (dstNode == Integer.valueOf(node.getId())) { // deliver to me
+				routingTables[Integer.valueOf(node.getId())][0][dstNode] = -1;
+				continue;
+			}
+
+			// check out the dst Node's position first
+			int dstRow = dstNode / gEdgeSize;
+			int dstCol = dstNode % gEdgeSize;
+
+			int row = Integer.valueOf(getNodeTopologyParameter(node, TopologyParameter.ROW));
+			int column = Integer.valueOf(getNodeTopologyParameter(node, TopologyParameter.COLUMN));
+			int nextStepRow = row;
+			int nextStepCol = column;
+
+			if (dstCol != column) { // We should go horizontally
+				if (column > dstCol) {
+					nextStepCol--;
+				} else {
+					nextStepCol++;
+				}
+			} else { // We should go vertically
+				if (row > dstRow) {
+					nextStepRow--;
+				} else {
+					nextStepRow++;
+				}
+			}
+
+			for (int i = 0; i < node.getLink().size(); i++) {
+				if (LINK_OUT.equals(node.getLink().get(i).getType())) {
+					if (Integer.valueOf(getLinkTopologyParameter(links[Integer.valueOf(node.getLink().get(i).getValue())], TopologyParameter.ROW_TO)) == nextStepRow
+							&& Integer.valueOf(getLinkTopologyParameter(links[Integer.valueOf(node.getLink().get(i).getValue())], TopologyParameter.COLUMN_TO)) == nextStepCol) {
+						routingTables[Integer.valueOf(node.getId())][0][dstNode] = Integer.valueOf(links[Integer
+								.valueOf(node.getLink().get(i).getValue())]
+								.getId());
+						break;
+					}
+				}
+			}
+		}
+
+		// Duplicate this routing row to the other routing rows.
+		for (int i = 1; i < nodesNumber; i++) {
+			for (int j = 0; j < nodesNumber; j++) {
+				routingTables[Integer.valueOf(node.getId())][i][j] = routingTables[Integer.valueOf(node.getId())][0][j];
+			}
+		}
+	}
+
 	/**
 	 * Default constructor
 	 * <p>
 	 * No routing table is built.
 	 * </p>
 	 * 
-	 * @param gTileNum
-	 *            the size of the 2D mesh (gTileNum * gTileNum)
-	 * @param gProcNum
+	 * @param topologyId
+	 *            the ID of the NoC topology used by this algorithm
+	 * @param nodesNumber
+	 *            the size of the 2D mesh (nodesNumber * nodesNumber)
+	 * @param coresNumber
 	 *            the number of processes (tasks). Note that each core has only
 	 *            one task associated to it
 	 */
-	public SimulatedAnnealingMapper(int gTileNum, int gProcNum) {
-		this(gTileNum, gProcNum, false, LegalTurnSet.WEST_FIRST, 1.056f, 2.831f);
+	public SimulatedAnnealingMapper(String topologyId, int nodesNumber, int coresNumber) {
+		this(topologyId, nodesNumber, coresNumber, false, LegalTurnSet.WEST_FIRST, 1.056f, 2.831f);
 	}
 
 	/**
 	 * Constructor
 	 * 
-	 * @param gTileNum
-	 *            the size of the 2D mesh (gTileNum * gTileNum)
-	 * @param gProcNum
+	 * @param topologyId
+	 *            the ID of the NoC topology used by this algorithm
+	 * @param nodesNumber
+	 *            the size of the 2D mesh (nodesNumber * nodesNumber)
+	 * @param coresNumber
 	 *            the number of processes (tasks). Note that each core has only
 	 *            one task associated to it
 	 * @param buildRoutingTable
@@ -204,111 +335,160 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 * @param bufWriteEBit
 	 *            energy consumption per bit write
 	 */
-	public SimulatedAnnealingMapper(int gTileNum, int gProcNum,
+	public SimulatedAnnealingMapper(String topologyId, int nodesNumber, int coresNumber,
 			boolean buildRoutingTable, LegalTurnSet legalTurnSet,
 			float bufReadEBit, float bufWriteEBit) {
-		this.gTileNum = gTileNum;
-		this.gEdgeSize = (int) Math.sqrt(gTileNum);
-		this.gProcNum = gProcNum;
+		this.topologyId = topologyId;
+		this.nodesNumber = nodesNumber;
+		this.edgeSize = (int) Math.sqrt(nodesNumber);
+		this.coresNumber = coresNumber;
 		// we have 2gEdgeSize(gEdgeSize - 1) bidirectional links =>
 		// 4gEdgeSize(gEdgeSize - 1) unidirectional links
-		this.gLinkNum = 2 * (gEdgeSize - 1) * gEdgeSize * 2;
+		this.linksNumber = 2 * (edgeSize - 1) * edgeSize * 2;
 		this.buildRoutingTable = buildRoutingTable;
 		this.legalTurnSet = legalTurnSet;
 		this.bufReadEBit = bufReadEBit;
 		this.bufWriteEBit = bufWriteEBit;
 
-		gTile = new Node[gTileNum];
+		nodes = new NodeType[nodesNumber];
 
-		gProcess = new Core[gProcNum];
+		cores = new Core[coresNumber];
 
-		gLink = new Link[gLinkNum];
+		links = new LinkType[linksNumber];
 	}
 
 	public void initializeCores() {
-		for (int i = 0; i < gProcess.length; i++) {
-			gProcess[i] = new Core(i, -1);
-			gProcess[i].setFromCommunication(new int[gTileNum]);
-			gProcess[i].setToCommunication(new int[gTileNum]);
-			gProcess[i].setFromBandwidthRequirement(new int[gTileNum]);
-			gProcess[i].setToBandwidthRequirement(new int[gTileNum]);
+		for (int i = 0; i < cores.length; i++) {
+			cores[i] = new Core(i, -1);
+			cores[i].setFromCommunication(new int[nodesNumber]);
+			cores[i].setToCommunication(new int[nodesNumber]);
+			cores[i].setFromBandwidthRequirement(new int[nodesNumber]);
+			cores[i].setToBandwidthRequirement(new int[nodesNumber]);
 		}
 	}
 
 	public void initializeNocTopology(int bandwidth, float switchEBit,
 			float linkEBit) {
 		// initialize nodes
-		for (int i = 0; i < gTile.length; i++) {
-			gTile[i] = new Node(i, -1, i / gEdgeSize, i % gEdgeSize, switchEBit);
+		ObjectFactory nodeFactory = new ObjectFactory();
+		for (int i = 0; i < nodes.length; i++) {
+			NodeType node = nodeFactory.createNodeType();
+			node.setId(Integer.toString(i));
+			node.setCore(Integer.toString(-1));
+			TopologyParameterType row = new TopologyParameterType();
+			row.setTopology(topologyId);
+			row.setType(TopologyParameter.ROW.toString());
+			row.setValue(Integer.toString(i / edgeSize));
+			node.getTopologyParameter().add(row);
+			TopologyParameterType column = new TopologyParameterType();
+			column.setTopology(topologyId);
+			column.setType(TopologyParameter.COLUMN.toString());
+			column.setValue(Integer.toString(i % edgeSize));
+			node.getTopologyParameter().add(column);
+			node.setCost((double)switchEBit);
+			nodes[i] = node;
 		}
 		// initialize links
-		for (int i = 0; i < gLink.length; i++) {
+		for (int i = 0; i < links.length; i++) {
 			// There are totally 2*(gEdgeSize-1)*gEdgeSize*2 links. The first
 			// half links are horizontal
 			// the second half links are vertical links.
-			int fromTileRow;
-			int fromTileColumn;
-			int toTileRow;
-			int toTileColumn;
-			if (i < 2 * (gEdgeSize - 1) * gEdgeSize) {
-				fromTileRow = i / (2 * (gEdgeSize - 1));
-				toTileRow = i / (2 * (gEdgeSize - 1));
-				int localId = i % (2 * (gEdgeSize - 1));
-				if (localId < (gEdgeSize - 1)) {
+			int fromNodeRow;
+			int fromNodeColumn;
+			int toNodeRow;
+			int toNodeColumn;
+			if (i < 2 * (edgeSize - 1) * edgeSize) {
+				fromNodeRow = i / (2 * (edgeSize - 1));
+				toNodeRow = i / (2 * (edgeSize - 1));
+				int localId = i % (2 * (edgeSize - 1));
+				if (localId < (edgeSize - 1)) {
 					// from west to east
-					fromTileColumn = localId;
-					toTileColumn = localId + 1;
+					fromNodeColumn = localId;
+					toNodeColumn = localId + 1;
 				} else {
 					// from east to west
-					localId = localId - (gEdgeSize - 1);
-					fromTileColumn = localId + 1;
-					toTileColumn = localId;
+					localId = localId - (edgeSize - 1);
+					fromNodeColumn = localId + 1;
+					toNodeColumn = localId;
 				}
 			} else {
-				int localId = i - 2 * (gEdgeSize - 1) * gEdgeSize;
-				fromTileColumn = localId / (2 * (gEdgeSize - 1));
-				toTileColumn = localId / (2 * (gEdgeSize - 1));
-				localId = localId % (2 * (gEdgeSize - 1));
-				if (localId < (gEdgeSize - 1)) {
+				int localId = i - 2 * (edgeSize - 1) * edgeSize;
+				fromNodeColumn = localId / (2 * (edgeSize - 1));
+				toNodeColumn = localId / (2 * (edgeSize - 1));
+				localId = localId % (2 * (edgeSize - 1));
+				if (localId < (edgeSize - 1)) {
 					// from south to north
-					fromTileRow = localId;
-					toTileRow = localId + 1;
+					fromNodeRow = localId;
+					toNodeRow = localId + 1;
 				} else {
 					// from north to south
-					localId = localId - (gEdgeSize - 1);
-					fromTileRow = localId + 1;
-					toTileRow = localId;
+					localId = localId - (edgeSize - 1);
+					fromNodeRow = localId + 1;
+					toNodeRow = localId;
 				}
 			}
 
-			int fromTileId = fromTileRow * gEdgeSize + fromTileColumn;
-			int toTileId = toTileRow * gEdgeSize + toTileColumn;
+			int fromNodeId = fromNodeRow * edgeSize + fromNodeColumn;
+			int toNodeId = toNodeRow * edgeSize + toNodeColumn;
 
-			gLink[i] = new Link(i, bandwidth, fromTileId, toTileId, linkEBit);
-			gLink[i].setFromNodeRow(fromTileRow);
-			gLink[i].setFromNodeColumn(fromTileColumn);
-			gLink[i].setToNodeRow(toTileRow);
-			gLink[i].setToNodeColumn(toTileColumn);
+			LinkType link = new LinkType();
+			link.setId(Integer.toString(i));
+			link.setBandwidth(bandwidth);
+			link.setSourceNode(Integer.toString(fromNodeId));
+			link.setDestinationNode(Integer.toString(toNodeId));
+			link.setCost((double)linkEBit);
+			ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType rowTo = new ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType();
+			rowTo.setTopology(topologyId);
+			rowTo.setType(TopologyParameter.ROW_TO.toString());
+			rowTo.setValue(Integer.toString(toNodeRow));
+			link.getTopologyParameter().add(rowTo);
+			ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType rowFrom = new ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType();
+			rowFrom.setTopology(topologyId);
+			rowFrom.setType(TopologyParameter.ROW_FROM.toString());
+			rowFrom.setValue(Integer.toString(fromNodeRow));
+			link.getTopologyParameter().add(rowFrom);
+			ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType columnTo = new ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType();
+			columnTo.setTopology(topologyId);
+			columnTo.setType(TopologyParameter.COLUMN_TO.toString());
+			columnTo.setValue(Integer.toString(toNodeColumn));
+			link.getTopologyParameter().add(columnTo);
+			ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType columnFrom = new ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType();
+			columnFrom.setTopology(topologyId);
+			columnFrom.setType(TopologyParameter.COLUMN_FROM.toString());
+			columnFrom.setValue(Integer.toString(fromNodeColumn));
+			link.getTopologyParameter().add(columnFrom);
+			links[i] = link;
 		}
 		// attach the links to the NoC nodes
-		for (int i = 0; i < gTileNum; i++) {
-			for (int j = 0; j < gLink.length; j++) {
-				if (gLink[j].getFromNodeRow() == gTile[i].getRow()
-						&& gLink[j].getFromNodeColumn() == gTile[i].getColumn()) {
-					gTile[i].addOutLink(gLink[j].getLinkId());
+		boolean inAdded = false;
+		boolean outAdded = false;
+		for (int i = 0; i < nodesNumber; i++) {
+			for (int j = 0; j < links.length; j++) {
+				if (Integer.valueOf(getLinkTopologyParameter(links[j], TopologyParameter.ROW_FROM)) == Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.ROW))
+						&& Integer.valueOf(getLinkTopologyParameter(links[j], TopologyParameter.COLUMN_FROM)) == Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.COLUMN))) {
+					ro.ulbsibiu.acaps.noc.xml.node.LinkType linkType = new ro.ulbsibiu.acaps.noc.xml.node.LinkType();
+					linkType.setType(LINK_OUT);
+					linkType.setValue(links[j].getId());
+					nodes[i].getLink().add(linkType);
+					outAdded = true;
 				}
-				if (gLink[j].getToTileRow() == gTile[i].getRow()
-						&& gLink[j].getToNodeColumn() == gTile[i].getColumn()) {
-					gTile[i].addInLink(gLink[j].getLinkId());
+				if (Integer.valueOf(getLinkTopologyParameter(links[j], TopologyParameter.ROW_TO)) == Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.ROW))
+						&& Integer.valueOf(getLinkTopologyParameter(links[j], TopologyParameter.COLUMN_TO)) == Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.COLUMN))) {
+					ro.ulbsibiu.acaps.noc.xml.node.LinkType linkType = new ro.ulbsibiu.acaps.noc.xml.node.LinkType();
+					linkType.setType(LINK_IN);
+					linkType.setValue(links[j].getId());
+					nodes[i].getLink().add(linkType);
+					inAdded = true;
 				}
 			}
-			logger.assertLog(gTile[i].getInLinks().size() > 0, null);
-			logger.assertLog(gTile[i].getOutLinks().size() > 0, null);
+			logger.assertLog(inAdded, null);
+			logger.assertLog(outAdded, null);
 		}
 		// for each router generate a routing table provided by the XY routing
 		// protocol
-		for (int i = 0; i < gTileNum; i++) {
-			gTile[i].generateXYRoutingTable(gTileNum, gEdgeSize, gLink);
+		routingTables = new int[nodesNumber][nodesNumber][nodesNumber];
+		for (int i = 0; i < nodesNumber; i++) {
+			generateXYRoutingTable(nodes[i], nodesNumber, edgeSize, links);
 		}
 
 		generateLinkUsageList();
@@ -319,33 +499,33 @@ public class SimulatedAnnealingMapper implements Mapper {
 			linkUsageList = null;
 		} else {
 			// Allocate the space for the link usage table
-			int[][][] linkUsageMatrix = new int[gTileNum][gTileNum][gLinkNum];
+			int[][][] linkUsageMatrix = new int[nodesNumber][nodesNumber][linksNumber];
 
 			// Setting up the link usage matrix
-			for (int srcId = 0; srcId < gTileNum; srcId++) {
-				for (int dstId = 0; dstId < gTileNum; dstId++) {
+			for (int srcId = 0; srcId < nodesNumber; srcId++) {
+				for (int dstId = 0; dstId < nodesNumber; dstId++) {
 					if (srcId == dstId) {
 						continue;
 					}
-					Node currentTile = gTile[srcId];
-					while (currentTile.getTileId() != dstId) {
-						int linkId = currentTile.routeToLink(srcId, dstId);
-						Link link = gLink[linkId];
+					NodeType currentNode = nodes[srcId];
+					while (Integer.valueOf(currentNode.getId()) != dstId) {
+						int linkId = routingTables[Integer.valueOf(currentNode.getId())][srcId][dstId];
+						LinkType link = links[linkId];
 						linkUsageMatrix[srcId][dstId][linkId] = 1;
-						currentTile = gTile[link.getToTileId()];
+						currentNode = nodes[Integer.valueOf(link.getDestinationNode())];
 					}
 				}
 			}
 
 			// Now build the link usage list
-			linkUsageList = new ArrayList[gTileNum][gTileNum];
-			for (int src = 0; src < gTileNum; src++) {
-				for (int dst = 0; dst < gTileNum; dst++) {
+			linkUsageList = new ArrayList[nodesNumber][nodesNumber];
+			for (int src = 0; src < nodesNumber; src++) {
+				for (int dst = 0; dst < nodesNumber; dst++) {
 					linkUsageList[src][dst] = new ArrayList<Integer>();
 					if (src == dst) {
 						continue;
 					}
-					for (int linkId = 0; linkId < gLinkNum; linkId++) {
+					for (int linkId = 0; linkId < linksNumber; linkId++) {
 						if (linkUsageMatrix[src][dst][linkId] == 1) {
 							linkUsageList[src][dst].add(linkId);
 						}
@@ -354,37 +534,37 @@ public class SimulatedAnnealingMapper implements Mapper {
 			}
 
 			logger.assertLog(this.linkUsageList != null, null);
-			logger.assertLog(linkUsageList.length == gTileNum, null);
+			logger.assertLog(linkUsageList.length == nodesNumber, null);
 			for (int i = 0; i < linkUsageList.length; i++) {
-				logger.assertLog(linkUsageList[i].length == gTileNum, null);
+				logger.assertLog(linkUsageList[i].length == nodesNumber, null);
 			}
 		}
 	}
 
 	private void mapCoresToNocNodesRandomly() {
 		Random rand = new Random();
-		for (int i = 0; i < gTileNum; i++) {
-			int k = Math.abs(rand.nextInt()) % gTileNum;
-			while (gTile[k].getCoreId() != -1) {
-				k = Math.abs(rand.nextInt()) % gTileNum;
+		for (int i = 0; i < nodesNumber; i++) {
+			int k = Math.abs(rand.nextInt()) % nodesNumber;
+			while (Integer.valueOf(nodes[k].getCore()) != -1) {
+				k = Math.abs(rand.nextInt()) % nodesNumber;
 			}
-			gProcess[i].setNodeId(k);
-			gTile[k].setCoreId(i);
+			cores[i].setNodeId(k);
+			nodes[k].setCore(Integer.toString(i));
 		}
 
 		// // this maps the cores like NoCMap does
 		// int[] coreMap = new int[] { 11, 13, 10, 8, 12, 0, 9, 1, 2, 4, 14, 15,
 		// 5, 3, 7, 6 };
-		// for (int i = 0; i < gProcNum; i++) {
-		// gProcess[i].setTileId(coreMap[i]);
-		// gTile[coreMap[i]].setProcId(i);
+		// for (int i = 0; i < coresNumber; i++) {
+		// cores[i].setNodeId(coreMap[i]);
+		// gNode[coreMap[i]].setProcId(i);
 		// }
 	}
 
 	private void printCurrentMapping() {
-		for (int i = 0; i < gProcNum; i++) {
-			System.out.println("Core " + gProcess[i].getCoreId()
-					+ " is mapped to NoC node " + gProcess[i].getNodeId());
+		for (int i = 0; i < coresNumber; i++) {
+			System.out.println("Core " + cores[i].getCoreId()
+					+ " is mapped to NoC node " + cores[i].getNodeId());
 		}
 	}
 
@@ -501,9 +681,9 @@ public class SimulatedAnnealingMapper implements Mapper {
 			logger.trace("attempts = " + attempts);
 		}
 		for (int m = 1; m < attempts; m++) {
-			int[] tiles = makeRandomSwap();
-			int tile1 = tiles[0];
-			int tile2 = tiles[1];
+			int[] nodes = makeRandomSwap();
+			int node1 = nodes[0];
+			int node2 = nodes[1];
 			double newCost = calculateTotalCost();
 			double deltaCost = newCost - currentCost;
 			if (logger.isDebugEnabled()) {
@@ -527,9 +707,9 @@ public class SimulatedAnnealingMapper implements Mapper {
 				currentCost = newCost;
 			} else {
 				if (logger.isTraceEnabled()) {
-					logger.trace("Rolling back tiles " + tile1 + " and " + tile2);
+					logger.trace("Rolling back nodes " + node1 + " and " + node2);
 				}
-				swapProcesses(tile1, tile2); // roll back
+				swapProcesses(node1, node2); // roll back
 			}
 			if (m % unit == 0) {
 				// This is just to print out the process of the algorithm
@@ -560,10 +740,10 @@ public class SimulatedAnnealingMapper implements Mapper {
 		double deltaCost;
 
 		if (!buildRoutingTable) {
-			linkBandwidthUsage = new int[gLinkNum];
+			linkBandwidthUsage = new int[linksNumber];
 		} else {
-			synLinkBandwithUsage = new int[gEdgeSize][gEdgeSize][4];
-			saRoutingTable = new int[gEdgeSize][gEdgeSize][gTileNum][gTileNum];
+			synLinkBandwithUsage = new int[edgeSize][edgeSize][4];
+			saRoutingTable = new int[edgeSize][edgeSize][nodesNumber][nodesNumber];
 			for (int i = 0; i < saRoutingTable.length; i++) {
 				for (int j = 0; j < saRoutingTable[i].length; j++) {
 					for (int k = 0; k < saRoutingTable[i][j].length; k++) {
@@ -581,8 +761,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 		cost2 = 999999999;
 		currentCost = cost2;
 
-		attempts = gTileNum * gTileNum * 100;
-		// attempts = gTileNum * 10;
+		attempts = nodesNumber * nodesNumber * 100;
+		// attempts = nodesNumber * 10;
 
 		initRand(1234567);
 
@@ -651,54 +831,54 @@ public class SimulatedAnnealingMapper implements Mapper {
 	}
 
 	/**
-	 * Randomly picks two tiles and swaps them
+	 * Randomly picks two nodes and swaps them
 	 * 
 	 * @return an array with exactly 2 integers
 	 */
 	private int[] makeRandomSwap() {
-		int tile1 = (int) uniformIntegerRandomVariable(0, gTileNum - 1);
-		int tile2 = -1;
+		int node1 = (int) uniformIntegerRandomVariable(0, nodesNumber - 1);
+		int node2 = -1;
 
 		while (true) {
-			// select two tiles to swap
-			tile2 = (int) uniformIntegerRandomVariable(0, gTileNum - 1);
-			if (tile1 != tile2
-					&& (gTile[tile1] != null || gTile[tile2] != null)) {
+			// select two nodes to swap
+			node2 = (int) uniformIntegerRandomVariable(0, nodesNumber - 1);
+			if (node1 != node2
+					&& (nodes[node1] != null || nodes[node2] != null)) {
 				break;
 			}
 		}
 
-		// Swap the processes attached to these two tiles
-		swapProcesses(tile1, tile2);
-		return new int[] { tile1, tile2 };
+		// Swap the processes attached to these two nodes
+		swapProcesses(node1, node2);
+		return new int[] { node1, node2 };
 	}
 
 	/**
-	 * Swaps the processes from tiles with IDs t1 and t2
+	 * Swaps the processes from nodes with IDs t1 and t2
 	 * 
 	 * @param t1
-	 *            the ID of the first tile
+	 *            the ID of the first node
 	 * @param t2
-	 *            the ID of the second tile
+	 *            the ID of the second node
 	 */
 	private void swapProcesses(int t1, int t2) {
-		Node tile1 = gTile[t1];
-		Node tile2 = gTile[t2];
-		logger.assertLog(tile1 != null, null);
-		logger.assertLog(tile2 != null, null);
+		NodeType node1 = nodes[t1];
+		NodeType node2 = nodes[t2];
+		logger.assertLog(node1 != null, null);
+		logger.assertLog(node2 != null, null);
 
-		int p1 = tile1.getCoreId();
-		int p2 = tile2.getCoreId();
+		int p1 = Integer.valueOf(node1.getCore());
+		int p2 = Integer.valueOf(node2.getCore());
 		
 		if (logger.isTraceEnabled()) {
-			logger.trace("Swapping process " + p1 + " of tile " + t1
-					+ " with process " + p2 + " of tile " + t2);
+			logger.trace("Swapping process " + p1 + " of node " + t1
+					+ " with process " + p2 + " of node " + t2);
 		}
 		
-		tile1.setCoreId(p2);
-		tile2.setCoreId(p1);
+		node1.setCore(Integer.toString(p2));
+		node2.setCore(Integer.toString(p1));
 		if (p1 != -1) {
-			Core process = gProcess[p1];
+			Core process = cores[p1];
 			if (process == null) {
 				process = new Core(p1, t2);
 			} else {
@@ -706,7 +886,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 			}
 		}
 		if (p2 != -1) {
-			Core process = gProcess[p2];
+			Core process = cores[p2];
 			if (process == null) {
 				process = new Core(p2, t1);
 			} else {
@@ -746,33 +926,33 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 */
 	private float calculateOverloadWithFixedRouting() {
 		Arrays.fill(linkBandwidthUsage, 0);
-		for (int proc1 = 0; proc1 < gProcNum; proc1++) {
-			for (int proc2 = proc1 + 1; proc2 < gProcNum; proc2++) {
-				if (gProcess[proc1].getToBandwidthRequirement()[proc2] > 0) {
-					int tile1 = gProcess[proc1].getNodeId();
-					int tile2 = gProcess[proc2].getNodeId();
-					for (int i = 0; i < linkUsageList[tile1][tile2].size(); i++) {
-						int linkId = linkUsageList[tile1][tile2].get(i);
-						linkBandwidthUsage[linkId] += gProcess[proc1]
+		for (int proc1 = 0; proc1 < coresNumber; proc1++) {
+			for (int proc2 = proc1 + 1; proc2 < coresNumber; proc2++) {
+				if (cores[proc1].getToBandwidthRequirement()[proc2] > 0) {
+					int node1 = cores[proc1].getNodeId();
+					int node2 = cores[proc2].getNodeId();
+					for (int i = 0; i < linkUsageList[node1][node2].size(); i++) {
+						int linkId = linkUsageList[node1][node2].get(i);
+						linkBandwidthUsage[linkId] += cores[proc1]
 								.getToBandwidthRequirement()[proc2];
 					}
 				}
-				if (gProcess[proc1].getFromBandwidthRequirement()[proc2] > 0) {
-					int tile1 = gProcess[proc1].getNodeId();
-					int tile2 = gProcess[proc2].getNodeId();
-					for (int i = 0; i < linkUsageList[tile1][tile2].size(); i++) {
-						int linkId = linkUsageList[tile2][tile1].get(i);
-						linkBandwidthUsage[linkId] += gProcess[proc1]
+				if (cores[proc1].getFromBandwidthRequirement()[proc2] > 0) {
+					int node1 = cores[proc1].getNodeId();
+					int node2 = cores[proc2].getNodeId();
+					for (int i = 0; i < linkUsageList[node1][node2].size(); i++) {
+						int linkId = linkUsageList[node2][node1].get(i);
+						linkBandwidthUsage[linkId] += cores[proc1]
 								.getFromBandwidthRequirement()[proc2];
 					}
 				}
 			}
 		}
 		float overloadCost = 0;
-		for (int i = 0; i < gLinkNum; i++) {
-			if (linkBandwidthUsage[i] > gLink[i].getBandwidth()) {
+		for (int i = 0; i < linksNumber; i++) {
+			if (linkBandwidthUsage[i] > links[i].getBandwidth()) {
 				overloadCost = ((float) linkBandwidthUsage[i])
-						/ gLink[i].getBandwidth() - 1.0f;
+						/ links[i].getBandwidth() - 1.0f;
 			}
 		}
 		overloadCost *= OVERLOAD_UNIT_COST;
@@ -788,29 +968,29 @@ public class SimulatedAnnealingMapper implements Mapper {
 		float overloadCost = 0.0f;
 
 		// Clear the link usage
-		for (int i = 0; i < gEdgeSize; i++) {
-			for (int j = 0; j < gEdgeSize; j++) {
+		for (int i = 0; i < edgeSize; i++) {
+			for (int j = 0; j < edgeSize; j++) {
 				Arrays.fill(synLinkBandwithUsage[i][j], 0);
 			}
 		}
 
-		for (int src = 0; src < gProcNum; src++) {
-			for (int dst = 0; dst < gProcNum; dst++) {
-				int tile1 = gProcess[src].getNodeId();
-				int tile2 = gProcess[dst].getNodeId();
-				if (gProcess[src].getToBandwidthRequirement()[dst] > 0) {
-					routeTraffic(tile1, tile2,
-							gProcess[src].getToBandwidthRequirement()[dst]);
+		for (int src = 0; src < coresNumber; src++) {
+			for (int dst = 0; dst < coresNumber; dst++) {
+				int node1 = cores[src].getNodeId();
+				int node2 = cores[dst].getNodeId();
+				if (cores[src].getToBandwidthRequirement()[dst] > 0) {
+					routeTraffic(node1, node2,
+							cores[src].getToBandwidthRequirement()[dst]);
 				}
 			}
 		}
 
-		for (int i = 0; i < gEdgeSize; i++) {
-			for (int j = 0; j < gEdgeSize; j++) {
+		for (int i = 0; i < edgeSize; i++) {
+			for (int j = 0; j < edgeSize; j++) {
 				for (int k = 0; k < 4; k++) {
-					if (synLinkBandwithUsage[i][j][k] > gLink[0].getBandwidth()) {
+					if (synLinkBandwithUsage[i][j][k] > links[0].getBandwidth()) {
 						overloadCost += ((float) synLinkBandwithUsage[i][j][k])
-								/ gLink[0].getBandwidth() - 1.0;
+								/ links[0].getBandwidth() - 1.0;
 					}
 				}
 			}
@@ -824,20 +1004,20 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 * Routes the traffic. Hence, the routing table is computed here by the
 	 * algorithm.
 	 * 
-	 * @param srcTile
-	 *            the source tile
-	 * @param dstTile
-	 *            the destination tile
+	 * @param srcNode
+	 *            the source node
+	 * @param dstNode
+	 *            the destination node
 	 * @param bandwidth
 	 *            the bandwidth
 	 */
-	private void routeTraffic(int srcTile, int dstTile, int bandwidth) {
+	private void routeTraffic(int srcNode, int dstNode, int bandwidth) {
 		boolean commit = true;
 
-		int srcRow = gTile[srcTile].getRow();
-		int srcColumn = gTile[srcTile].getColumn();
-		int dstRow = gTile[dstTile].getRow();
-		int dstColumn = gTile[dstTile].getColumn();
+		int srcRow = Integer.valueOf(getNodeTopologyParameter(nodes[srcNode], TopologyParameter.ROW));
+		int srcColumn = Integer.valueOf(getNodeTopologyParameter(nodes[srcNode], TopologyParameter.COLUMN));
+		int dstRow = Integer.valueOf(getNodeTopologyParameter(nodes[dstNode], TopologyParameter.ROW));
+		int dstColumn = Integer.valueOf(getNodeTopologyParameter(nodes[dstNode], TopologyParameter.COLUMN));
 
 		int row = srcRow;
 		int col = srcColumn;
@@ -935,7 +1115,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 			synLinkBandwithUsage[row][col][direction] += bandwidth;
 
 			if (commit) {
-				saRoutingTable[row][col][srcTile][dstTile] = direction;
+				saRoutingTable[row][col][srcNode][dstNode] = direction;
 			}
 			switch (direction) {
 			case SOUTH:
@@ -959,28 +1139,27 @@ public class SimulatedAnnealingMapper implements Mapper {
 
 	private void programRouters() {
 		// clean all the old routing table
-		for (int tileId = 0; tileId < gTileNum; tileId++) {
-			for (int srcTile = 0; srcTile < gTileNum; srcTile++) {
-				for (int dstTile = 0; dstTile < gTileNum; dstTile++) {
-					if (tileId == dstTile) {
-						gTile[tileId].setRoutingEntry(srcTile, dstTile, -1);
+		for (int nodeId = 0; nodeId < nodesNumber; nodeId++) {
+			for (int srcNode = 0; srcNode < nodesNumber; srcNode++) {
+				for (int dstNode = 0; dstNode < nodesNumber; dstNode++) {
+					if (nodeId == dstNode) {
+						routingTables[Integer.valueOf(nodes[nodeId].getId())][srcNode][dstNode] = -1;
 					} else {
-						gTile[tileId].setRoutingEntry(srcTile, dstTile, -2);
+						routingTables[Integer.valueOf(nodes[nodeId].getId())][srcNode][dstNode] = -2;
 					}
 				}
 			}
 		}
 
-		for (int row = 0; row < gEdgeSize; row++) {
-			for (int col = 0; col < gEdgeSize; col++) {
-				int tileId = row * gEdgeSize + col;
-				for (int srcTile = 0; srcTile < gTileNum; srcTile++) {
-					for (int dstTile = 0; dstTile < gTileNum; dstTile++) {
+		for (int row = 0; row < edgeSize; row++) {
+			for (int col = 0; col < edgeSize; col++) {
+				int nodeId = row * edgeSize + col;
+				for (int srcNode = 0; srcNode < nodesNumber; srcNode++) {
+					for (int dstNode = 0; dstNode < nodesNumber; dstNode++) {
 						int linkId = locateLink(row, col,
-								saRoutingTable[row][col][srcTile][dstTile]);
+								saRoutingTable[row][col][srcNode][dstNode]);
 						if (linkId != -1) {
-							gTile[tileId].setRoutingEntry(srcTile, dstTile,
-									linkId);
+							routingTables[Integer.valueOf(nodes[nodeId].getId())][srcNode][dstNode] = linkId;
 						}
 					}
 				}
@@ -1007,29 +1186,29 @@ public class SimulatedAnnealingMapper implements Mapper {
 
 	private float calculateSwitchEnergy() {
 		float energy = 0;
-		for (int src = 0; src < gTileNum; src++) {
-			for (int dst = 0; dst < gTileNum; dst++) {
-				int srcProc = gTile[src].getCoreId();
-				int dstProc = gTile[dst].getCoreId();
-				int commVol = gProcess[srcProc].getToCommunication()[dstProc];
+		for (int src = 0; src < nodesNumber; src++) {
+			for (int dst = 0; dst < nodesNumber; dst++) {
+				int srcProc = Integer.valueOf(nodes[src].getCore());
+				int dstProc = Integer.valueOf(nodes[dst].getCore());
+				int commVol = cores[srcProc].getToCommunication()[dstProc];
 				if (commVol > 0) {
-					energy += gTile[src].getCost() * commVol;
-					Node currentTile = gTile[src];
+					energy += nodes[src].getCost() * commVol;
+					NodeType currentNode = nodes[src];
 					if (logger.isTraceEnabled()) {
-						logger.trace("adding " + currentTile.getCost() + " * "
+						logger.trace("adding " + currentNode.getCost() + " * "
 								+ commVol + " (core " + srcProc + " to core "
-								+ dstProc + ") current tile "
-								+ currentTile.getTileId());
+								+ dstProc + ") current node "
+								+ currentNode.getId());
 					}
-					while (currentTile.getTileId() != dst) {
-						int linkId = currentTile.getRoutingEntries()[src][dst];
-						currentTile = gTile[gLink[linkId].getToTileId()];
-						energy += currentTile.getCost() * commVol;
+					while (Integer.valueOf(currentNode.getId()) != dst) {
+						int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
+						currentNode = nodes[Integer.valueOf(links[linkId].getDestinationNode())];
+						energy += currentNode.getCost() * commVol;
 						if (logger.isTraceEnabled()) {
-							logger.trace("adding " + currentTile.getCost()
+							logger.trace("adding " + currentNode.getCost()
 									+ " * " + commVol + " (core " + srcProc
-									+ " to core " + dstProc + ") current tile "
-									+ currentTile.getTileId() + " link ID "
+									+ " to core " + dstProc + ") current node "
+									+ currentNode.getId() + " link ID "
 									+ linkId);
 						}
 					}
@@ -1041,17 +1220,17 @@ public class SimulatedAnnealingMapper implements Mapper {
 
 	private float calculateLinkEnergy() {
 		float energy = 0;
-		for (int src = 0; src < gTileNum; src++) {
-			for (int dst = 0; dst < gTileNum; dst++) {
-				int srcProc = gTile[src].getCoreId();
-				int dstProc = gTile[dst].getCoreId();
-				int commVol = gProcess[srcProc].getToCommunication()[dstProc];
+		for (int src = 0; src < nodesNumber; src++) {
+			for (int dst = 0; dst < nodesNumber; dst++) {
+				int srcProc = Integer.valueOf(nodes[src].getCore());
+				int dstProc = Integer.valueOf(nodes[dst].getCore());
+				int commVol = cores[srcProc].getToCommunication()[dstProc];
 				if (commVol > 0) {
-					Node currentTile = gTile[src];
-					while (currentTile.getTileId() != dst) {
-						int linkId = currentTile.getRoutingEntries()[src][dst];
-						energy += gLink[linkId].getCost() * commVol;
-						currentTile = gTile[gLink[linkId].getToTileId()];
+					NodeType currentNode = nodes[src];
+					while (Integer.valueOf(currentNode.getId()) != dst) {
+						int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
+						energy += links[linkId].getCost() * commVol;
+						currentNode = nodes[Integer.valueOf(links[linkId].getDestinationNode())];
 					}
 				}
 			}
@@ -1061,17 +1240,17 @@ public class SimulatedAnnealingMapper implements Mapper {
 
 	private float calculateBufferEnergy() {
 		float energy = 0;
-		for (int src = 0; src < gTileNum; src++) {
-			for (int dst = 0; dst < gTileNum; dst++) {
-				int srcProc = gTile[src].getCoreId();
-				int dstProc = gTile[dst].getCoreId();
-				int commVol = gProcess[srcProc].getToCommunication()[dstProc];
+		for (int src = 0; src < nodesNumber; src++) {
+			for (int dst = 0; dst < nodesNumber; dst++) {
+				int srcProc = Integer.valueOf(nodes[src].getCore());
+				int dstProc = Integer.valueOf(nodes[dst].getCore());
+				int commVol = cores[srcProc].getToCommunication()[dstProc];
 				if (commVol > 0) {
-					Node currentTile = gTile[src];
-					while (currentTile.getTileId() != dst) {
-						int linkId = currentTile.getRoutingEntries()[src][dst];
+					NodeType currentNode = nodes[src];
+					while (Integer.valueOf(currentNode.getId()) != dst) {
+						int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
 						energy += (bufReadEBit + bufWriteEBit) * commVol;
-						currentTile = gTile[gLink[linkId].getToTileId()];
+						currentNode = nodes[Integer.valueOf(links[linkId].getDestinationNode())];
 					}
 					energy += bufWriteEBit * commVol;
 				}
@@ -1111,14 +1290,14 @@ public class SimulatedAnnealingMapper implements Mapper {
 			return -1;
 		}
 		int linkId;
-		for (linkId = 0; linkId < gLinkNum; linkId++) {
-			if (gTile[gLink[linkId].getFromNodeId()].getRow() == origRow
-					&& gTile[gLink[linkId].getFromNodeId()].getColumn() == origColumn
-					&& gTile[gLink[linkId].getToTileId()].getRow() == row
-					&& gTile[gLink[linkId].getToTileId()].getColumn() == column)
+		for (linkId = 0; linkId < linksNumber; linkId++) {
+			if (Integer.valueOf(getNodeTopologyParameter(nodes[Integer.valueOf(links[linkId].getSourceNode())], TopologyParameter.ROW)) == origRow
+					&& Integer.valueOf(getNodeTopologyParameter(nodes[Integer.valueOf(links[linkId].getSourceNode())], TopologyParameter.COLUMN)) == origColumn
+					&& Integer.valueOf(getNodeTopologyParameter(nodes[Integer.valueOf(links[linkId].getDestinationNode())], TopologyParameter.ROW)) == row
+					&& Integer.valueOf(getNodeTopologyParameter(nodes[Integer.valueOf(links[linkId].getDestinationNode())], TopologyParameter.COLUMN)) == column)
 				break;
 		}
-		if (linkId == gLinkNum) {
+		if (linkId == linksNumber) {
 			logger.fatal("Error in locating link");
 			System.exit(-1);
 		}
@@ -1128,36 +1307,38 @@ public class SimulatedAnnealingMapper implements Mapper {
 	private boolean verifyBandwidthRequirement() {
 		generateLinkUsageList();
 
-		for (int i = 0; i < gLinkNum; i++) {
-			gLink[i].setUsedBandwidth(0);
+		int[] usedBandwidth = new int[linksNumber];
+		
+		for (int i = 0; i < linksNumber; i++) {
+			usedBandwidth[i] = 0;
 		}
 
-		for (int src = 0; src < gTileNum; src++) {
-			for (int dst = 0; dst < gTileNum; dst++) {
+		for (int src = 0; src < nodesNumber; src++) {
+			for (int dst = 0; dst < nodesNumber; dst++) {
 	            if (src == dst) {
 	                continue;
 	            }
-	            int srcProc = gTile[src].getCoreId();
-	            int dstProc = gTile[dst].getCoreId();
-	            int commLoad = gProcess[srcProc].getToBandwidthRequirement()[dstProc];
+	            int srcProc = Integer.valueOf(nodes[src].getCore());
+	            int dstProc = Integer.valueOf(nodes[dst].getCore());
+	            int commLoad = cores[srcProc].getToBandwidthRequirement()[dstProc];
 	            if (commLoad == 0) {
 	                continue;
 	            }
-	            Node currentTile = gTile[src];
-	            while (currentTile.getTileId() != dst) {
-	                int linkId = currentTile.routeToLink(src, dst);
-	                Link link = gLink[linkId];
-	                currentTile = gTile[link.getToTileId()];
-	                gLink[linkId].setUsedBandwidth(gLink[linkId].getUsedBandwidth() + commLoad);
+	            NodeType currentNode = nodes[src];
+	            while (Integer.valueOf(currentNode.getId()) != dst) {
+	                int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
+	                LinkType link = links[linkId];
+	                currentNode = nodes[Integer.valueOf(link.getDestinationNode())];
+	                usedBandwidth[linkId] += commLoad;
 	            }
 	        }
 	    }
 	    //check for the overloaded links
 	    int violations = 0;
-		for (int i = 0; i < gLinkNum; i++) {
-	        if (gLink[i].getUsedBandwidth()> gLink[i].getBandwidth()) {
-	        	System.out.println("Link " + i + " is overloaded: " + gLink[i].getUsedBandwidth() + " > "
-	                 + gLink[i].getBandwidth());
+		for (int i = 0; i < linksNumber; i++) {
+	        if (usedBandwidth[i] > links[i].getBandwidth()) {
+	        	System.out.println("Link " + i + " is overloaded: " + usedBandwidth[i] + " > "
+	                 + links[i].getBandwidth());
 	            violations ++;
 	        }
 	    }
@@ -1186,18 +1367,50 @@ public class SimulatedAnnealingMapper implements Mapper {
 	    System.out.println("Total communication energy consumption is " + calculateCommunicationEnergy());
 	}
 	
+	private void saveRoutingTables() {
+		if (logger.isInfoEnabled()) {
+			logger.info("Saving the routing tables");
+		}
+		
+		for (int i = 0; i < nodes.length; i++) {
+			int[][] routingEntries = routingTables[Integer.valueOf(nodes[i].getId())];
+			for (int j = 0; j < routingEntries.length; j++) {
+				for (int k = 0; k < routingEntries[j].length; k++) {
+					if (routingEntries[i][j] >= 0) {
+						RoutingTableEntryType routingTableEntry = new RoutingTableEntryType();
+						routingTableEntry.setSource(Integer.toString(i));
+						routingTableEntry.setDestination(Integer.toString(j));
+						routingTableEntry.setLink(Integer.toString(routingEntries[i][j]));
+						nodes[i].getRoutingTableEntry().add(routingTableEntry);
+					}
+				}
+			}
+		}
+	}
+	
 	@Override
 	public String map() throws TooFewNocNodesException {
-		if (gTileNum < gProcNum) {
-			throw new TooFewNocNodesException(gProcNum, gTileNum);
+		if (nodesNumber < coresNumber) {
+			throw new TooFewNocNodesException(coresNumber, nodesNumber);
 		}
 
 		mapCoresToNocNodesRandomly();
 
 		printCurrentMapping();
 
-		anneal();
+		long start = System.currentTimeMillis();
+		System.out.println("Start mapping...");
 
+		logger.assertLog((coresNumber == ((int) cores.length)), null);
+
+		anneal();
+		long end = System.currentTimeMillis();
+		System.out.println("Mapping process finished successfully.");
+		System.out.println("Time: " + (end - start) / 1000 + " seconds");
+
+		saveRoutingTables();
+		
+		// FIXME save the mapping and the routing tables into the XML
 		return null;
 	}
 
@@ -1254,10 +1467,10 @@ public class SimulatedAnnealingMapper implements Mapper {
 					logger.fatal("Invalid rate!");
 					System.exit(0);
 				}
-				gProcess[id].getToCommunication()[dstId] = (int) (rate * 1000000);
-				gProcess[id].getToBandwidthRequirement()[dstId] = (int) (rate * 3 * linkBandwidth);
-				gProcess[dstId].getFromCommunication()[id] = (int) (rate * 1000000);
-				gProcess[dstId].getFromBandwidthRequirement()[id] = (int) (rate * 3 * linkBandwidth);
+				cores[id].getToCommunication()[dstId] = (int) (rate * 1000000);
+				cores[id].getToBandwidthRequirement()[dstId] = (int) (rate * 3 * linkBandwidth);
+				cores[dstId].getFromCommunication()[id] = (int) (rate * 1000000);
+				cores[dstId].getFromBandwidthRequirement()[id] = (int) (rate * 3 * linkBandwidth);
 			}
 		}
 
@@ -1270,9 +1483,11 @@ public class SimulatedAnnealingMapper implements Mapper {
 			System.err.println("usage: SimulatedAnnealingMapper {routing}");
 			System.err.println("(where routing may be true or false; any other value means false)");
 		} else {
-			// from the initial random mapping, I think tiles must equal cores (it
-			// is not enough to have cores <= tiles)
-			int tiles = 16;
+			// the mesh-2D.xml from NoC-XML
+			String topologyId = "mesh2D";
+			// from the initial random mapping, I think nodes must equal cores (it
+			// is not enough to have cores <= nodes)
+			int nodes = 16;
 			int cores = 16;
 			int linkBandwidth = 1000000;
 			float switchEBit = 0.284f;
@@ -1283,11 +1498,11 @@ public class SimulatedAnnealingMapper implements Mapper {
 			SimulatedAnnealingMapper saMapper;
 			if ("true".equals(args[0])) {
 				// SA with routing
-				saMapper = new SimulatedAnnealingMapper(tiles, cores, true,
+				saMapper = new SimulatedAnnealingMapper(topologyId, nodes, cores, true,
 						LegalTurnSet.ODD_EVEN, bufReadEBit, burWriteEBit);
 			} else {
 				// SA without routing
-				saMapper = new SimulatedAnnealingMapper(tiles, cores);
+				saMapper = new SimulatedAnnealingMapper(topologyId, nodes, cores);
 			}
 			saMapper.initializeCores();
 			saMapper.initializeNocTopology(linkBandwidth, switchEBit, linkEBit);
@@ -1302,6 +1517,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 			saMapper.printCurrentMapping();
 			
 			saMapper.analyzeIt();
+			
+			// FIXME save the routingTables into the NodeTypes
 		}
 	}
 }

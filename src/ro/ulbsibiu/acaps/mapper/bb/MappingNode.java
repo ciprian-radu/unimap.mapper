@@ -9,6 +9,10 @@ import java.util.List;
 
 import ro.ulbsibiu.acaps.mapper.util.MathUtils;
 
+import static ro.ulbsibiu.acaps.mapper.bb.BranchAndBoundMapper.TopologyParameter.ROW;
+import static ro.ulbsibiu.acaps.mapper.bb.BranchAndBoundMapper.TopologyParameter.COLUMN;
+import static ro.ulbsibiu.acaps.mapper.bb.BranchAndBoundMapper.getNodeTopologyParameter;
+
 /**
  * Represents a node from the search tree of the Branch-and-Bound algorithm.
  * 
@@ -147,7 +151,7 @@ class MappingNode {
 		rSynLinkBandwidthUsageTemp = null;
 		
 		if (bbMapper.buildRoutingTable) {
-			routingTable = new int[bbMapper.gEdgeSize][bbMapper.gEdgeSize][bbMapper.gTileNum][bbMapper.gTileNum];
+			routingTable = new int[bbMapper.edgeSize][bbMapper.edgeSize][bbMapper.nodesNumber][bbMapper.nodesNumber];
 			for (int i = 0; i < routingTable.length; i++) {
 				for (int j = 0; j < routingTable[i].length; j++) {
 					for (int k = 0; k < routingTable[i][j].length; k++) {
@@ -165,16 +169,16 @@ class MappingNode {
 		occupancyTableReady = false;
 		lowerBound = -1;
 		cnt++;
-		mapping = new int[bbMapper.gProcNum];
-		for (int i = 0; i < bbMapper.gProcNum; i++) {
+		mapping = new int[bbMapper.coresNumber];
+		for (int i = 0; i < bbMapper.coresNumber; i++) {
 			mapping[i] = -1;
 		}
 
 		stage = parent.stage;
 
 		int proc1 = bbMapper.procMapArray[stage];
-		// if (bbMapper.gProcess[proc1]->is_locked() &&
-		// bbMapper.gProcess[proc1]->lock_to !=
+		// if (bbMapper.cores[proc1]->is_locked() &&
+		// bbMapper.cores[proc1]->lock_to !=
 		// tileId) {
 		// illegal = true;
 		// return;
@@ -184,21 +188,21 @@ class MappingNode {
 		upperBound = parent.upperBound;
 
 		// Copy the parent's partial mapping
-		mapping = Arrays.copyOf(parent.mapping, bbMapper.gProcNum);
+		mapping = Arrays.copyOf(parent.mapping, bbMapper.coresNumber);
 
 		if (bbMapper.buildRoutingTable) {
 			// Copy the parent's link bandwidth usage
-			rSynLinkBandwidthUsage = new int[bbMapper.gEdgeSize][bbMapper.gEdgeSize][4];
-			for (int i = 0; i < bbMapper.gEdgeSize; i++) {
-				for (int j = 0; j < bbMapper.gEdgeSize; j++) {
+			rSynLinkBandwidthUsage = new int[bbMapper.edgeSize][bbMapper.edgeSize][4];
+			for (int i = 0; i < bbMapper.edgeSize; i++) {
+				for (int j = 0; j < bbMapper.edgeSize; j++) {
 					rSynLinkBandwidthUsage[i][j] = Arrays.copyOf(
 							parent.rSynLinkBandwidthUsage[i][j], 4);
 				}
 			}
 		} else {
-			linkBandwidthUsage = new int[bbMapper.gLinkNum];
+			linkBandwidthUsage = new int[bbMapper.linksNumber];
 			linkBandwidthUsage = Arrays.copyOf(parent.linkBandwidthUsage,
-					bbMapper.gLinkNum);
+					bbMapper.linksNumber);
 		}
 
 		// Map the next process to tile tileId
@@ -231,14 +235,14 @@ class MappingNode {
 				int tile2 = mapping[i];
 				proc1 = bbMapper.procMapArray[stage];
 				int proc2 = bbMapper.procMapArray[i];
-				if (bbMapper.gProcess[proc1].getToBandwidthRequirement()[proc2] > 0) {
+				if (bbMapper.cores[proc1].getToBandwidthRequirement()[proc2] > 0) {
 					for (int j = 0; j < bbMapper.linkUsageList[tile1][tile2]
 							.size(); j++) {
 						int linkId = bbMapper.linkUsageList[tile1][tile2]
 								.get(j);
-						linkBandwidthUsage[linkId] += bbMapper.gProcess[proc1]
+						linkBandwidthUsage[linkId] += bbMapper.cores[proc1]
 								.getToBandwidthRequirement()[proc2];
-						if (linkBandwidthUsage[linkId] > bbMapper.gLink[linkId]
+						if (linkBandwidthUsage[linkId] > bbMapper.links[linkId]
 								.getBandwidth()) {
 							cost = BranchAndBoundMapper.MAX_VALUE + 1;
 							illegal = true;
@@ -246,14 +250,14 @@ class MappingNode {
 						}
 					}
 				}
-				if (bbMapper.gProcess[proc1].getFromBandwidthRequirement()[proc2] > 0) {
+				if (bbMapper.cores[proc1].getFromBandwidthRequirement()[proc2] > 0) {
 					for (int j = 0; j < bbMapper.linkUsageList[tile2][tile1]
 							.size(); j++) {
 						int linkId = bbMapper.linkUsageList[tile2][tile1]
 								.get(j);
-						linkBandwidthUsage[linkId] += bbMapper.gProcess[proc1]
+						linkBandwidthUsage[linkId] += bbMapper.cores[proc1]
 								.getFromBandwidthRequirement()[proc2];
-						if (linkBandwidthUsage[linkId] > bbMapper.gLink[linkId]
+						if (linkBandwidthUsage[linkId] > bbMapper.links[linkId]
 								.getBandwidth()) {
 							cost = BranchAndBoundMapper.MAX_VALUE + 1;
 							illegal = true;
@@ -267,8 +271,8 @@ class MappingNode {
 		stage++;
 
 		if (calcBound) {
-			tileOccupancyTable = new boolean[bbMapper.gTileNum];
-			for (int i = 0; i < bbMapper.gTileNum; i++) {
+			tileOccupancyTable = new boolean[bbMapper.nodesNumber];
+			for (int i = 0; i < bbMapper.nodesNumber; i++) {
 				tileOccupancyTable[i] = false;
 			}
 	
@@ -304,7 +308,7 @@ class MappingNode {
 		rSynLinkBandwidthUsageTemp = null;
 		
 		if (bbMapper.buildRoutingTable) {
-			routingTable = new int[bbMapper.gEdgeSize][bbMapper.gEdgeSize][bbMapper.gTileNum][bbMapper.gTileNum];
+			routingTable = new int[bbMapper.edgeSize][bbMapper.edgeSize][bbMapper.nodesNumber][bbMapper.nodesNumber];
 			for (int i = 0; i < routingTable.length; i++) {
 				for (int j = 0; j < routingTable[i].length; j++) {
 					for (int k = 0; k < routingTable[i][j].length; k++) {
@@ -323,8 +327,8 @@ class MappingNode {
 		bestRoutingBitArray = null;
 
 		cnt++;
-		mapping = new int[bbMapper.gProcNum];
-		for (int i = 0; i < bbMapper.gProcNum; i++) {
+		mapping = new int[bbMapper.coresNumber];
+		for (int i = 0; i < bbMapper.coresNumber; i++) {
 			mapping[i] = -1;
 		}
 
@@ -334,30 +338,30 @@ class MappingNode {
 		cost = 0;
 
 		// int proc1 = proc_map_array[0];
-		// if (bbMapper.gProcess[proc1]->is_locked() &&
-		// bbMapper.gProcess[proc1]->lock_to !=
+		// if (bbMapper.cores[proc1]->is_locked() &&
+		// bbMapper.cores[proc1]->lock_to !=
 		// tileId) {
 		// illegal = true;
 		// return;
 		// }
 
-		tileOccupancyTable = new boolean[bbMapper.gTileNum];
-		for (int i = 0; i < bbMapper.gTileNum; i++) {
+		tileOccupancyTable = new boolean[bbMapper.nodesNumber];
+		for (int i = 0; i < bbMapper.nodesNumber; i++) {
 			tileOccupancyTable[i] = false;
 		}
 
 		if (bbMapper.buildRoutingTable) {
-			rSynLinkBandwidthUsage = new int[bbMapper.gEdgeSize][bbMapper.gEdgeSize][4];
-			for (int i = 0; i < bbMapper.gEdgeSize; i++) {
-				for (int j = 0; j < bbMapper.gEdgeSize; j++) {
+			rSynLinkBandwidthUsage = new int[bbMapper.edgeSize][bbMapper.edgeSize][4];
+			for (int i = 0; i < bbMapper.edgeSize; i++) {
+				for (int j = 0; j < bbMapper.edgeSize; j++) {
 					for (int k = 0; k < 4; k++) {
 						rSynLinkBandwidthUsage[i][j][k] = 0;
 					}
 				}
 			}
 		} else {
-			linkBandwidthUsage = new int[bbMapper.gLinkNum];
-			for (int i = 0; i < bbMapper.gLinkNum; i++) {
+			linkBandwidthUsage = new int[bbMapper.linksNumber];
+			for (int i = 0; i < bbMapper.linksNumber; i++) {
 				linkBandwidthUsage[i] = 0;
 			}
 		}
@@ -398,7 +402,7 @@ class MappingNode {
 		rSynLinkBandwidthUsageTemp = null;
 		
 		if (bbMapper.buildRoutingTable) {
-			routingTable = new int[bbMapper.gEdgeSize][bbMapper.gEdgeSize][bbMapper.gTileNum][bbMapper.gTileNum];
+			routingTable = new int[bbMapper.edgeSize][bbMapper.edgeSize][bbMapper.nodesNumber][bbMapper.nodesNumber];
 			for (int i = 0; i < routingTable.length; i++) {
 				for (int j = 0; j < routingTable[i].length; j++) {
 					for (int k = 0; k < routingTable[i][j].length; k++) {
@@ -416,23 +420,23 @@ class MappingNode {
 		occupancyTableReady = false;
 		lowerBound = -1;
 		cnt++;
-		mapping = new int[bbMapper.gProcNum];
-		for (int i = 0; i < bbMapper.gProcNum; i++) {
+		mapping = new int[bbMapper.coresNumber];
+		for (int i = 0; i < bbMapper.coresNumber; i++) {
 			mapping[i] = -1;
 		}
 		stage = origin.stage;
 		illegal = origin.illegal;
 
 		// Copy the parent's partial mapping
-		for (int i = 0; i < bbMapper.gProcNum; i++) {
+		for (int i = 0; i < bbMapper.coresNumber; i++) {
 			mapping[i] = origin.mapping[i];
 		}
 
 		if (bbMapper.buildRoutingTable) {
 			// Copy the parent's link bandwidth usage
-			rSynLinkBandwidthUsage = new int[bbMapper.gEdgeSize][bbMapper.gEdgeSize][4];
-			for (int i = 0; i < bbMapper.gEdgeSize; i++) {
-				for (int j = 0; j < bbMapper.gEdgeSize; j++) {
+			rSynLinkBandwidthUsage = new int[bbMapper.edgeSize][bbMapper.edgeSize][4];
+			for (int i = 0; i < bbMapper.edgeSize; i++) {
+				for (int j = 0; j < bbMapper.edgeSize; j++) {
 					rSynLinkBandwidthUsage[i][j] = Arrays.copyOf(
 							origin.rSynLinkBandwidthUsage[i][j], 4);
 				}
@@ -445,7 +449,7 @@ class MappingNode {
 	 * current mapping
 	 */
 	private float LowerBound() {
-		for (int i = 0; i < bbMapper.gTileNum; i++) {
+		for (int i = 0; i < bbMapper.nodesNumber; i++) {
 			tileOccupancyTable[i] = false;
 		}
 		for (int i = 0; i < stage; i++) {
@@ -460,7 +464,7 @@ class MappingNode {
 		// We assume that the unmapped node can occupy the unoccupied tile
 		// which has the lowest cost to the occupied node
 		for (int i = 0; i < stage; i++) {
-			for (int j = stage; j < bbMapper.gProcNum; j++) {
+			for (int j = stage; j < bbMapper.coresNumber; j++) {
 				if (bbMapper.procMatrix[i][j] == 0) {
 					continue;
 				}
@@ -472,8 +476,8 @@ class MappingNode {
 		}
 		// Now add the cost of the communication among all the un-mapped nodes
 		int vol = 0;
-		for (int i = stage; i < bbMapper.gProcNum; i++) {
-			for (int j = i + 1; j < bbMapper.gProcNum; j++) {
+		for (int i = stage; i < bbMapper.coresNumber; i++) {
+			for (int j = i + 1; j < bbMapper.coresNumber; j++) {
 				vol += bbMapper.procMatrix[i][j];
 			}
 		}
@@ -490,7 +494,7 @@ class MappingNode {
 	 */
 	private float UpperBound() {
 		if (!occupancyTableReady) {
-			for (int i = 0; i < bbMapper.gTileNum; i++) {
+			for (int i = 0; i < bbMapper.nodesNumber; i++) {
 				tileOccupancyTable[i] = false;
 			}
 			for (int i = 0; i < stage; i++) {
@@ -508,7 +512,7 @@ class MappingNode {
 
 		if (bbMapper.buildRoutingTable) {
 			createBandwidthTempMemory();
-			if (!routeTraffics(stage, bbMapper.gProcNum - 1, false, true)) {
+			if (!routeTraffics(stage, bbMapper.coresNumber - 1, false, true)) {
 				illegalChildMapping = true;
 				if (logger.isTraceEnabled()) {
 					logger.trace("Upper bound is the max value " + BranchAndBoundMapper.MAX_VALUE);
@@ -529,7 +533,7 @@ class MappingNode {
 
 		for (int i = 0; i < stage; i++) {
 			int tile1 = mapping[i];
-			for (int j = stage; j < bbMapper.gProcNum; j++) {
+			for (int j = stage; j < bbMapper.coresNumber; j++) {
 				int tile2 = mapping[j];
 				if (logger.isTraceEnabled()) {
 					logger.trace("Adding to the upper bound "
@@ -544,9 +548,9 @@ class MappingNode {
 						* bbMapper.archMatrix[tile1][tile2];
 			}
 		}
-		for (int i = stage; i < bbMapper.gProcNum; i++) {
+		for (int i = stage; i < bbMapper.coresNumber; i++) {
 			int tile1 = mapping[i];
-			for (int j = i + 1; j < bbMapper.gProcNum; j++) {
+			for (int j = i + 1; j < bbMapper.coresNumber; j++) {
 				int tile2 = mapping[j];
 				if (logger.isTraceEnabled()) {
 					logger.trace("Adding to the upper bound "
@@ -568,38 +572,38 @@ class MappingNode {
 	}
 
 	private boolean fixedVerifyBandwidthUsage() {
-		int[] linkBandwidthUsageTemp = new int[bbMapper.gLinkNum];
+		int[] linkBandwidthUsageTemp = new int[bbMapper.linksNumber];
 		linkBandwidthUsageTemp = Arrays.copyOf(linkBandwidthUsage,
-				bbMapper.gLinkNum);
+				bbMapper.linksNumber);
 
 		for (int i = 0; i < stage; i++) {
 			int tile1 = mapping[i];
 			int proc1 = bbMapper.procMapArray[i];
-			for (int j = stage; j < bbMapper.gProcNum; j++) {
+			for (int j = stage; j < bbMapper.coresNumber; j++) {
 				int tile2 = mapping[j];
 				int proc2 = bbMapper.procMapArray[j];
-				if (bbMapper.gProcess[proc1].getToBandwidthRequirement()[proc2] != 0) {
+				if (bbMapper.cores[proc1].getToBandwidthRequirement()[proc2] != 0) {
 					for (int k = 0; k < bbMapper.linkUsageList[tile1][tile2]
 							.size(); k++) {
 						int linkId = bbMapper.linkUsageList[tile1][tile2]
 								.get(k);
-						linkBandwidthUsageTemp[linkId] += bbMapper.gProcess[proc1]
+						linkBandwidthUsageTemp[linkId] += bbMapper.cores[proc1]
 								.getToBandwidthRequirement()[proc2];
-						if (linkBandwidthUsageTemp[linkId] > bbMapper.gLink[linkId]
+						if (linkBandwidthUsageTemp[linkId] > bbMapper.links[linkId]
 								.getBandwidth()) {
 							return false;
 						}
 					}
 				}
 
-				if (bbMapper.gProcess[proc1].getFromBandwidthRequirement()[proc2] != 0) {
+				if (bbMapper.cores[proc1].getFromBandwidthRequirement()[proc2] != 0) {
 					for (int k = 0; k < bbMapper.linkUsageList[tile2][tile1]
 							.size(); k++) {
 						int linkId = bbMapper.linkUsageList[tile2][tile1]
 								.get(k);
-						linkBandwidthUsageTemp[linkId] += bbMapper.gProcess[proc1]
+						linkBandwidthUsageTemp[linkId] += bbMapper.cores[proc1]
 								.getFromBandwidthRequirement()[proc2];
-						if (linkBandwidthUsageTemp[linkId] > bbMapper.gLink[linkId]
+						if (linkBandwidthUsageTemp[linkId] > bbMapper.links[linkId]
 								.getBandwidth()) {
 							return false;
 						}
@@ -607,34 +611,34 @@ class MappingNode {
 				}
 			}
 		}
-		for (int i = stage; i < bbMapper.gProcNum; i++) {
+		for (int i = stage; i < bbMapper.coresNumber; i++) {
 			int tile1 = mapping[i];
 			int proc1 = bbMapper.procMapArray[i];
-			for (int j = i + 1; j < bbMapper.gProcNum; j++) {
+			for (int j = i + 1; j < bbMapper.coresNumber; j++) {
 				int tile2 = mapping[j];
 				int proc2 = bbMapper.procMapArray[j];
-				if (bbMapper.gProcess[proc1].getToBandwidthRequirement()[proc2] != 0) {
+				if (bbMapper.cores[proc1].getToBandwidthRequirement()[proc2] != 0) {
 					for (int k = 0; k < bbMapper.linkUsageList[tile1][tile2]
 							.size(); k++) {
 						int linkId = bbMapper.linkUsageList[tile1][tile2]
 								.get(k);
-						linkBandwidthUsageTemp[linkId] += bbMapper.gProcess[proc1]
+						linkBandwidthUsageTemp[linkId] += bbMapper.cores[proc1]
 								.getToBandwidthRequirement()[proc2];
-						if (linkBandwidthUsageTemp[linkId] > bbMapper.gLink[linkId]
+						if (linkBandwidthUsageTemp[linkId] > bbMapper.links[linkId]
 								.getBandwidth()) {
 							return false;
 						}
 					}
 				}
 
-				if (bbMapper.gProcess[proc1].getFromBandwidthRequirement()[proc2] != 0) {
+				if (bbMapper.cores[proc1].getFromBandwidthRequirement()[proc2] != 0) {
 					for (int k = 0; k < bbMapper.linkUsageList[tile2][tile1]
 							.size(); k++) {
 						int linkId = bbMapper.linkUsageList[tile2][tile1]
 								.get(k);
-						linkBandwidthUsageTemp[linkId] += bbMapper.gProcess[proc1]
+						linkBandwidthUsageTemp[linkId] += bbMapper.cores[proc1]
 								.getFromBandwidthRequirement()[proc2];
-						if (linkBandwidthUsageTemp[linkId] > bbMapper.gLink[linkId]
+						if (linkBandwidthUsageTemp[linkId] > bbMapper.links[linkId]
 								.getBandwidth()) {
 							return false;
 						}
@@ -651,7 +655,7 @@ class MappingNode {
 	 */
 	int bestCostCandidate() {
 		float minimal = BranchAndBoundMapper.MAX_VALUE;
-		for (int i = 0; i < bbMapper.gTileNum; i++) {
+		for (int i = 0; i < bbMapper.nodesNumber; i++) {
 			tileOccupancyTable[i] = false;
 		}
 		for (int i = 0; i < stage; i++) {
@@ -659,7 +663,7 @@ class MappingNode {
 		}
 
 		int index = -1;
-		for (int tileId = 0; tileId < bbMapper.gTileNum; tileId++) {
+		for (int tileId = 0; tileId < bbMapper.nodesNumber; tileId++) {
 			if (tileOccupancyTable[tileId]) {
 				continue;
 			}
@@ -681,7 +685,7 @@ class MappingNode {
 		return index;
 	}
 
-	int mapToTile(int i) {
+	int mapToNode(int i) {
 		return mapping[i];
 	}
 
@@ -698,7 +702,7 @@ class MappingNode {
 	 */
 	private float lowestUnitCost(int tileId) {
 		float min = 50000;
-		for (int i = 0; i < bbMapper.gTileNum; i++) {
+		for (int i = 0; i < bbMapper.nodesNumber; i++) {
 			if (i == tileId) {
 				continue;
 			}
@@ -718,11 +722,11 @@ class MappingNode {
 	 */
 	private float lowestUnmappedUnitCost() {
 		float min = 50000;
-		for (int i = 0; i < bbMapper.gTileNum; i++) {
+		for (int i = 0; i < bbMapper.nodesNumber; i++) {
 			if (tileOccupancyTable[i]) {
 				continue;
 			}
-			for (int j = i + 1; j < bbMapper.gTileNum; j++) {
+			for (int j = i + 1; j < bbMapper.nodesNumber; j++) {
 				if (tileOccupancyTable[j]) {
 					continue;
 				}
@@ -738,7 +742,7 @@ class MappingNode {
 	 * Map the other unmapped process node using greedy mapping
 	 */
 	private void greedyMapping() {
-		for (int i = stage; i < bbMapper.gProcNum; i++) {
+		for (int i = stage; i < bbMapper.coresNumber; i++) {
 			int sumRow = 0;
 			int sumCol = 0;
 			int vol = 0;
@@ -747,8 +751,8 @@ class MappingNode {
 					continue;
 				}
 				int tileId = mapping[j];
-				int row = tileId / bbMapper.gEdgeSize;
-				int col = tileId % bbMapper.gEdgeSize;
+				int row = tileId / bbMapper.edgeSize;
+				int col = tileId % bbMapper.edgeSize;
 				sumRow += bbMapper.procMatrix[i][j] * row;
 				sumCol += bbMapper.procMatrix[i][j] * col;
 				vol += bbMapper.procMatrix[i][j];
@@ -780,7 +784,7 @@ class MappingNode {
 	private void mapNode(int procId, float goodRow, float goodCol) {
 		float minDist = 10000;
 		int bestId = -1;
-		for (int i = 0; i < bbMapper.gTileNum; i++) {
+		for (int i = 0; i < bbMapper.nodesNumber; i++) {
 			if (logger.isTraceEnabled()) {
 				logger.trace("tileOccupancyTable[" + i + "] = " + (tileOccupancyTable[i] ? "1" : "0"));
 			}
@@ -794,8 +798,8 @@ class MappingNode {
 				}
 				break;
 			}
-			int row = i / bbMapper.gEdgeSize;
-			int col = i % bbMapper.gEdgeSize;
+			int row = i / bbMapper.edgeSize;
+			int col = i % bbMapper.edgeSize;
 			float dist = Math.abs(goodRow - row) + Math.abs(goodCol - col);
 			// Note that we use machine epsilon to perform the following
 			// comparison between the float numbers
@@ -850,9 +854,9 @@ class MappingNode {
 
 	private void createBandwidthTempMemory() {
 		// Copy the bandwidth usage status to rSynLinkBandwidthUsageTemp
-		rSynLinkBandwidthUsageTemp = new int[bbMapper.gEdgeSize][bbMapper.gEdgeSize][4];
-		for (int i = 0; i < bbMapper.gEdgeSize; i++) {
-			for (int j = 0; j < bbMapper.gEdgeSize; j++) {
+		rSynLinkBandwidthUsageTemp = new int[bbMapper.edgeSize][bbMapper.edgeSize][4];
+		for (int i = 0; i < bbMapper.edgeSize; i++) {
+			for (int j = 0; j < bbMapper.edgeSize; j++) {
 				rSynLinkBandwidthUsageTemp[i][j] = Arrays.copyOf(
 						rSynLinkBandwidthUsage[i][j], 4);
 			}
@@ -882,11 +886,11 @@ class MappingNode {
 			// then we should insert it at the head of the queue.
 			for (int i = 0; i < currentStage; i++) {
 				int oldProc = bbMapper.procMapArray[i];
-				if (bbMapper.gProcess[newProc].getToBandwidthRequirement()[oldProc] != 0) {
+				if (bbMapper.cores[newProc].getToBandwidthRequirement()[oldProc] != 0) {
 					ProcComm aProcComm = new ProcComm();
 					aProcComm.srcProc = currentStage; // we put virtual proc id
 					aProcComm.dstProc = i;
-					aProcComm.bandwidth = bbMapper.gProcess[newProc]
+					aProcComm.bandwidth = bbMapper.cores[newProc]
 							.getToBandwidthRequirement()[oldProc];
 					aProcComm.adaptivity = calculateAdaptivity(
 							mapping[aProcComm.srcProc],
@@ -901,11 +905,11 @@ class MappingNode {
 					}
 					Q.add(aProcComm);
 				}
-				if (bbMapper.gProcess[newProc].getFromBandwidthRequirement()[oldProc] > 0) {
+				if (bbMapper.cores[newProc].getFromBandwidthRequirement()[oldProc] > 0) {
 					ProcComm aProcComm = new ProcComm();
 					aProcComm.srcProc = i;
 					aProcComm.dstProc = currentStage;
-					aProcComm.bandwidth = bbMapper.gProcess[newProc]
+					aProcComm.bandwidth = bbMapper.cores[newProc]
 							.getFromBandwidthRequirement()[oldProc];
 					aProcComm.adaptivity = calculateAdaptivity(
 							mapping[aProcComm.srcProc],
@@ -959,10 +963,14 @@ class MappingNode {
 	private final int calculateAdaptivity(int srcTile, int dstTile,
 			int bandwidth) {
 		int adaptivity;
-		if (bbMapper.gTile[srcTile].getRow() == bbMapper.gTile[dstTile]
-				.getRow()
-				|| bbMapper.gTile[srcTile].getColumn() == bbMapper.gTile[dstTile]
-						.getColumn()) {
+		int rowSrc = Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[srcTile], ROW));
+		int colSrc = Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[srcTile], COLUMN));
+		int rowDst = Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[dstTile], ROW));
+		int colDst = Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[dstTile], COLUMN));
+		
+		int row = rowSrc;
+		int col = colSrc;
+		if (row == rowDst || col == colDst) {
 			adaptivity = 0;
 			return adaptivity;
 		}
@@ -970,24 +978,21 @@ class MappingNode {
 		int[][][] bandwidthUsage = rSynLinkBandwidthUsage;
 
 		adaptivity = 1;
-		int row = bbMapper.gTile[srcTile].getRow();
-		int col = bbMapper.gTile[srcTile].getColumn();
 		int direction = -2;
-		while (row != bbMapper.gTile[dstTile].getRow()
-				|| col != bbMapper.gTile[dstTile].getColumn()) {
+		while (row != rowDst || col != colDst) {
 			// For west-first routing
 			if (BranchAndBoundMapper.LegalTurnSet.WEST_FIRST
 					.equals(bbMapper.legalTurnSet)) {
-				if (col > bbMapper.gTile[dstTile].getColumn()) // step west
+				if (col > colDst) // step west
 					return 0;
-				else if (col == bbMapper.gTile[dstTile].getColumn())
+				else if (col == colDst)
 					return 0;
-				else if (row == bbMapper.gTile[dstTile].getRow())
+				else if (row == rowDst)
 					return 0;
 				// Here comes the flexibility. We can choose whether to go
 				// vertical or horizontal
 				else {
-					int direction1 = (row < bbMapper.gTile[dstTile].getRow()) ? BranchAndBoundMapper.NORTH
+					int direction1 = (row < rowDst) ? BranchAndBoundMapper.NORTH
 							: BranchAndBoundMapper.SOUTH;
 					if (bandwidthUsage[row][col][direction1] + bandwidth < bbMapper.linkBandwidth
 							&& bandwidthUsage[row][col][BranchAndBoundMapper.EAST]
@@ -1000,8 +1005,8 @@ class MappingNode {
 			// For odd-even routing
 			else if (BranchAndBoundMapper.LegalTurnSet.ODD_EVEN
 					.equals(bbMapper.legalTurnSet)) {
-				int e0 = bbMapper.gTile[dstTile].getColumn() - col;
-				int e1 = bbMapper.gTile[dstTile].getRow() - row;
+				int e0 = colDst - col;
+				int e1 = rowDst - row;
 				if (e0 == 0) // currently the same column as destination
 					direction = (e1 > 0) ? BranchAndBoundMapper.NORTH
 							: BranchAndBoundMapper.SOUTH;
@@ -1012,11 +1017,10 @@ class MappingNode {
 						else {
 							int direction1 = -1, direction2 = -1;
 							if (col % 2 == 1
-									|| col == bbMapper.gTile[srcTile]
-											.getColumn())
+									|| col == colSrc)
 								direction1 = (e1 > 0) ? BranchAndBoundMapper.NORTH
 										: BranchAndBoundMapper.SOUTH;
-							if (bbMapper.gTile[dstTile].getColumn() % 2 == 1
+							if (colDst % 2 == 1
 									|| e0 != 1)
 								direction2 = BranchAndBoundMapper.EAST;
 							if (direction1 == -1)
@@ -1089,23 +1093,28 @@ class MappingNode {
 	 */
 	private boolean routeTrafficEasy(int srcTile, int dstTile, int bandwidth,
 			boolean commit, boolean updateRoutingTable) {
-		int row = bbMapper.gTile[srcTile].getRow();
-		int col = bbMapper.gTile[srcTile].getColumn();
+		int rowSrc = Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[srcTile], ROW));
+		int colSrc = Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[srcTile], COLUMN));
+		int rowDst = Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[dstTile], ROW));
+		int colDst = Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[dstTile], COLUMN));
 
+		int row = rowSrc;
+		int col = colSrc;
 		int[][][] bandwidthUsage = commit ? rSynLinkBandwidthUsage
 				: rSynLinkBandwidthUsageTemp;
 		int direction = -2;
-		while (row != bbMapper.gTile[dstTile].getRow()
-				|| col != bbMapper.gTile[dstTile].getRow()) {
+		while (row != rowDst
+				|| col != colDst) {
 			// For west-first routing
 			if (BranchAndBoundMapper.LegalTurnSet.WEST_FIRST
 					.equals(bbMapper.legalTurnSet)) {
-				if (col > bbMapper.gTile[dstTile].getColumn()) // step west
+				if (col > colDst) // step west
 					direction = BranchAndBoundMapper.WEST;
-				else if (col == bbMapper.gTile[dstTile].getColumn())
-					direction = (row < bbMapper.gTile[dstTile].getRow()) ? BranchAndBoundMapper.NORTH
+				else if (col == colDst)
+					direction = (row < rowDst) 
+							? BranchAndBoundMapper.NORTH
 							: BranchAndBoundMapper.SOUTH;
-				else if (row == bbMapper.gTile[dstTile].getRow())
+				else if (row == rowDst)
 					direction = BranchAndBoundMapper.EAST;
 				// Here comes the flexibility. We can choose whether to go
 				// vertical or horizontal
@@ -1127,15 +1136,16 @@ class MappingNode {
 				else {
 					direction = BranchAndBoundMapper.EAST;
 					if (bandwidthUsage[row][col][direction] + bandwidth > bbMapper.linkBandwidth)
-						direction = (row < bbMapper.gTile[dstTile].getRow()) ? BranchAndBoundMapper.NORTH
+						direction = (row < rowDst) 
+								? BranchAndBoundMapper.NORTH
 								: BranchAndBoundMapper.SOUTH;
 				}
 			}
 			// For odd-even routing
 			else if (BranchAndBoundMapper.LegalTurnSet.ODD_EVEN
 					.equals(bbMapper.legalTurnSet)) {
-				int e0 = bbMapper.gTile[dstTile].getColumn() - col;
-				int e1 = bbMapper.gTile[dstTile].getRow() - row;
+				int e0 = colDst - col;
+				int e1 = rowDst - row;
 				if (e0 == 0) // currently the same column as destination
 					direction = (e1 > 0) ? BranchAndBoundMapper.NORTH
 							: BranchAndBoundMapper.SOUTH;
@@ -1146,11 +1156,10 @@ class MappingNode {
 						else {
 							int direction1 = -1, direction2 = -1;
 							if (col % 2 == 1
-									|| col == bbMapper.gTile[srcTile]
-											.getColumn())
+									|| col == colSrc)
 								direction1 = (e1 > 0) ? BranchAndBoundMapper.NORTH
 										: BranchAndBoundMapper.SOUTH;
-							if (bbMapper.gTile[dstTile].getColumn() % 2 == 1
+							if (colDst % 2 == 1
 									|| e0 != 1)
 								direction2 = BranchAndBoundMapper.EAST;
 							if (direction1 == -1 && direction2 == -1) {
@@ -1226,37 +1235,39 @@ class MappingNode {
 	 */
 	private boolean routeTrafficHard(int srcTile, int dstTile, int bandwidth,
 			boolean commit, boolean updateRoutingTable) {
-		int row = bbMapper.gTile[srcTile].getRow();
-		int col = bbMapper.gTile[srcTile].getColumn();
+		int rowSrc = Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[srcTile], ROW));
+		int colSrc = Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[srcTile], COLUMN));
+		int rowDst = Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[dstTile], ROW));
+		int colDst = Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[dstTile], COLUMN));
 
+		int row = rowSrc;
+		int col = colSrc;
 		int[][][] BW_usage = commit ? rSynLinkBandwidthUsage
 				: rSynLinkBandwidthUsageTemp;
 
-		// We can arrive at any destination with 2*bbMapper.gEdgeSize hops
+		// We can arrive at any destination with 2*bbMapper.edgeSize hops
 		if (routingBitArray == null) {
-			routingBitArray = new int[2 * bbMapper.gEdgeSize];
+			routingBitArray = new int[2 * bbMapper.edgeSize];
 		}
 		if (bestRoutingBitArray == null) {
-			bestRoutingBitArray = new int[2 * bbMapper.gEdgeSize];
+			bestRoutingBitArray = new int[2 * bbMapper.edgeSize];
 		}
 
 		// In the following, we find the routing path which has the minimal
 		// maximal
 		// link BW usage and store that routing path to best_routing_bit_array
 		int min_path_BW = Integer.MAX_VALUE;
-		int x_hop = bbMapper.gTile[srcTile].getColumn()
-				- bbMapper.gTile[dstTile].getColumn();
+		int x_hop = colSrc - colDst;
 		x_hop = (x_hop >= 0) ? x_hop : (0 - x_hop);
-		int y_hop = bbMapper.gTile[srcTile].getRow()
-				- bbMapper.gTile[dstTile].getRow();
+		int y_hop = rowSrc - rowDst;
 		y_hop = (y_hop >= 0) ? y_hop : (0 - y_hop);
 
 		initRoutingPathGenerator(x_hop, y_hop);
 
 		while (nextRoutingPath(x_hop, y_hop)) { // For each path
 			int usage = pathBandwidthUsage(row, col,
-					bbMapper.gTile[dstTile].getRow(),
-					bbMapper.gTile[dstTile].getColumn(), BW_usage, bandwidth);
+					rowDst,
+					colDst, BW_usage, bandwidth);
 			if (usage < min_path_BW) {
 				min_path_BW = usage;
 				bestRoutingBitArray = Arrays.copyOf(routingBitArray, x_hop
@@ -1270,14 +1281,12 @@ class MappingNode {
 		int direction = -2;
 
 		int hop_id = 0;
-		while (row != bbMapper.gTile[dstTile].getRow()
-				|| col != bbMapper.gTile[dstTile].getColumn()) {
-
+		while (row != rowDst || col != colDst) {
 			if (bestRoutingBitArray[hop_id++] != 0)
-				direction = (row < bbMapper.gTile[dstTile].getRow()) ? BranchAndBoundMapper.NORTH
+				direction = (row < rowDst) ? BranchAndBoundMapper.NORTH
 						: BranchAndBoundMapper.SOUTH;
 			else
-				direction = (col < bbMapper.gTile[dstTile].getColumn()) ? BranchAndBoundMapper.EAST
+				direction = (col < colDst) ? BranchAndBoundMapper.EAST
 						: BranchAndBoundMapper.WEST;
 
 			BW_usage[row][col][direction] += bandwidth;
@@ -1511,7 +1520,7 @@ class MappingNode {
 	 * @return
 	 */
 	private boolean oneBits(int r, int onebits) {
-		routingBitArray = new int[2 * bbMapper.gEdgeSize];
+		routingBitArray = new int[2 * bbMapper.edgeSize];
 		Arrays.fill(routingBitArray, 0);
 		int index = 0;
 		int currentOneBits = 0;
@@ -1533,29 +1542,26 @@ class MappingNode {
 	boolean programRouters() {
 		generateRoutingTable();
 		// clean all the old routing table
-		for (int tileId = 0; tileId < bbMapper.gTileNum; tileId++) {
-			for (int srcTile = 0; srcTile < bbMapper.gTileNum; srcTile++) {
-				for (int dstTile = 0; dstTile < bbMapper.gTileNum; dstTile++) {
+		for (int tileId = 0; tileId < bbMapper.nodesNumber; tileId++) {
+			for (int srcTile = 0; srcTile < bbMapper.nodesNumber; srcTile++) {
+				for (int dstTile = 0; dstTile < bbMapper.nodesNumber; dstTile++) {
 					if (tileId == dstTile)
-						bbMapper.gTile[tileId].setRoutingEntry(srcTile,
-								dstTile, -1);
+						bbMapper.routingTables[Integer.valueOf(bbMapper.nodes[tileId].getId())][srcTile][dstTile] = -1;
 					else
-						bbMapper.gTile[tileId].setRoutingEntry(srcTile,
-								dstTile, -2);
+						bbMapper.routingTables[Integer.valueOf(bbMapper.nodes[tileId].getId())][srcTile][dstTile] = -2;
 				}
 			}
 		}
 
-		for (int row = 0; row < bbMapper.gEdgeSize; row++) {
-			for (int col = 0; col < bbMapper.gEdgeSize; col++) {
-				int tileId = row * bbMapper.gEdgeSize + col;
-				for (int srcTile = 0; srcTile < bbMapper.gTileNum; srcTile++) {
-					for (int dstTile = 0; dstTile < bbMapper.gTileNum; dstTile++) {
+		for (int row = 0; row < bbMapper.edgeSize; row++) {
+			for (int col = 0; col < bbMapper.edgeSize; col++) {
+				int tileId = row * bbMapper.edgeSize + col;
+				for (int srcTile = 0; srcTile < bbMapper.nodesNumber; srcTile++) {
+					for (int dstTile = 0; dstTile < bbMapper.nodesNumber; dstTile++) {
 						int linkId = locateLink(row, col,
 								routingTable[row][col][srcTile][dstTile]);
 						if (linkId != -1)
-							bbMapper.gTile[tileId].setRoutingEntry(srcTile,
-									dstTile, linkId);
+							bbMapper.routingTables[Integer.valueOf(bbMapper.nodes[tileId].getId())][srcTile][dstTile] = linkId;
 					}
 				}
 			}
@@ -1593,50 +1599,46 @@ class MappingNode {
 		default:
 			return -1;
 		}
-		int link_id;
-		for (link_id = 0; link_id < bbMapper.gLinkNum; link_id++) {
-			if (bbMapper.gTile[bbMapper.gLink[link_id].getFromNodeId()]
-					.getRow() == origRow
-					&& bbMapper.gTile[bbMapper.gLink[link_id].getFromNodeId()]
-							.getColumn() == origColumn
-					&& bbMapper.gTile[bbMapper.gLink[link_id].getToTileId()]
-							.getRow() == row
-					&& bbMapper.gTile[bbMapper.gLink[link_id].getToTileId()]
-							.getColumn() == column)
+		int linkId;
+		for (linkId = 0; linkId < bbMapper.linksNumber; linkId++) {
+			if (Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getSourceNode())], ROW)) == origRow
+					&& Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getSourceNode())], COLUMN)) == origColumn
+					&& Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getDestinationNode())], ROW)) == row
+					&& Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getDestinationNode())], COLUMN)) == column)
 				break;
 		}
-		if (link_id == bbMapper.gLinkNum) {
+		if (linkId == bbMapper.linksNumber) {
 			logger.fatal("Error in locating link");
 			System.exit(-1);
 		}
-		return link_id;
+		return linkId;
 	}
 
 	private void generateRoutingTable() {
 		// reset all the BW_usage
-		for (int i = 0; i < bbMapper.gEdgeSize; i++)
-			for (int j = 0; j < bbMapper.gEdgeSize; j++)
+		for (int i = 0; i < bbMapper.edgeSize; i++)
+			for (int j = 0; j < bbMapper.edgeSize; j++)
 				for (int k = 0; k < 4; k++)
 					rSynLinkBandwidthUsage[i][j][k] = 0;
 
-		routingTable = new int[bbMapper.gEdgeSize][bbMapper.gEdgeSize][bbMapper.gTileNum][bbMapper.gTileNum];
-		for (int i = 0; i < bbMapper.gEdgeSize; i++) {
-			for (int j = 0; j < bbMapper.gEdgeSize; j++) {
-				for (int k = 0; k < bbMapper.gTileNum; k++) {
-					for (int m = 0; m < bbMapper.gTileNum; m++)
+		routingTable = new int[bbMapper.edgeSize][bbMapper.edgeSize][bbMapper.nodesNumber][bbMapper.nodesNumber];
+		for (int i = 0; i < bbMapper.edgeSize; i++) {
+			for (int j = 0; j < bbMapper.edgeSize; j++) {
+				for (int k = 0; k < bbMapper.nodesNumber; k++) {
+					for (int m = 0; m < bbMapper.nodesNumber; m++)
 						routingTable[i][j][k][m] = -2;
 				}
 			}
 		}
 
 		// if it's a real child mapping node.
-		if (stage == bbMapper.gProcNum)
-			routeTraffics(0, bbMapper.gProcNum - 1, true, true);
+		if (stage == bbMapper.coresNumber)
+			routeTraffics(0, bbMapper.coresNumber - 1, true, true);
 		// if it's the node which generate min upperBound
 		else {
 			for (int i = 0; i < stage; i++)
 				routeTraffics(i, i, true, true);
-			routeTraffics(stage, bbMapper.gProcNum - 1, true, true);
+			routeTraffics(stage, bbMapper.coresNumber - 1, true, true);
 		}
 	}
 

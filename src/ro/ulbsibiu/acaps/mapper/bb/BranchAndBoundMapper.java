@@ -13,10 +13,13 @@ import java.util.Random;
 import ro.ulbsibiu.acaps.mapper.Mapper;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
 import ro.ulbsibiu.acaps.mapper.bb.MappingNode.RoutingEffort;
-import ro.ulbsibiu.acaps.mapper.sa.Link;
 import ro.ulbsibiu.acaps.mapper.sa.Core;
-import ro.ulbsibiu.acaps.mapper.sa.Node;
 import ro.ulbsibiu.acaps.mapper.util.MathUtils;
+import ro.ulbsibiu.acaps.noc.xml.link.LinkType;
+import ro.ulbsibiu.acaps.noc.xml.node.NodeType;
+import ro.ulbsibiu.acaps.noc.xml.node.ObjectFactory;
+import ro.ulbsibiu.acaps.noc.xml.node.RoutingTableEntryType;
+import ro.ulbsibiu.acaps.noc.xml.node.TopologyParameterType;
 
 /**
  * Branch-and-Bound algorithm for Network-on-Chip (NoC) application mapping. The
@@ -49,38 +52,38 @@ public class BranchAndBoundMapper implements Mapper {
 	static final int WEST = 3;
 
 	/** the number of tiles (nodes) from the NoC */
-	int gTileNum;
+	int nodesNumber;
 
 	/**
-	 * the size of the 2D mesh, sqrt(gTileNum) (sqrt(gTileNum) * sqrt(gTileNum)
-	 * = gTileNum)
+	 * the size of the 2D mesh, sqrt(nodesNumber) (sqrt(nodesNumber) * sqrt(nodesNumber)
+	 * = nodesNumber)
 	 */
-	int gEdgeSize;
+	int edgeSize;
 
 	/**
 	 * the number of processes (tasks). Note that each core has only one task
 	 * associated to it.
 	 */
-	int gProcNum;
+	int coresNumber;
 
 	/**
 	 * the number of links from the NoC
 	 */
-	int gLinkNum;
+	int linksNumber;
 
 	/** the tiles from the Network-on-Chip (NoC) */
-	Node[] gTile;
+	NodeType[] nodes;
 
 	/** the processes (tasks, cores) */
-	Core[] gProcess;
+	Core[] cores;
 
 	/** the communication channels from the NoC */
-	Link[] gLink;
+	LinkType[] links;
 
 	/**
 	 * what links are used by tiles to communicate (each source - destination
 	 * tile pair has a list of link IDs). The matrix must have size
-	 * <tt>gTileNum x gTileNum</tt>. <b>This must be <tt>null</tt> when
+	 * <tt>nodesNumber x nodesNumber</tt>. <b>This must be <tt>null</tt> when
 	 * <tt>buildRoutingTable</tt> is <tt>true</tt> </b>
 	 */
 	List<Integer>[][] linkUsageList = null;
@@ -173,12 +176,136 @@ public class BranchAndBoundMapper implements Mapper {
 	/** the best mapping */
 	private MappingNode bestMapping;
 
+	/** the ID of the NoC topology used by this algorithm */
+	private String topologyId;
+	
+	static enum TopologyParameter {
+		/** on what row of a 2D mesh the node is located */
+		ROW,
+		/** on what column of a 2D mesh the node is located */
+		COLUMN,
+		/** on what row of a 2D mesh the source node of a link is located */
+		ROW_TO,
+		/** on what row of a 2D mesh the destination node of a link is located */
+		ROW_FROM,
+		/** on what column of a 2D mesh the source node of a link is located */
+		COLUMN_TO,
+		/** on what column of a 2D mesh the destination node of a link is located */
+		COLUMN_FROM
+	};
+	
+	private static final String LINK_IN = "in";
+	
+	private static final String LINK_OUT = "out";
+	
+	static String getNodeTopologyParameter(NodeType node,
+			TopologyParameter parameter) {
+		String value = null;
+		List<TopologyParameterType> topologyParameters = node
+				.getTopologyParameter();
+		for (int i = 0; i < topologyParameters.size(); i++) {
+			if (parameter.toString().equalsIgnoreCase(
+					topologyParameters.get(i).getType())) {
+				value = topologyParameters.get(i).getValue();
+				break;
+			}
+		}
+		logger.assertLog(value != null,
+				"Couldn't find the topology parameter '" + parameter
+						+ "' in the node " + node.getId());
+		return value;
+	}
+
+	private String getLinkTopologyParameter(LinkType link,
+			TopologyParameter parameter) {
+		String value = null;
+		List<ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType> topologyParameters = link
+				.getTopologyParameter();
+		for (int i = 0; i < topologyParameters.size(); i++) {
+			if (parameter.toString().equalsIgnoreCase(
+					topologyParameters.get(i).getType())) {
+				value = topologyParameters.get(i).getValue();
+				break;
+			}
+		}
+		logger.assertLog(value != null,
+				"Couldn't find the topology parameter '" + parameter
+						+ "' in the link " + link.getId());
+		return value;
+	}
+	
+	/** routingTables[nodeId][sourceNode][destinationNode] = link ID */
+	int[][][] routingTables;
+	
+	public void generateXYRoutingTable(NodeType node, int nodesNumber, int gEdgeSize, LinkType[] links) {
+		for (int i = 0; i < nodesNumber; i++) {
+			for (int j = 0; j < nodesNumber; j++) {
+				RoutingTableEntryType routingTableEntryType = new RoutingTableEntryType();
+				routingTableEntryType.setSource(Integer.toString(i));
+				routingTableEntryType.setDestination(Integer.toString(j));
+				routingTableEntryType.setLink(Integer.toString(-2));
+				node.getRoutingTableEntry().add(routingTableEntryType);
+			}
+		}
+
+		for (int dstNode = 0; dstNode < nodesNumber; dstNode++) {
+			if (dstNode == Integer.valueOf(node.getId())) { // deliver to me
+				routingTables[Integer.valueOf(node.getId())][0][dstNode] = -1;
+				continue;
+			}
+
+			// check out the dst Node's position first
+			int dstRow = dstNode / gEdgeSize;
+			int dstCol = dstNode % gEdgeSize;
+
+			int row = Integer.valueOf(getNodeTopologyParameter(node, TopologyParameter.ROW));
+			int column = Integer.valueOf(getNodeTopologyParameter(node, TopologyParameter.COLUMN));
+			int nextStepRow = row;
+			int nextStepCol = column;
+
+			if (dstCol != column) { // We should go horizontally
+				if (column > dstCol) {
+					nextStepCol--;
+				} else {
+					nextStepCol++;
+				}
+			} else { // We should go vertically
+				if (row > dstRow) {
+					nextStepRow--;
+				} else {
+					nextStepRow++;
+				}
+			}
+
+			for (int i = 0; i < node.getLink().size(); i++) {
+				if (LINK_OUT.equals(node.getLink().get(i).getType())) {
+					if (Integer.valueOf(getLinkTopologyParameter(links[Integer.valueOf(node.getLink().get(i).getValue())], TopologyParameter.ROW_TO)) == nextStepRow
+							&& Integer.valueOf(getLinkTopologyParameter(links[Integer.valueOf(node.getLink().get(i).getValue())], TopologyParameter.COLUMN_TO)) == nextStepCol) {
+						routingTables[Integer.valueOf(node.getId())][0][dstNode] = Integer.valueOf(links[Integer
+								.valueOf(node.getLink().get(i).getValue())]
+								.getId());
+						break;
+					}
+				}
+			}
+		}
+
+		// Duplicate this routing row to the other routing rows.
+		for (int i = 1; i < nodesNumber; i++) {
+			for (int j = 0; j < nodesNumber; j++) {
+				routingTables[Integer.valueOf(node.getId())][i][j] = routingTables[Integer.valueOf(node.getId())][0][j];
+			}
+		}
+	}
+	
 	/**
 	 * Constructor
 	 * 
-	 * @param gTileNum
-	 *            the size of the 2D mesh (gTileNum * gTileNum)
-	 * @param gProcNum
+	 * @param topologyId
+	 *            the ID of the NoC topology used by this algorithm
+	 * @param nodesNumber
+	 *            the size of the 2D mesh (nodesNumber * nodesNumber)
+	 * @param coresNumber
 	 *            the number of processes (tasks). Note that each core has only
 	 *            one task associated to it
 	 * @param linkBandwidth
@@ -190,18 +317,20 @@ public class BranchAndBoundMapper implements Mapper {
 	 * @param bufWriteEBit
 	 *            energy consumption per bit write
 	 */
-	public BranchAndBoundMapper(int gTileNum, int gProcNum, int linkBandwidth,
+	public BranchAndBoundMapper(String topologyId, int nodesNumber, int coresNumber, int linkBandwidth,
 			int priorityQueueSize, float bufReadEBit, float bufWriteEBit) {
-		this(gTileNum, gProcNum, linkBandwidth, priorityQueueSize, false,
+		this(topologyId, nodesNumber, coresNumber, linkBandwidth, priorityQueueSize, false,
 				LegalTurnSet.WEST_FIRST, bufReadEBit, bufWriteEBit);
 	}
 
 	/**
 	 * Constructor
 	 * 
-	 * @param gTileNum
-	 *            the size of the 2D mesh (gTileNum * gTileNum)
-	 * @param gProcNum
+	 * @param topologyId
+	 *            the ID of the NoC topology used by this algorithm
+	 * @param nodesNumber
+	 *            the size of the 2D mesh (nodesNumber * nodesNumber)
+	 * @param coresNumber
 	 *            the number of processes (tasks). Note that each core has only
 	 *            one task associated to it
 	 * @param linkBandwidth
@@ -218,113 +347,161 @@ public class BranchAndBoundMapper implements Mapper {
 	 * @param bufWriteEBit
 	 *            energy consumption per bit write
 	 */
-	public BranchAndBoundMapper(int gTileNum, int gProcNum, int linkBandwidth,
+	public BranchAndBoundMapper(String topologyId, int nodesNumber, int coresNumber, int linkBandwidth,
 			int priorityQueueSize, boolean buildRoutingTable,
 			LegalTurnSet legalTurnSet, float bufReadEBit, float bufWriteEBit) {
-		this.gTileNum = gTileNum;
-		this.gEdgeSize = (int) Math.sqrt(gTileNum);
-		this.gProcNum = gProcNum;
+		this.topologyId = topologyId;
+		this.nodesNumber = nodesNumber;
+		this.edgeSize = (int) Math.sqrt(nodesNumber);
+		this.coresNumber = coresNumber;
 		this.linkBandwidth = linkBandwidth;
 		this.priorityQueueSize = priorityQueueSize;
-		// we have 2gEdgeSize(gEdgeSize - 1) bidirectional links =>
-		// 4gEdgeSize(gEdgeSize - 1) unidirectional links
-		this.gLinkNum = 2 * (gEdgeSize - 1) * gEdgeSize * 2;
+		// we have 2gEdgeSize(edgeSize - 1) bidirectional links =>
+		// 4gEdgeSize(edgeSize - 1) unidirectional links
+		this.linksNumber = 2 * (edgeSize - 1) * edgeSize * 2;
 		this.buildRoutingTable = buildRoutingTable;
 		this.legalTurnSet = legalTurnSet;
 		this.bufReadEBit = bufReadEBit;
 		this.bufWriteEBit = bufWriteEBit;
 
-		gTile = new Node[gTileNum];
+		nodes = new NodeType[nodesNumber];
 
-		gProcess = new Core[gProcNum];
+		cores = new Core[coresNumber];
 
-		gLink = new Link[gLinkNum];
+		links = new LinkType[linksNumber];
 	}
 
 	public void initializeCores() {
-		for (int i = 0; i < gProcess.length; i++) {
-			gProcess[i] = new Core(i, -1);
-			gProcess[i].setFromCommunication(new int[gTileNum]);
-			gProcess[i].setToCommunication(new int[gTileNum]);
-			gProcess[i].setFromBandwidthRequirement(new int[gTileNum]);
-			gProcess[i].setToBandwidthRequirement(new int[gTileNum]);
+		for (int i = 0; i < cores.length; i++) {
+			cores[i] = new Core(i, -1);
+			cores[i].setFromCommunication(new int[nodesNumber]);
+			cores[i].setToCommunication(new int[nodesNumber]);
+			cores[i].setFromBandwidthRequirement(new int[nodesNumber]);
+			cores[i].setToBandwidthRequirement(new int[nodesNumber]);
 		}
 	}
 
 	public void initializeNocTopology(float switchEBit, float linkEBit) {
 		// initialize nodes
-		for (int i = 0; i < gTile.length; i++) {
-			gTile[i] = new Node(i, -1, i / gEdgeSize, i % gEdgeSize, switchEBit);
+		ObjectFactory nodeFactory = new ObjectFactory();
+		for (int i = 0; i < nodes.length; i++) {
+			NodeType node = nodeFactory.createNodeType();
+			node.setId(Integer.toString(i));
+			node.setCore(Integer.toString(-1));
+			TopologyParameterType row = new TopologyParameterType();
+			row.setTopology(topologyId);
+			row.setType("row");
+			row.setValue(Integer.toString(i / edgeSize));
+			node.getTopologyParameter().add(row);
+			TopologyParameterType column = new TopologyParameterType();
+			column.setTopology(topologyId);
+			column.setType("column");
+			column.setValue(Integer.toString(i % edgeSize));
+			node.getTopologyParameter().add(column);
+			node.setCost((double)switchEBit);
+			nodes[i] = node;
 		}
 		// initialize links
-		for (int i = 0; i < gLink.length; i++) {
-			// There are totally 2*(gEdgeSize-1)*gEdgeSize*2 links. The first
+		for (int i = 0; i < links.length; i++) {
+			// There are totally 2*(edgeSize-1)*edgeSize*2 links. The first
 			// half links are horizontal
 			// the second half links are vertical links.
-			int fromTileRow;
-			int fromTileColumn;
-			int toTileRow;
-			int toTileColumn;
-			if (i < 2 * (gEdgeSize - 1) * gEdgeSize) {
-				fromTileRow = i / (2 * (gEdgeSize - 1));
-				toTileRow = i / (2 * (gEdgeSize - 1));
-				int localId = i % (2 * (gEdgeSize - 1));
-				if (localId < (gEdgeSize - 1)) {
+			int fromNodeRow;
+			int fromNodeColumn;
+			int toNodeRow;
+			int toNodeColumn;
+			if (i < 2 * (edgeSize - 1) * edgeSize) {
+				fromNodeRow = i / (2 * (edgeSize - 1));
+				toNodeRow = i / (2 * (edgeSize - 1));
+				int localId = i % (2 * (edgeSize - 1));
+				if (localId < (edgeSize - 1)) {
 					// from west to east
-					fromTileColumn = localId;
-					toTileColumn = localId + 1;
+					fromNodeColumn = localId;
+					toNodeColumn = localId + 1;
 				} else {
 					// from east to west
-					localId = localId - (gEdgeSize - 1);
-					fromTileColumn = localId + 1;
-					toTileColumn = localId;
+					localId = localId - (edgeSize - 1);
+					fromNodeColumn = localId + 1;
+					toNodeColumn = localId;
 				}
 			} else {
-				int localId = i - 2 * (gEdgeSize - 1) * gEdgeSize;
-				fromTileColumn = localId / (2 * (gEdgeSize - 1));
-				toTileColumn = localId / (2 * (gEdgeSize - 1));
-				localId = localId % (2 * (gEdgeSize - 1));
-				if (localId < (gEdgeSize - 1)) {
+				int localId = i - 2 * (edgeSize - 1) * edgeSize;
+				fromNodeColumn = localId / (2 * (edgeSize - 1));
+				toNodeColumn = localId / (2 * (edgeSize - 1));
+				localId = localId % (2 * (edgeSize - 1));
+				if (localId < (edgeSize - 1)) {
 					// from south to north
-					fromTileRow = localId;
-					toTileRow = localId + 1;
+					fromNodeRow = localId;
+					toNodeRow = localId + 1;
 				} else {
 					// from north to south
-					localId = localId - (gEdgeSize - 1);
-					fromTileRow = localId + 1;
-					toTileRow = localId;
+					localId = localId - (edgeSize - 1);
+					fromNodeRow = localId + 1;
+					toNodeRow = localId;
 				}
 			}
 
-			int fromTileId = fromTileRow * gEdgeSize + fromTileColumn;
-			int toTileId = toTileRow * gEdgeSize + toTileColumn;
+			int fromNodeId = fromNodeRow * edgeSize + fromNodeColumn;
+			int toNodeId = toNodeRow * edgeSize + toNodeColumn;
 
-			gLink[i] = new Link(i, linkBandwidth, fromTileId, toTileId,
-					linkEBit);
-			gLink[i].setFromNodeRow(fromTileRow);
-			gLink[i].setFromNodeColumn(fromTileColumn);
-			gLink[i].setToNodeRow(toTileRow);
-			gLink[i].setToNodeColumn(toTileColumn);
+			LinkType link = new LinkType();
+			link.setId(Integer.toString(i));
+			link.setBandwidth(linkBandwidth);
+			link.setSourceNode(Integer.toString(fromNodeId));
+			link.setDestinationNode(Integer.toString(toNodeId));
+			link.setCost((double)linkEBit);
+			ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType rowTo = new ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType();
+			rowTo.setTopology(topologyId);
+			rowTo.setType(TopologyParameter.ROW_TO.toString());
+			rowTo.setValue(Integer.toString(toNodeRow));
+			link.getTopologyParameter().add(rowTo);
+			ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType rowFrom = new ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType();
+			rowFrom.setTopology(topologyId);
+			rowFrom.setType(TopologyParameter.ROW_FROM.toString());
+			rowFrom.setValue(Integer.toString(fromNodeRow));
+			link.getTopologyParameter().add(rowFrom);
+			ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType columnTo = new ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType();
+			columnTo.setTopology(topologyId);
+			columnTo.setType(TopologyParameter.COLUMN_TO.toString());
+			columnTo.setValue(Integer.toString(toNodeColumn));
+			link.getTopologyParameter().add(columnTo);
+			ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType columnFrom = new ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType();
+			columnFrom.setTopology(topologyId);
+			columnFrom.setType(TopologyParameter.COLUMN_FROM.toString());
+			columnFrom.setValue(Integer.toString(fromNodeColumn));
+			link.getTopologyParameter().add(columnFrom);
+			links[i] = link;
 		}
 		// attach the links to the NoC nodes
-		for (int i = 0; i < gTileNum; i++) {
-			for (int j = 0; j < gLink.length; j++) {
-				if (gLink[j].getFromNodeRow() == gTile[i].getRow()
-						&& gLink[j].getFromNodeColumn() == gTile[i].getColumn()) {
-					gTile[i].addOutLink(gLink[j].getLinkId());
+		boolean inAdded = false;
+		boolean outAdded = false;
+		for (int i = 0; i < nodesNumber; i++) {
+			for (int j = 0; j < links.length; j++) {
+				if (Integer.valueOf(getLinkTopologyParameter(links[j], TopologyParameter.ROW_FROM)) == Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.ROW))
+						&& Integer.valueOf(getLinkTopologyParameter(links[j], TopologyParameter.COLUMN_FROM)) == Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.COLUMN))) {
+					ro.ulbsibiu.acaps.noc.xml.node.LinkType linkType = new ro.ulbsibiu.acaps.noc.xml.node.LinkType();
+					linkType.setType(LINK_OUT);
+					linkType.setValue(links[j].getId());
+					nodes[i].getLink().add(linkType);
+					outAdded = true;
 				}
-				if (gLink[j].getToTileRow() == gTile[i].getRow()
-						&& gLink[j].getToNodeColumn() == gTile[i].getColumn()) {
-					gTile[i].addInLink(gLink[j].getLinkId());
+				if (Integer.valueOf(getLinkTopologyParameter(links[j], TopologyParameter.ROW_TO)) == Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.ROW))
+						&& Integer.valueOf(getLinkTopologyParameter(links[j], TopologyParameter.COLUMN_TO)) == Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.COLUMN))) {
+					ro.ulbsibiu.acaps.noc.xml.node.LinkType linkType = new ro.ulbsibiu.acaps.noc.xml.node.LinkType();
+					linkType.setType(LINK_IN);
+					linkType.setValue(links[j].getId());
+					nodes[i].getLink().add(linkType);
+					inAdded = true;
 				}
 			}
-			logger.assertLog(gTile[i].getInLinks().size() > 0, null);
-			logger.assertLog(gTile[i].getOutLinks().size() > 0, null);
+			logger.assertLog(inAdded, null);
+			logger.assertLog(outAdded, null);
 		}
 		// for each router generate a routing table provided by the XY routing
 		// protocol
-		for (int i = 0; i < gTileNum; i++) {
-			gTile[i].generateXYRoutingTable(gTileNum, gEdgeSize, gLink);
+		routingTables = new int[nodesNumber][nodesNumber][nodesNumber];
+		for (int i = 0; i < nodesNumber; i++) {
+			generateXYRoutingTable(nodes[i], nodesNumber, edgeSize, links);
 		}
 
 		generateLinkUsageList();
@@ -335,33 +512,33 @@ public class BranchAndBoundMapper implements Mapper {
 			linkUsageList = null;
 		} else {
 			// Allocate the space for the link usage table
-			int[][][] linkUsageMatrix = new int[gTileNum][gTileNum][gLinkNum];
+			int[][][] linkUsageMatrix = new int[nodesNumber][nodesNumber][linksNumber];
 
 			// Setting up the link usage matrix
-			for (int srcId = 0; srcId < gTileNum; srcId++) {
-				for (int dstId = 0; dstId < gTileNum; dstId++) {
+			for (int srcId = 0; srcId < nodesNumber; srcId++) {
+				for (int dstId = 0; dstId < nodesNumber; dstId++) {
 					if (srcId == dstId) {
 						continue;
 					}
-					Node currentTile = gTile[srcId];
-					while (currentTile.getTileId() != dstId) {
-						int linkId = currentTile.routeToLink(srcId, dstId);
-						Link link = gLink[linkId];
+					NodeType currentNode = nodes[srcId];
+					while (Integer.valueOf(currentNode.getId()) != dstId) {
+						int linkId = routingTables[Integer.valueOf(currentNode.getId())][srcId][dstId];
+						LinkType link = links[linkId];
 						linkUsageMatrix[srcId][dstId][linkId] = 1;
-						currentTile = gTile[link.getToTileId()];
+						currentNode = nodes[Integer.valueOf(link.getDestinationNode())];
 					}
 				}
 			}
 
 			// Now build the g_link_usage_list
-			linkUsageList = new ArrayList[gTileNum][gTileNum];
-			for (int src = 0; src < gTileNum; src++) {
-				for (int dst = 0; dst < gTileNum; dst++) {
+			linkUsageList = new ArrayList[nodesNumber][nodesNumber];
+			for (int src = 0; src < nodesNumber; src++) {
+				for (int dst = 0; dst < nodesNumber; dst++) {
 					linkUsageList[src][dst] = new ArrayList<Integer>();
 					if (src == dst) {
 						continue;
 					}
-					for (int linkId = 0; linkId < gLinkNum; linkId++) {
+					for (int linkId = 0; linkId < linksNumber; linkId++) {
 						if (linkUsageMatrix[src][dst][linkId] == 1) {
 							linkUsageList[src][dst].add(linkId);
 						}
@@ -370,37 +547,37 @@ public class BranchAndBoundMapper implements Mapper {
 			}
 
 			logger.assertLog(this.linkUsageList != null, null);
-			logger.assertLog(linkUsageList.length == gTileNum, null);
+			logger.assertLog(linkUsageList.length == nodesNumber, null);
 			for (int i = 0; i < linkUsageList.length; i++) {
-				logger.assertLog(linkUsageList[i].length == gTileNum, null);
+				logger.assertLog(linkUsageList[i].length == nodesNumber, null);
 			}
 		}
 	}
 
 	private void mapCoresToNocNodesRandomly() {
 		Random rand = new Random();
-		for (int i = 0; i < gTileNum; i++) {
-			int k = Math.abs(rand.nextInt()) % gTileNum;
-			while (gTile[k].getCoreId() != -1) {
-				k = Math.abs(rand.nextInt()) % gTileNum;
+		for (int i = 0; i < nodesNumber; i++) {
+			int k = Math.abs(rand.nextInt()) % nodesNumber;
+			while (!Integer.toString(-1).equals(nodes[k].getCore())) {
+				k = Math.abs(rand.nextInt()) % nodesNumber;
 			}
-			gProcess[i].setNodeId(k);
-			gTile[k].setCoreId(i);
+			cores[i].setNodeId(k);
+			nodes[k].setCore(Integer.toString(i));
 		}
 
 		// // this maps the cores like NoCMap does
 		// int[] coreMap = new int[] { 11, 13, 10, 8, 12, 0, 9, 1, 2, 4, 14, 15,
 		// 5, 3, 7, 6 };
-		// for (int i = 0; i < gProcNum; i++) {
-		// gProcess[i].setTileId(coreMap[i]);
-		// gTile[coreMap[i]].setProcId(i);
+		// for (int i = 0; i < coresNumber; i++) {
+		// cores[i].setNodeId(coreMap[i]);
+		// nodes[coreMap[i]].setProcId(i);
 		// }
 	}
 
 	private void printCurrentMapping() {
-		for (int i = 0; i < gProcNum; i++) {
-			System.out.println("Core " + gProcess[i].getCoreId()
-					+ " is mapped to NoC node " + gProcess[i].getNodeId());
+		for (int i = 0; i < coresNumber; i++) {
+			System.out.println("Core " + cores[i].getCoreId()
+					+ " is mapped to NoC node " + cores[i].getNodeId());
 		}
 	}
 
@@ -411,7 +588,7 @@ public class BranchAndBoundMapper implements Mapper {
 		if (logger.isInfoEnabled()) {
 			logger.info("Initialize for branch-and-bound");
 		}
-		procMapArray = new int[gProcNum];
+		procMapArray = new int[coresNumber];
 		sortProcesses();
 		buildProcessMatrix();
 		buildArchitectureMatrix();
@@ -420,15 +597,15 @@ public class BranchAndBoundMapper implements Mapper {
 		// // let's calculate the maximum ebit of sending a bit
 		// // from one tile to its neighboring tile
 		// float max_e = -1;
-		// for (int i = 0; i < gLinkNum; i++) {
-		// if (gLink[i].getCost() > max_e)
-		// max_e = gLink[i].getCost();
+		// for (int i = 0; i < linksNumber; i++) {
+		// if (links[i].getCost() > max_e)
+		// max_e = links[i].getCost();
 		// }
 		// float eb = max_e;
 		// max_e = -1;
-		// for (int i = 0; i < gTileNum; i++) {
-		// if (gTile[i].getCost() > max_e)
-		// max_e = gTile[i].getCost();
+		// for (int i = 0; i < nodesNumber; i++) {
+		// if (nodes[i].getCost() > max_e)
+		// max_e = nodes[i].getCost();
 		// }
 		// eb += max_e * 2;
 		// MAX_PER_TRAN_COST = eb * DUMMY_VOL * 1.3; // let's put some overhead
@@ -437,18 +614,18 @@ public class BranchAndBoundMapper implements Mapper {
 	}
 
 	private void buildProcessMatrix() {
-		procMatrix = new int[gProcNum][gProcNum];
-		for (int i = 0; i < gProcNum; i++) {
-			int row = gProcess[i].getRank();
-			for (int j = 0; j < gProcNum; j++) {
-				int col = gProcess[j].getRank();
-				procMatrix[row][col] = gProcess[i].getFromCommunication()[j]
-						+ gProcess[i].getToCommunication()[j];
+		procMatrix = new int[coresNumber][coresNumber];
+		for (int i = 0; i < coresNumber; i++) {
+			int row = cores[i].getRank();
+			for (int j = 0; j < coresNumber; j++) {
+				int col = cores[j].getRank();
+				procMatrix[row][col] = cores[i].getFromCommunication()[j]
+						+ cores[i].getToCommunication()[j];
 			}
 		}
 		// Sanity checking
-		for (int i = 0; i < gProcNum; i++) {
-			for (int j = 0; j < gProcNum; j++) {
+		for (int i = 0; i < coresNumber; i++) {
+			for (int j = 0; j < coresNumber; j++) {
 				if (procMatrix[i][j] < 0) {
 					logger.fatal("Error for < 0");
 					System.exit(1);
@@ -462,25 +639,25 @@ public class BranchAndBoundMapper implements Mapper {
 	}
 
 	private void buildArchitectureMatrix() {
-		archMatrix = new float[gTileNum][gTileNum];
-		for (int src = 0; src < gTileNum; src++) {
-			for (int dst = 0; dst < gTileNum; dst++) {
+		archMatrix = new float[nodesNumber][nodesNumber];
+		for (int src = 0; src < nodesNumber; src++) {
+			for (int dst = 0; dst < nodesNumber; dst++) {
 				float energy = 0;
-				Node currentTile = gTile[src];
-				energy += currentTile.getCost();
-				while (currentTile.getTileId() != dst) {
-					int linkId = currentTile.routeToLink(src, dst);
-					Link link = gLink[linkId];
+				NodeType currentNode = nodes[src];
+				energy += currentNode.getCost();
+				while (Integer.valueOf(currentNode.getId()) != dst) {
+					int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
+					LinkType link = links[linkId];
 					energy += link.getCost();
-					currentTile = gTile[link.getToTileId()];
-					energy += currentTile.getCost();
+					currentNode = nodes[Integer.valueOf(link.getDestinationNode())];
+					energy += currentNode.getCost();
 				}
 				archMatrix[src][dst] = energy;
 			}
 		}
 		// Sanity checking
-		for (int i = 0; i < gTileNum; i++) {
-			for (int j = 0; j < gTileNum; j++) {
+		for (int i = 0; i < nodesNumber; i++) {
+			for (int j = 0; j < nodesNumber; j++) {
 				if (archMatrix[i][j] != archMatrix[j][i]) {
 					logger.fatal("Error. The architecture matrix is not symetric.");
 					System.exit(1);
@@ -496,40 +673,40 @@ public class BranchAndBoundMapper implements Mapper {
 	private void sortProcesses() {
 		// sort them according to the sum of each process's ingress and egress
 		// communication volume
-		for (int i = 0; i < gProcess.length; i++) {
-			gProcess[i].setTotalCommVol(0);
-			for (int k = 0; k < gProcess.length; k++) {
-				gProcess[i].setTotalCommVol(gProcess[i].getTotalCommVol()
-						+ gProcess[i].getToCommunication()[k]
-						+ gProcess[i].getFromCommunication()[k]);
+		for (int i = 0; i < cores.length; i++) {
+			cores[i].setTotalCommVol(0);
+			for (int k = 0; k < cores.length; k++) {
+				cores[i].setTotalCommVol(cores[i].getTotalCommVol()
+						+ cores[i].getToCommunication()[k]
+						+ cores[i].getFromCommunication()[k]);
 			}
 		}
 		// Now rank them
 		int currentRank = 0;
 		// locked PEs have the highest priority
-		// for (int i=0; i<gProcess.length; i++) {
-		// if (gProcess[i].isLocked()) {
+		// for (int i=0; i<cores.length; i++) {
+		// if (cores[i].isLocked()) {
 		// proc_map_array[cur_rank] = i;
-		// gProcess[i].setRank(cur_rank ++);
+		// cores[i].setRank(cur_rank ++);
 		// }
 		// else {
-		// gProcess[i].setRank(-1);
+		// cores[i].setRank(-1);
 		// }
 		// }
 		// the remaining PEs are sorted based on their comm volume
-		for (int i = currentRank; i < gProcess.length; i++) {
+		for (int i = currentRank; i < cores.length; i++) {
 			int max = -1;
 			int maxid = -1;
-			for (int k = 0; k < gProcNum; k++) {
-				if (gProcess[k].getRank() != -1) {
+			for (int k = 0; k < coresNumber; k++) {
+				if (cores[k].getRank() != -1) {
 					continue;
 				}
-				if (gProcess[k].getTotalCommVol() > max) {
-					max = gProcess[k].getTotalCommVol();
+				if (cores[k].getTotalCommVol() > max) {
+					max = cores[k].getTotalCommVol();
 					maxid = k;
 				}
 			}
-			gProcess[maxid].setRank(i);
+			cores[maxid].setRank(i);
 			procMapArray[i] = maxid;
 		}
 	}
@@ -544,9 +721,9 @@ public class BranchAndBoundMapper implements Mapper {
 		// // this ruins the symmetric structure of the system completely.
 		// // although for some corner cases, symmetry still exists, we don't
 		// // consider it here.
-		// for (int i = 0; i < gEdgeSize; i++) {
-		// for (int j = 0; j < gEdgeSize; j++) {
-		// MappingNode pNode = new MappingNode(i * gEdgeSize + j);
+		// for (int i = 0; i < edgeSize; i++) {
+		// for (int j = 0; j < edgeSize; j++) {
+		// MappingNode pNode = new MappingNode(i * edgeSize + j);
 		// if (!pNode.isIllegal()) {
 		// Q.insert(pNode);
 		// }
@@ -559,10 +736,10 @@ public class BranchAndBoundMapper implements Mapper {
 		// And if we need to synthesize the routing table, then there is not
 		// much symmetry property to be exploited
 		if (!buildRoutingTable) {
-			int size = (gEdgeSize + 1) / 2;
+			int size = (edgeSize + 1) / 2;
 			for (int i = 0; i < size; i++) {
 				for (int j = 0; j <= i; j++) {
-					MappingNode pNode = new MappingNode(this, i * gEdgeSize + j);
+					MappingNode pNode = new MappingNode(this, i * edgeSize + j);
 					if (!pNode.isIllegal()) {
 						Q.insert(pNode);
 					}
@@ -571,10 +748,10 @@ public class BranchAndBoundMapper implements Mapper {
 		} else {
 			// for west-first or odd-even, we only need to consider the
 			// bottom half
-			int size = (gEdgeSize + 1) / 2;
+			int size = (edgeSize + 1) / 2;
 			for (int i = 0; i < size; i++) {
-				for (int j = 0; j < gEdgeSize; j++) {
-					MappingNode pNode = new MappingNode(this, i * gEdgeSize + j);
+				for (int j = 0; j < edgeSize; j++) {
+					MappingNode pNode = new MappingNode(this, i * edgeSize + j);
 					if (!pNode.isIllegal()) {
 						Q.insert(pNode);
 					}
@@ -627,7 +804,7 @@ public class BranchAndBoundMapper implements Mapper {
 				&& minUpperBoundHitCount <= minHitThreshold) {
 			insertAllFlag = true;
 		}
-		for (int i = previousInsert; i < gTileNum; i++) {
+		for (int i = previousInsert; i < nodesNumber; i++) {
 			if (logger.isTraceEnabled()) {
 				logger.trace("Node expandable at " + i + " " + pNode.isExpandable(i));
 			}
@@ -661,9 +838,9 @@ public class BranchAndBoundMapper implements Mapper {
 								bestMapping = new MappingNode(this, child);
 						}
 					}
-					if (child.getStage() == gProcNum) {
+					if (child.getStage() == coresNumber) {
 						minCost = child.cost;
-						if (child.getStage() < gProcNum)
+						if (child.getStage() < coresNumber)
 							minCost = child.upperBound;
 						if (MathUtils.definitelyLessThan(minCost, minUpperBound))
 							minUpperBound = minCost;
@@ -713,9 +890,9 @@ public class BranchAndBoundMapper implements Mapper {
 				insertAll(pNode, Q);
 				return;
 			}
-			if (child.getStage() == gProcNum || MathUtils.approximatelyEqual(child.lowerBound, child.upperBound)) {
+			if (child.getStage() == coresNumber || MathUtils.approximatelyEqual(child.lowerBound, child.upperBound)) {
 				minCost = child.cost;
-				if (child.getStage() < gProcNum) {
+				if (child.getStage() < coresNumber) {
 					minCost = child.upperBound;
 				}
 				if (MathUtils.definitelyLessThan(minCost, minUpperBound)) {
@@ -755,14 +932,14 @@ public class BranchAndBoundMapper implements Mapper {
 						+ minUpperBound);
 				minUpperBoundHitCount = 0;
 			}
-			if (child.getStage() == gProcNum
+			if (child.getStage() == coresNumber
 					|| MathUtils.approximatelyEqual(child.lowerBound, child.upperBound)) {
 				if (MathUtils.approximatelyEqual(minCost, child.cost) && bestMapping != null) {
 					return;
 				}
 				else {
 					minCost = child.cost;
-					if (child.getStage() < gProcNum) {
+					if (child.getStage() < coresNumber) {
 						minCost = child.upperBound;
 					}
 					if (MathUtils.definitelyLessThan(minCost, minUpperBound)) {
@@ -778,26 +955,47 @@ public class BranchAndBoundMapper implements Mapper {
 	}
 
 	private void applyMapping(MappingNode bestMapping) {
-		for (int i = 0; i < gProcNum; i++) {
-			gProcess[i].setNodeId(-1);
+		for (int i = 0; i < coresNumber; i++) {
+			cores[i].setNodeId(-1);
 		}
-		for (int i = 0; i < gTileNum; i++) {
-			gTile[i].setCoreId(-1);
+		for (int i = 0; i < nodesNumber; i++) {
+			nodes[i].setCore(Integer.toString(-1));
 		}
-		for (int i = 0; i < gProcNum; i++) {
+		for (int i = 0; i < coresNumber; i++) {
 			int procId = procMapArray[i];
-			gProcess[procId].setNodeId(bestMapping.mapToTile(i));
-			gTile[bestMapping.mapToTile(i)].setCoreId(procId);
+			cores[procId].setNodeId(bestMapping.mapToNode(i));
+			nodes[bestMapping.mapToNode(i)].setCore(Integer.toString(procId));
 		}
 		if (buildRoutingTable) {
 			bestMapping.programRouters();
 		}
 	}
 
+	private void saveRoutingTables() {
+		if (logger.isInfoEnabled()) {
+			logger.info("Saving the routing tables");
+		}
+		
+		for (int i = 0; i < nodes.length; i++) {
+			int[][] routingEntries = routingTables[Integer.valueOf(nodes[i].getId())];
+			for (int j = 0; j < routingEntries.length; j++) {
+				for (int k = 0; k < routingEntries[j].length; k++) {
+					if (routingEntries[i][j] >= 0) {
+						RoutingTableEntryType routingTableEntry = new RoutingTableEntryType();
+						routingTableEntry.setSource(Integer.toString(i));
+						routingTableEntry.setDestination(Integer.toString(j));
+						routingTableEntry.setLink(Integer.toString(routingEntries[i][j]));
+						nodes[i].getRoutingTableEntry().add(routingTableEntry);
+					}
+				}
+			}
+		}
+	}
+	
 	@Override
 	public String map() throws TooFewNocNodesException {
-		if (gTileNum < gProcNum) {
-			throw new TooFewNocNodesException(gProcNum, gTileNum);
+		if (nodesNumber < coresNumber) {
+			throw new TooFewNocNodesException(coresNumber, nodesNumber);
 		}
 
 		mapCoresToNocNodesRandomly();
@@ -807,13 +1005,16 @@ public class BranchAndBoundMapper implements Mapper {
 		long start = System.currentTimeMillis();
 		System.out.println("Start mapping...");
 
-		logger.assertLog((gProcNum == ((int) gProcess.length)), null);
+		logger.assertLog((coresNumber == ((int) cores.length)), null);
 
 		branchAndBoundMapping();
 		long end = System.currentTimeMillis();
 		System.out.println("Mapping process finished successfully.");
 		System.out.println("Time: " + (end - start) / 1000 + " seconds");
 
+		saveRoutingTables();
+		
+		// FIXME save the mapping and the routing tables into the XML
 		return null;
 	}
 
@@ -873,10 +1074,10 @@ public class BranchAndBoundMapper implements Mapper {
 					logger.fatal("Invalid rate!");
 					System.exit(0);
 				}
-				gProcess[id].getToCommunication()[dstId] = (int) (rate * 1000000);
-				gProcess[id].getToBandwidthRequirement()[dstId] = (int) (rate * 3 * linkBandwidth);
-				gProcess[dstId].getFromCommunication()[id] = (int) (rate * 1000000);
-				gProcess[dstId].getFromBandwidthRequirement()[id] = (int) (rate * 3 * linkBandwidth);
+				cores[id].getToCommunication()[dstId] = (int) (rate * 1000000);
+				cores[id].getToBandwidthRequirement()[dstId] = (int) (rate * 3 * linkBandwidth);
+				cores[dstId].getFromCommunication()[id] = (int) (rate * 1000000);
+				cores[dstId].getFromBandwidthRequirement()[id] = (int) (rate * 3 * linkBandwidth);
 			}
 		}
 
@@ -886,36 +1087,38 @@ public class BranchAndBoundMapper implements Mapper {
 	private boolean verifyBandwidthRequirement() {
 		generateLinkUsageList();
 
-		for (int i = 0; i < gLinkNum; i++) {
-			gLink[i].setUsedBandwidth(0);
+		int[] usedBandwidth = new int[linksNumber];
+		
+		for (int i = 0; i < linksNumber; i++) {
+			usedBandwidth[i] = 0;
 		}
 
-		for (int src = 0; src < gTileNum; src++) {
-			for (int dst = 0; dst < gTileNum; dst++) {
+		for (int src = 0; src < nodesNumber; src++) {
+			for (int dst = 0; dst < nodesNumber; dst++) {
 	            if (src == dst) {
 	                continue;
 	            }
-	            int srcProc = gTile[src].getCoreId();
-	            int dstProc = gTile[dst].getCoreId();
-	            int commLoad = gProcess[srcProc].getToBandwidthRequirement()[dstProc];
+	            int srcProc = Integer.valueOf(nodes[src].getCore());
+	            int dstProc = Integer.valueOf(nodes[dst].getCore());
+	            int commLoad = cores[srcProc].getToBandwidthRequirement()[dstProc];
 	            if (commLoad == 0) {
 	                continue;
 	            }
-	            Node currentTile = gTile[src];
-	            while (currentTile.getTileId() != dst) {
-	                int linkId = currentTile.routeToLink(src, dst);
-	                Link link = gLink[linkId];
-	                currentTile = gTile[link.getToTileId()];
-	                gLink[linkId].setUsedBandwidth(gLink[linkId].getUsedBandwidth() + commLoad);
+	            NodeType currentNode = nodes[src];
+	            while (Integer.valueOf(currentNode.getId()) != dst) {
+	                int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
+	                LinkType link = links[linkId];
+	                currentNode = nodes[Integer.valueOf(link.getDestinationNode())];
+	                usedBandwidth[linkId] += commLoad;
 	            }
 	        }
 	    }
 	    //check for the overloaded links
 	    int violations = 0;
-		for (int i = 0; i < gLinkNum; i++) {
-	        if (gLink[i].getUsedBandwidth()> gLink[i].getBandwidth()) {
-	        	System.out.println("Link " + i + " is overloaded: " + gLink[i].getUsedBandwidth() + " > "
-	                 + gLink[i].getBandwidth());
+		for (int i = 0; i < linksNumber; i++) {
+	        if (usedBandwidth[i] > links[i].getBandwidth()) {
+	        	System.out.println("Link " + i + " is overloaded: " + usedBandwidth[i] + " > "
+	                 + links[i].getBandwidth());
 	            violations ++;
 	        }
 	    }
@@ -945,29 +1148,29 @@ public class BranchAndBoundMapper implements Mapper {
 	
 	private float calculateSwitchEnergy() {
 		float energy = 0;
-		for (int src = 0; src < gTileNum; src++) {
-			for (int dst = 0; dst < gTileNum; dst++) {
-				int srcProc = gTile[src].getCoreId();
-				int dstProc = gTile[dst].getCoreId();
-				int commVol = gProcess[srcProc].getToCommunication()[dstProc];
+		for (int src = 0; src < nodesNumber; src++) {
+			for (int dst = 0; dst < nodesNumber; dst++) {
+				int srcProc = Integer.valueOf(nodes[src].getCore());
+				int dstProc = Integer.valueOf(nodes[dst].getCore());
+				int commVol = cores[srcProc].getToCommunication()[dstProc];
 				if (commVol > 0) {
-					energy += gTile[src].getCost() * commVol;
-					Node currentTile = gTile[src];
+					energy += nodes[src].getCost() * commVol;
+					NodeType currentNode = nodes[src];
 					if (logger.isTraceEnabled()) {
-						logger.trace("adding " + currentTile.getCost() + " * "
+						logger.trace("adding " + currentNode.getCost() + " * "
 								+ commVol + " (core " + srcProc + " to core "
 								+ dstProc + ") current tile "
-								+ currentTile.getTileId());
+								+ currentNode.getId());
 					}
-					while (currentTile.getTileId() != dst) {
-						int linkId = currentTile.getRoutingEntries()[src][dst];
-						currentTile = gTile[gLink[linkId].getToTileId()];
-						energy += currentTile.getCost() * commVol;
+					while (Integer.valueOf(currentNode.getId()) != dst) {
+						int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
+						currentNode = nodes[Integer.valueOf(links[linkId].getDestinationNode())];
+						energy += currentNode.getCost() * commVol;
 						if (logger.isTraceEnabled()) {
-							logger.trace("adding " + currentTile.getCost()
+							logger.trace("adding " + currentNode.getCost()
 									+ " * " + commVol + " (core " + srcProc
 									+ " to core " + dstProc + ") current tile "
-									+ currentTile.getTileId() + " link ID "
+									+ currentNode.getId() + " link ID "
 									+ linkId);
 						}
 					}
@@ -979,17 +1182,17 @@ public class BranchAndBoundMapper implements Mapper {
 
 	private float calculateLinkEnergy() {
 		float energy = 0;
-		for (int src = 0; src < gTileNum; src++) {
-			for (int dst = 0; dst < gTileNum; dst++) {
-				int srcProc = gTile[src].getCoreId();
-				int dstProc = gTile[dst].getCoreId();
-				int commVol = gProcess[srcProc].getToCommunication()[dstProc];
+		for (int src = 0; src < nodesNumber; src++) {
+			for (int dst = 0; dst < nodesNumber; dst++) {
+				int srcProc = Integer.valueOf(nodes[src].getCore());
+				int dstProc = Integer.valueOf(nodes[dst].getCore());
+				int commVol = cores[srcProc].getToCommunication()[dstProc];
 				if (commVol > 0) {
-					Node currentTile = gTile[src];
-					while (currentTile.getTileId() != dst) {
-						int linkId = currentTile.getRoutingEntries()[src][dst];
-						energy += gLink[linkId].getCost() * commVol;
-						currentTile = gTile[gLink[linkId].getToTileId()];
+					NodeType currentNode = nodes[src];
+					while (Integer.valueOf(currentNode.getId()) != dst) {
+						int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
+						energy += links[linkId].getCost() * commVol;
+						currentNode = nodes[Integer.valueOf(links[linkId].getDestinationNode())];
 					}
 				}
 			}
@@ -999,17 +1202,17 @@ public class BranchAndBoundMapper implements Mapper {
 
 	private float calculateBufferEnergy() {
 		float energy = 0;
-		for (int src = 0; src < gTileNum; src++) {
-			for (int dst = 0; dst < gTileNum; dst++) {
-				int srcProc = gTile[src].getCoreId();
-				int dstProc = gTile[dst].getCoreId();
-				int commVol = gProcess[srcProc].getToCommunication()[dstProc];
+		for (int src = 0; src < nodesNumber; src++) {
+			for (int dst = 0; dst < nodesNumber; dst++) {
+				int srcProc = Integer.valueOf(nodes[src].getCore());
+				int dstProc = Integer.valueOf(nodes[dst].getCore());
+				int commVol = cores[srcProc].getToCommunication()[dstProc];
 				if (commVol > 0) {
-					Node currentTile = gTile[src];
-					while (currentTile.getTileId() != dst) {
-						int linkId = currentTile.getRoutingEntries()[src][dst];
+					NodeType currentNode = nodes[src];
+					while (Integer.valueOf(currentNode.getId()) != dst) {
+						int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
 						energy += (bufReadEBit + bufWriteEBit) * commVol;
-						currentTile = gTile[gLink[linkId].getToTileId()];
+						currentNode = nodes[Integer.valueOf(links[linkId].getDestinationNode())];
 					}
 					energy += bufWriteEBit * commVol;
 				}
@@ -1047,6 +1250,8 @@ public class BranchAndBoundMapper implements Mapper {
 			System.err
 					.println("(where routing may be true or false; any other value means false)");
 		} else {
+			// the mesh-2D.xml from NoC-XML
+			String topologyId = "mesh2D";
 			// from the initial random mapping, I think tiles must equal cores
 			// (it
 			// is not enough to have cores <= tiles)
@@ -1062,12 +1267,12 @@ public class BranchAndBoundMapper implements Mapper {
 			BranchAndBoundMapper bbMapper;
 			if ("true".equals(args[0])) {
 				// Branch and Bound with routing
-				bbMapper = new BranchAndBoundMapper(tiles, cores,
+				bbMapper = new BranchAndBoundMapper(topologyId, tiles, cores,
 						linkBandwidth, priorityQueueSize, true,
 						LegalTurnSet.ODD_EVEN, bufReadEBit, bufWriteEBit);
 			} else {
 				// Branch and Bound without routing
-				bbMapper = new BranchAndBoundMapper(tiles, cores,
+				bbMapper = new BranchAndBoundMapper(topologyId, tiles, cores,
 						linkBandwidth, priorityQueueSize, bufReadEBit, bufWriteEBit);
 			}
 
