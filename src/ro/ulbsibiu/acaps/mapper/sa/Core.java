@@ -1,8 +1,9 @@
 package ro.ulbsibiu.acaps.mapper.sa;
 
 /**
- * Holds data regarding a core attached to a NoC node. Note that each core
- * is uniquely assigned to an IP core.
+ * Holds data regarding a core attached to a NoC node. Note that each core has
+ * only one task assigned to it (thus, core is synonym to process/task, in this
+ * context).
  * 
  * @author cipi
  * 

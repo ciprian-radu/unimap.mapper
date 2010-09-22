@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ctg
+	xmlns="http://webspace.ulbsibiu.ro/ciprian.radu/research/noc/application_mapping/unified_framework/schema/ctg"
+	id="0" period="56000">
+	<communication>
+		<source id="2" />
+		<destination id="8" />
+		<volume>53571.428571429</volume>
+	</communication>
+	<communication>
+		<source id="2" />
+		<destination id="14" />
+		<volume>53571.428571429</volume>
+	</communication>
+	<communication>
+		<source id="3" />
+		<destination id="8" />
+		<volume>71428.5714285714</volume>
+	</communication>
+	<communication>
+		<source id="4" />
+		<destination id="0" />
+		<volume>71428.5714285714</volume>
+	</communication>
+	<communication>
+		<source id="4" />
+		<destination id="6" />
+		<volume>53571.4285714286</volume>
+	</communication>
+	<communication>
+		<source id="5" />
+		<destination id="12" />
+		<volume>17857.1428571429</volume>
+	</communication>
+	<communication>
+		<source id="5" />
+		<destination id="14" />
+		<volume>53571.4285714286</volume>
+	</communication>
+	<communication>
+		<source id="6" />
+		<destination id="0" />
+		<volume>53571.4285714286</volume>
+	</communication>
+	<communication>
+		<source id="7" />
+		<destination id="12" />
+		<volume>178571.428571429</volume>
+	</communication>
+	<communication>
+		<source id="9" />
+		<destination id="15" />
+		<volume>178571.428571429</volume>
+	</communication>
+	<communication>
+		<source id="10" />
+		<destination id="12" />
+		<volume>17857.1428571429</volume>
+	</communication>
+	<communication>
+		<source id="10" />
+		<destination id="13" />
+		<volume>53571.4285714286</volume>
+	</communication>
+	<communication>
+		<source id="10" />
+		<destination id="14" />
+		<volume>53571.4285714286</volume>
+	</communication>
+	<communication>
+		<source id="11" />
+		<destination id="10" />
+		<volume>178571.428571429</volume>
+	</communication>
+	<communication>
+		<source id="12" />
+		<destination id="4" />
+		<volume>107142.857142857</volume>
+	</communication>
+	<communication>
+		<source id="13" />
+		<destination id="2" />
+		<volume>53571.4285714286</volume>
+	</communication>
+	<communication>
+		<source id="14" />
+		<destination id="0" />
+		<volume>53571.4285714286</volume>
+	</communication>
+	<communication>
+		<source id="14" />
+		<destination id="1" />
+		<volume>53571.4285714286</volume>
+	</communication>
+	<communication>
+		<source id="14" />
+		<destination id="8" />
+		<volume>71428.5714285714</volume>
+	</communication>
+	<communication>
+		<source id="15" />
+		<destination id="3" />
+		<volume>53571.4285714286</volume>
+	</communication>
+	<communication>
+		<source id="15" />
+		<destination id="8" />
+		<volume>53571.4285714286</volume>
+	</communication>
+	<communication>
+		<source id="15" />
+		<destination id="12" />
+		<volume>35714.2857142857</volume>
+	</communication>
+</ctg>
