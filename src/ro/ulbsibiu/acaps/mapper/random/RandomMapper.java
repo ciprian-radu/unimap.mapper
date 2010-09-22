@@ -186,7 +186,7 @@ public class RandomMapper implements Mapper {
 		String mappingXml = mapper.map();
 		PrintWriter pw = new PrintWriter(path + "ctg-" + ctgId + File.separator
 				+ "mapping-" + mappingId + ".xml");
-		logger.info("Saving the mapping XMl file");
+		logger.info("Saving the mapping XML file");
 		pw.write(mappingXml);
 		pw.close();
 	}

@@ -3,13 +3,30 @@ package ro.ulbsibiu.acaps.mapper.bb;
 import org.apache.log4j.Logger;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBElement;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
+
+import ro.ulbsibiu.acaps.ctg.xml.apcg.ApcgType;
+import ro.ulbsibiu.acaps.ctg.xml.apcg.CoreType;
+import ro.ulbsibiu.acaps.ctg.xml.apcg.TaskType;
+import ro.ulbsibiu.acaps.ctg.xml.ctg.CommunicationType;
+import ro.ulbsibiu.acaps.ctg.xml.ctg.CtgType;
+import ro.ulbsibiu.acaps.ctg.xml.mapping.MapType;
+import ro.ulbsibiu.acaps.ctg.xml.mapping.MappingType;
 import ro.ulbsibiu.acaps.mapper.Mapper;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
 import ro.ulbsibiu.acaps.mapper.bb.MappingNode.RoutingEffort;
@@ -20,6 +37,7 @@ import ro.ulbsibiu.acaps.noc.xml.node.NodeType;
 import ro.ulbsibiu.acaps.noc.xml.node.ObjectFactory;
 import ro.ulbsibiu.acaps.noc.xml.node.RoutingTableEntryType;
 import ro.ulbsibiu.acaps.noc.xml.node.TopologyParameterType;
+import ro.ulbsibiu.acaps.noc.xml.topologyParameter.TopologyType;
 
 /**
  * Branch-and-Bound algorithm for Network-on-Chip (NoC) application mapping. The
@@ -240,11 +258,7 @@ public class BranchAndBoundMapper implements Mapper {
 	public void generateXYRoutingTable(NodeType node, int nodesNumber, int gEdgeSize, LinkType[] links) {
 		for (int i = 0; i < nodesNumber; i++) {
 			for (int j = 0; j < nodesNumber; j++) {
-				RoutingTableEntryType routingTableEntryType = new RoutingTableEntryType();
-				routingTableEntryType.setSource(Integer.toString(i));
-				routingTableEntryType.setDestination(Integer.toString(j));
-				routingTableEntryType.setLink(Integer.toString(-2));
-				node.getRoutingTableEntry().add(routingTableEntryType);
+				routingTables[Integer.valueOf(node.getId())][i][j] = -2;
 			}
 		}
 
@@ -371,13 +385,64 @@ public class BranchAndBoundMapper implements Mapper {
 		links = new LinkType[linksNumber];
 	}
 
-	public void initializeCores() {
+	private List<CommunicationType> getCommunications(CtgType ctg, String sourceTaskId) {
+		logger.assertLog(ctg != null, null);
+		logger.assertLog(sourceTaskId != null, null);
+		
+		List<CommunicationType> communications = new ArrayList<CommunicationType>();
+		List<CommunicationType> communicationTypeList = ctg.getCommunication();
+		for (int i = 0; i < communicationTypeList.size(); i++) {
+			CommunicationType communicationType = communicationTypeList.get(i);
+			if (sourceTaskId.equals(communicationType.getSource().getId())) {
+				communications.add(communicationType);
+			}
+		}
+		
+		return communications;
+	}
+
+	public void initializeCores(ApcgType apcg, CtgType ctg, int linkBandwidth) {
+		logger.assertLog(apcg != null, "The APCG cannot be null");
+		logger.assertLog(ctg != null, "The CTG cannot be null");
+		
 		for (int i = 0; i < cores.length; i++) {
 			cores[i] = new Core(i, -1);
 			cores[i].setFromCommunication(new int[nodesNumber]);
 			cores[i].setToCommunication(new int[nodesNumber]);
 			cores[i].setFromBandwidthRequirement(new int[nodesNumber]);
 			cores[i].setToBandwidthRequirement(new int[nodesNumber]);
+		}
+		
+		List<CoreType> coreList = apcg.getCore();
+		for (int i = 0; i < coreList.size(); i++) {
+			CoreType coreType = coreList.get(i);
+			List<TaskType> taskList = coreType.getTask();
+			for (int j = 0; j < taskList.size(); j++) {
+				TaskType taskType = taskList.get(j);
+				String taskId = taskType.getId();
+				List<CommunicationType> communications = getCommunications(ctg, taskId);
+				for (int k = 0; k < communications.size(); k++) {
+					CommunicationType communicationType = communications.get(k);
+					cores[Integer
+							.valueOf(communicationType.getSource().getId())]
+							.getToCommunication()[Integer
+							.valueOf(communicationType.getDestination().getId())] = (int) communicationType
+							.getVolume();
+					cores[Integer
+							.valueOf(communicationType.getSource().getId())]
+							.getToBandwidthRequirement()[Integer
+							.valueOf(communicationType.getDestination().getId())] = (int) (3 * (communicationType
+							.getVolume() / 1000000) * linkBandwidth);
+					cores[Integer.valueOf(communicationType.getDestination()
+							.getId())].getToCommunication()[Integer
+							.valueOf(communicationType.getSource().getId())] = (int) communicationType
+							.getVolume();
+					cores[Integer.valueOf(communicationType.getDestination()
+							.getId())].getToBandwidthRequirement()[Integer
+							.valueOf(communicationType.getSource().getId())] = (int) (3 * (communicationType
+							.getVolume() / 1000000) * linkBandwidth);
+				}
+			}
 		}
 	}
 
@@ -980,15 +1045,62 @@ public class BranchAndBoundMapper implements Mapper {
 			int[][] routingEntries = routingTables[Integer.valueOf(nodes[i].getId())];
 			for (int j = 0; j < routingEntries.length; j++) {
 				for (int k = 0; k < routingEntries[j].length; k++) {
-					if (routingEntries[i][j] >= 0) {
+					if (routingEntries[j][k] >= 0) {
 						RoutingTableEntryType routingTableEntry = new RoutingTableEntryType();
-						routingTableEntry.setSource(Integer.toString(i));
-						routingTableEntry.setDestination(Integer.toString(j));
-						routingTableEntry.setLink(Integer.toString(routingEntries[i][j]));
+						routingTableEntry.setSource(Integer.toString(j));
+						routingTableEntry.setDestination(Integer.toString(k));
+						routingTableEntry.setLink(Integer.toString(routingEntries[j][k]));
 						nodes[i].getRoutingTableEntry().add(routingTableEntry);
 					}
 				}
 			}
+		}
+	}
+	
+	private void saveTopology() {
+		try {
+			// save the nodes
+			JAXBContext jaxbContext = JAXBContext.newInstance(NodeType.class);
+			Marshaller marshaller = jaxbContext.createMarshaller();
+			ObjectFactory nodeFactory = new ObjectFactory();
+			for (int i = 0; i < nodes.length; i++) {
+				StringWriter stringWriter = new StringWriter();
+				JAXBElement<NodeType> node = nodeFactory.createNode(nodes[i]);
+				marshaller.marshal(node, stringWriter);	
+				PrintWriter pw = new PrintWriter("src"
+						+ File.separator
+						+ this.getClass().getPackage().getName()
+								.replace(".", File.separator) + File.separator
+						+ "output" + File.separator + topologyId
+						+ File.separator + "nodes" + File.separator + "node-"
+						+ i + ".xml");
+				logger.info("Saving the XML for node " + i);
+				pw.write(stringWriter.toString());
+				pw.close();
+			}
+			// save the links
+			jaxbContext = JAXBContext.newInstance(LinkType.class);
+			marshaller = jaxbContext.createMarshaller();
+			ro.ulbsibiu.acaps.noc.xml.link.ObjectFactory linkFactory = new ro.ulbsibiu.acaps.noc.xml.link.ObjectFactory();
+			for (int i = 0; i < links.length; i++) {
+				StringWriter stringWriter = new StringWriter();
+				JAXBElement<LinkType> link = linkFactory.createLink(links[i]);
+				marshaller.marshal(link, stringWriter);	
+				PrintWriter pw = new PrintWriter("src"
+						+ File.separator
+						+ this.getClass().getPackage().getName()
+								.replace(".", File.separator) + File.separator
+						+ "output" + File.separator + topologyId
+						+ File.separator + "links" + File.separator + "link-"
+						+ i + ".xml");
+				logger.info("Saving the XML for link " + i);
+				pw.write(stringWriter.toString());
+				pw.close();
+			}
+		} catch (JAXBException e) {
+			logger.error("JAXB encountered an error", e);
+		} catch (FileNotFoundException e) {
+			logger.error("File not found", e);
 		}
 	}
 	
@@ -1014,8 +1126,29 @@ public class BranchAndBoundMapper implements Mapper {
 
 		saveRoutingTables();
 		
-		// FIXME save the mapping and the routing tables into the XML
-		return null;
+		saveTopology();
+
+		MappingType mapping = new MappingType();
+		mapping.setId("0");
+		mapping.setApcg("0");
+		for (int i = 0; i < nodes.length; i++) {
+			MapType map = new MapType();
+			map.setNode(nodes[i].getId());
+			map.setCore(nodes[i].getCore());
+			mapping.getMap().add(map);
+		}
+		StringWriter stringWriter = new StringWriter();
+		ro.ulbsibiu.acaps.ctg.xml.mapping.ObjectFactory mappingFactory = new ro.ulbsibiu.acaps.ctg.xml.mapping.ObjectFactory();
+		JAXBElement<MappingType> jaxbElement = mappingFactory.createMapping(mapping);
+		try {
+			JAXBContext jaxbContext = JAXBContext.newInstance(MappingType.class);
+			Marshaller marshaller = jaxbContext.createMarshaller();
+			marshaller.marshal(jaxbElement, stringWriter);
+		} catch (JAXBException e) {
+			logger.error("JAXB encountered an error", e);
+		}
+
+		return stringWriter.toString();
 	}
 
 	private void parseTrafficConfig(String filePath, double linkBandwidth)
@@ -1244,14 +1377,25 @@ public class BranchAndBoundMapper implements Mapper {
 	}
 	
 	public static void main(String[] args) throws TooFewNocNodesException,
-			IOException {
+			IOException, JAXBException {
 		if (args == null || args.length < 1) {
 			System.err.println("usage: BranchAndBoundMapper {routing}");
 			System.err
 					.println("(where routing may be true or false; any other value means false)");
 		} else {
 			// the mesh-2D.xml from NoC-XML
-			String topologyId = "mesh2D";
+			JAXBContext jaxbContext = JAXBContext
+					.newInstance("ro.ulbsibiu.acaps.noc.xml.topologyParameter");
+			Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
+			@SuppressWarnings("unchecked")
+			TopologyType topology = ((JAXBElement<TopologyType>) unmarshaller
+					.unmarshal(new File(".." + File.separator + "NoC-XML"
+							+ File.separator + "src" + File.separator + "ro"
+							+ File.separator + "ulbsibiu" + File.separator
+							+ "acaps" + File.separator + "noc" + File.separator
+							+ "topology" + File.separator + "mesh2D"
+							+ File.separator + "mesh-2D" + ".xml"))).getValue();
+			String topologyId = topology.getId();
 			// from the initial random mapping, I think tiles must equal cores
 			// (it
 			// is not enough to have cores <= tiles)
@@ -1276,14 +1420,49 @@ public class BranchAndBoundMapper implements Mapper {
 						linkBandwidth, priorityQueueSize, bufReadEBit, bufWriteEBit);
 			}
 
-			bbMapper.initializeCores();
+			jaxbContext = JAXBContext
+					.newInstance("ro.ulbsibiu.acaps.ctg.xml.apcg");
+			unmarshaller = jaxbContext.createUnmarshaller();
+			@SuppressWarnings("unchecked")
+			ApcgType apcg = ((JAXBElement<ApcgType>) unmarshaller
+					.unmarshal(new File("src"
+							+ File.separator
+							+ BranchAndBoundMapper.class.getPackage()
+									.getName().replace(".", File.separator)
+							+ File.separator + "input" + File.separator
+							+ "telecom_mocsyn_16tile_selectedpe"
+							+ File.separator + "apcg" + ".xml"))).getValue();
+
+			jaxbContext = JAXBContext
+					.newInstance("ro.ulbsibiu.acaps.ctg.xml.ctg");
+			unmarshaller = jaxbContext.createUnmarshaller();
+			@SuppressWarnings("unchecked")
+			CtgType ctg = ((JAXBElement<CtgType>) unmarshaller
+					.unmarshal(new File("src"
+							+ File.separator
+							+ BranchAndBoundMapper.class.getPackage()
+									.getName().replace(".", File.separator)
+							+ File.separator + "input" + File.separator
+							+ "telecom_mocsyn_16tile_selectedpe"
+							+ File.separator + "ctg" + ".xml"))).getValue();
+
+			bbMapper.initializeCores(apcg, ctg, linkBandwidth);
 			bbMapper.initializeNocTopology(switchEBit, linkEBit);
 
-			bbMapper.parseTrafficConfig(
-					"telecom-mocsyn-16tile-selectedpe.traffic.config",
-					linkBandwidth);
+//			bbMapper.parseTrafficConfig(
+//					"telecom-mocsyn-16tile-selectedpe.traffic.config",
+//					linkBandwidth);
 
-			bbMapper.map();
+			String mappingXml = bbMapper.map();
+			PrintWriter pw = new PrintWriter("src"
+					+ File.separator
+					+ BranchAndBoundMapper.class.getPackage().getName()
+							.replace(".", File.separator) + File.separator
+					+ "output" + File.separator + topologyId + File.separator
+					+ "mapping" + ".xml");
+			logger.info("Saving the mapping XML file");
+			pw.write(mappingXml);
+			pw.close();
 
 			bbMapper.printCurrentMapping();
 			
