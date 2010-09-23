@@ -371,6 +371,16 @@ public class SimulatedAnnealingMapper implements Mapper {
 		links = new LinkType[linksNumber];
 	}
 	
+	public void initializeCores() {
+		for (int i = 0; i < cores.length; i++) {
+			cores[i] = new Core(i, -1);
+			cores[i].setFromCommunication(new int[nodesNumber]);
+			cores[i].setToCommunication(new int[nodesNumber]);
+			cores[i].setFromBandwidthRequirement(new int[nodesNumber]);
+			cores[i].setToBandwidthRequirement(new int[nodesNumber]);
+		}
+	}
+
 	private List<CommunicationType> getCommunications(CtgType ctg, String sourceTaskId) {
 		logger.assertLog(ctg != null, null);
 		logger.assertLog(sourceTaskId != null, null);
@@ -379,7 +389,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 		List<CommunicationType> communicationTypeList = ctg.getCommunication();
 		for (int i = 0; i < communicationTypeList.size(); i++) {
 			CommunicationType communicationType = communicationTypeList.get(i);
-			if (sourceTaskId.equals(communicationType.getSource().getId())) {
+			if (sourceTaskId.equals(communicationType.getSource().getId())
+					|| sourceTaskId.equals(communicationType.getDestination().getId())) {
 				communications.add(communicationType);
 			}
 		}
@@ -387,17 +398,9 @@ public class SimulatedAnnealingMapper implements Mapper {
 		return communications;
 	}
 
-	public void initializeCores(ApcgType apcg, CtgType ctg, int linkBandwidth) {
+	public void parseApcg(ApcgType apcg, CtgType ctg, int linkBandwidth) {
 		logger.assertLog(apcg != null, "The APCG cannot be null");
 		logger.assertLog(ctg != null, "The CTG cannot be null");
-		
-		for (int i = 0; i < cores.length; i++) {
-			cores[i] = new Core(i, -1);
-			cores[i].setFromCommunication(new int[nodesNumber]);
-			cores[i].setToCommunication(new int[nodesNumber]);
-			cores[i].setFromBandwidthRequirement(new int[nodesNumber]);
-			cores[i].setToBandwidthRequirement(new int[nodesNumber]);
-		}
 		
 		List<CoreType> coreList = apcg.getCore();
 		for (int i = 0; i < coreList.size(); i++) {
@@ -420,18 +423,18 @@ public class SimulatedAnnealingMapper implements Mapper {
 							.valueOf(communicationType.getDestination().getId())] = (int) (3 * (communicationType
 							.getVolume() / 1000000) * linkBandwidth);
 					cores[Integer.valueOf(communicationType.getDestination()
-							.getId())].getToCommunication()[Integer
+							.getId())].getFromCommunication()[Integer
 							.valueOf(communicationType.getSource().getId())] = (int) communicationType
 							.getVolume();
 					cores[Integer.valueOf(communicationType.getDestination()
-							.getId())].getToBandwidthRequirement()[Integer
+							.getId())].getFromBandwidthRequirement()[Integer
 							.valueOf(communicationType.getSource().getId())] = (int) (3 * (communicationType
 							.getVolume() / 1000000) * linkBandwidth);
 				}
 			}
 		}
 	}
-
+	
 	public void initializeNocTopology(int bandwidth, float switchEBit,
 			float linkEBit) {
 		// initialize nodes
@@ -1680,12 +1683,20 @@ public class SimulatedAnnealingMapper implements Mapper {
 							+ "telecom_mocsyn_16tile_selectedpe"
 							+ File.separator + "ctg" + ".xml"))).getValue();
 			
-			saMapper.initializeCores(apcg, ctg, linkBandwidth);
+			saMapper.initializeCores();
 			saMapper.initializeNocTopology(linkBandwidth, switchEBit, linkEBit);
-			
-//			saMapper.parseTrafficConfig(
+
+//			// read the input data from a traffic.config file (NoCmap style)
+//			bbMapper.parseTrafficConfig(
 //					"telecom-mocsyn-16tile-selectedpe.traffic.config",
 //					linkBandwidth);
+			
+			// read the input data using the Unified Framework's XML interface
+			saMapper.parseApcg(apcg, ctg, linkBandwidth);
+			
+//			// This is just for checking that bbMapper.parseTrafficConfig(...)
+//			// and parseApcg(...) have the same effect
+//			saMapper.printCores();
 	
 			String mappingXml = saMapper.map();
 			PrintWriter pw = new PrintWriter("src"
