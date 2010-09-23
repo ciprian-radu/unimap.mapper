@@ -2,6 +2,7 @@
 <ctg
 	xmlns="http://webspace.ulbsibiu.ro/ciprian.radu/research/noc/application_mapping/unified_framework/schema/ctg"
 	id="0" period="56000">
+	<!-- The period was taken from NoCmap and it is expressed in network cycles (see worm_sim) -->
 	<communication>
 		<source id="2" />
 		<destination id="8" />
