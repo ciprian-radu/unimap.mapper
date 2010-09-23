@@ -385,6 +385,16 @@ public class BranchAndBoundMapper implements Mapper {
 		links = new LinkType[linksNumber];
 	}
 
+	public void initializeCores() {
+		for (int i = 0; i < cores.length; i++) {
+			cores[i] = new Core(i, -1);
+			cores[i].setFromCommunication(new int[nodesNumber]);
+			cores[i].setToCommunication(new int[nodesNumber]);
+			cores[i].setFromBandwidthRequirement(new int[nodesNumber]);
+			cores[i].setToBandwidthRequirement(new int[nodesNumber]);
+		}
+	}
+
 	private List<CommunicationType> getCommunications(CtgType ctg, String sourceTaskId) {
 		logger.assertLog(ctg != null, null);
 		logger.assertLog(sourceTaskId != null, null);
@@ -393,7 +403,8 @@ public class BranchAndBoundMapper implements Mapper {
 		List<CommunicationType> communicationTypeList = ctg.getCommunication();
 		for (int i = 0; i < communicationTypeList.size(); i++) {
 			CommunicationType communicationType = communicationTypeList.get(i);
-			if (sourceTaskId.equals(communicationType.getSource().getId())) {
+			if (sourceTaskId.equals(communicationType.getSource().getId())
+					|| sourceTaskId.equals(communicationType.getDestination().getId())) {
 				communications.add(communicationType);
 			}
 		}
@@ -401,17 +412,9 @@ public class BranchAndBoundMapper implements Mapper {
 		return communications;
 	}
 
-	public void initializeCores(ApcgType apcg, CtgType ctg, int linkBandwidth) {
+	public void parseApcg(ApcgType apcg, CtgType ctg, int linkBandwidth) {
 		logger.assertLog(apcg != null, "The APCG cannot be null");
 		logger.assertLog(ctg != null, "The CTG cannot be null");
-		
-		for (int i = 0; i < cores.length; i++) {
-			cores[i] = new Core(i, -1);
-			cores[i].setFromCommunication(new int[nodesNumber]);
-			cores[i].setToCommunication(new int[nodesNumber]);
-			cores[i].setFromBandwidthRequirement(new int[nodesNumber]);
-			cores[i].setToBandwidthRequirement(new int[nodesNumber]);
-		}
 		
 		List<CoreType> coreList = apcg.getCore();
 		for (int i = 0; i < coreList.size(); i++) {
@@ -434,11 +437,11 @@ public class BranchAndBoundMapper implements Mapper {
 							.valueOf(communicationType.getDestination().getId())] = (int) (3 * (communicationType
 							.getVolume() / 1000000) * linkBandwidth);
 					cores[Integer.valueOf(communicationType.getDestination()
-							.getId())].getToCommunication()[Integer
+							.getId())].getFromCommunication()[Integer
 							.valueOf(communicationType.getSource().getId())] = (int) communicationType
 							.getVolume();
 					cores[Integer.valueOf(communicationType.getDestination()
-							.getId())].getToBandwidthRequirement()[Integer
+							.getId())].getFromBandwidthRequirement()[Integer
 							.valueOf(communicationType.getSource().getId())] = (int) (3 * (communicationType
 							.getVolume() / 1000000) * linkBandwidth);
 				}
@@ -1216,6 +1219,39 @@ public class BranchAndBoundMapper implements Mapper {
 
 		br.close();
 	}
+	
+	private void printCores() {
+		for (int i = 0; i < cores.length; i++) {
+			System.out.println("Core " + cores[i].getCoreId() + "(node "
+					+ cores[i].getNodeId() + ", rank " + cores[i].getRank()
+					+ ")");
+			
+			int[] toCommunication = cores[i].getToCommunication();
+			System.out.println("to communication");
+			for (int j = 0; j < toCommunication.length; j++) {
+				System.out.println(toCommunication[j]);
+			}
+			
+			int[] fromCommunication = cores[i].getFromCommunication();
+			System.out.println("from communication");
+			for (int j = 0; j < fromCommunication.length; j++) {
+				System.out.println(fromCommunication[j]);
+			}
+			
+			int[] toBandwidthRequirement = cores[i].getToBandwidthRequirement();
+			System.out.println("to bandwidth requirement");
+			for (int j = 0; j < toBandwidthRequirement.length; j++) {
+				System.out.println(toBandwidthRequirement[j]);
+			}
+			
+			int[] fromBandwidthRequirement = cores[i].getFromBandwidthRequirement();
+			System.out.println("from bandwidth requirement");
+			for (int j = 0; j < fromBandwidthRequirement.length; j++) {
+				System.out.println(fromBandwidthRequirement[j]);
+			}
+		}
+		
+	}
 
 	private boolean verifyBandwidthRequirement() {
 		generateLinkUsageList();
@@ -1446,12 +1482,20 @@ public class BranchAndBoundMapper implements Mapper {
 							+ "telecom_mocsyn_16tile_selectedpe"
 							+ File.separator + "ctg" + ".xml"))).getValue();
 
-			bbMapper.initializeCores(apcg, ctg, linkBandwidth);
+			bbMapper.initializeCores();
 			bbMapper.initializeNocTopology(switchEBit, linkEBit);
 
+//			// read the input data from a traffic.config file (NoCmap style)
 //			bbMapper.parseTrafficConfig(
 //					"telecom-mocsyn-16tile-selectedpe.traffic.config",
 //					linkBandwidth);
+			
+			// read the input data using the Unified Framework's XML interface
+			bbMapper.parseApcg(apcg, ctg, linkBandwidth);
+			
+//			// This is just for checking that bbMapper.parseTrafficConfig(...)
+//			// and parseApcg(...) have the same effect
+//			bbMapper.printCores();
 
 			String mappingXml = bbMapper.map();
 			PrintWriter pw = new PrintWriter("src"
