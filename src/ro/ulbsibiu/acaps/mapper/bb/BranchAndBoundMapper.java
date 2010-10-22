@@ -545,16 +545,16 @@ public class BranchAndBoundMapper implements Mapper {
 		boolean outAdded = false;
 		for (int i = 0; i < nodesNumber; i++) {
 			for (int j = 0; j < links.length; j++) {
-				if (Integer.valueOf(getLinkTopologyParameter(links[j], TopologyParameter.ROW_FROM)) == Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.ROW))
-						&& Integer.valueOf(getLinkTopologyParameter(links[j], TopologyParameter.COLUMN_FROM)) == Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.COLUMN))) {
+				if (Integer.valueOf(getLinkTopologyParameter(links[j], TopologyParameter.ROW_FROM)).intValue() == Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.ROW)).intValue()
+						&& Integer.valueOf(getLinkTopologyParameter(links[j], TopologyParameter.COLUMN_FROM)).intValue() == Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.COLUMN)).intValue()) {
 					ro.ulbsibiu.acaps.noc.xml.node.LinkType linkType = new ro.ulbsibiu.acaps.noc.xml.node.LinkType();
 					linkType.setType(LINK_OUT);
 					linkType.setValue(links[j].getId());
 					nodes[i].getLink().add(linkType);
 					outAdded = true;
 				}
-				if (Integer.valueOf(getLinkTopologyParameter(links[j], TopologyParameter.ROW_TO)) == Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.ROW))
-						&& Integer.valueOf(getLinkTopologyParameter(links[j], TopologyParameter.COLUMN_TO)) == Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.COLUMN))) {
+				if (Integer.valueOf(getLinkTopologyParameter(links[j], TopologyParameter.ROW_TO)).intValue() == Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.ROW)).intValue()
+						&& Integer.valueOf(getLinkTopologyParameter(links[j], TopologyParameter.COLUMN_TO)).intValue() == Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.COLUMN)).intValue()) {
 					ro.ulbsibiu.acaps.noc.xml.node.LinkType linkType = new ro.ulbsibiu.acaps.noc.xml.node.LinkType();
 					linkType.setType(LINK_IN);
 					linkType.setValue(links[j].getId());
