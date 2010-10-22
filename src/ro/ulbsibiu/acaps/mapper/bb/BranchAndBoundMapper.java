@@ -624,7 +624,7 @@ public class BranchAndBoundMapper implements Mapper {
 
 	private void mapCoresToNocNodesRandomly() {
 		Random rand = new Random();
-		for (int i = 0; i < nodesNumber; i++) {
+		for (int i = 0; i < coresNumber; i++) {
 			int k = Math.abs(rand.nextInt()) % nodesNumber;
 			while (!Integer.toString(-1).equals(nodes[k].getCore())) {
 				k = Math.abs(rand.nextInt()) % nodesNumber;
@@ -1269,16 +1269,18 @@ public class BranchAndBoundMapper implements Mapper {
 	            }
 	            int srcProc = Integer.valueOf(nodes[src].getCore());
 	            int dstProc = Integer.valueOf(nodes[dst].getCore());
-	            int commLoad = cores[srcProc].getToBandwidthRequirement()[dstProc];
-	            if (commLoad == 0) {
-	                continue;
-	            }
-	            NodeType currentNode = nodes[src];
-	            while (Integer.valueOf(currentNode.getId()) != dst) {
-	                int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
-	                LinkType link = links[linkId];
-	                currentNode = nodes[Integer.valueOf(link.getDestinationNode())];
-	                usedBandwidth[linkId] += commLoad;
+	            if (srcProc > -1 && dstProc > -1) {
+		            int commLoad = cores[srcProc].getToBandwidthRequirement()[dstProc];
+		            if (commLoad == 0) {
+		                continue;
+		            }
+		            NodeType currentNode = nodes[src];
+		            while (Integer.valueOf(currentNode.getId()) != dst) {
+		                int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
+		                LinkType link = links[linkId];
+		                currentNode = nodes[Integer.valueOf(link.getDestinationNode())];
+		                usedBandwidth[linkId] += commLoad;
+		            }
 	            }
 	        }
 	    }
@@ -1321,26 +1323,28 @@ public class BranchAndBoundMapper implements Mapper {
 			for (int dst = 0; dst < nodesNumber; dst++) {
 				int srcProc = Integer.valueOf(nodes[src].getCore());
 				int dstProc = Integer.valueOf(nodes[dst].getCore());
-				int commVol = cores[srcProc].getToCommunication()[dstProc];
-				if (commVol > 0) {
-					energy += nodes[src].getCost() * commVol;
-					NodeType currentNode = nodes[src];
-					if (logger.isTraceEnabled()) {
-						logger.trace("adding " + currentNode.getCost() + " * "
-								+ commVol + " (core " + srcProc + " to core "
-								+ dstProc + ") current tile "
-								+ currentNode.getId());
-					}
-					while (Integer.valueOf(currentNode.getId()) != dst) {
-						int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
-						currentNode = nodes[Integer.valueOf(links[linkId].getDestinationNode())];
-						energy += currentNode.getCost() * commVol;
+				if (srcProc > -1 && dstProc > -1) {
+					int commVol = cores[srcProc].getToCommunication()[dstProc];
+					if (commVol > 0) {
+						energy += nodes[src].getCost() * commVol;
+						NodeType currentNode = nodes[src];
 						if (logger.isTraceEnabled()) {
-							logger.trace("adding " + currentNode.getCost()
-									+ " * " + commVol + " (core " + srcProc
-									+ " to core " + dstProc + ") current tile "
-									+ currentNode.getId() + " link ID "
-									+ linkId);
+							logger.trace("adding " + currentNode.getCost() + " * "
+									+ commVol + " (core " + srcProc + " to core "
+									+ dstProc + ") current tile "
+									+ currentNode.getId());
+						}
+						while (Integer.valueOf(currentNode.getId()) != dst) {
+							int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
+							currentNode = nodes[Integer.valueOf(links[linkId].getDestinationNode())];
+							energy += currentNode.getCost() * commVol;
+							if (logger.isTraceEnabled()) {
+								logger.trace("adding " + currentNode.getCost()
+										+ " * " + commVol + " (core " + srcProc
+										+ " to core " + dstProc + ") current tile "
+										+ currentNode.getId() + " link ID "
+										+ linkId);
+							}
 						}
 					}
 				}
@@ -1355,13 +1359,15 @@ public class BranchAndBoundMapper implements Mapper {
 			for (int dst = 0; dst < nodesNumber; dst++) {
 				int srcProc = Integer.valueOf(nodes[src].getCore());
 				int dstProc = Integer.valueOf(nodes[dst].getCore());
-				int commVol = cores[srcProc].getToCommunication()[dstProc];
-				if (commVol > 0) {
-					NodeType currentNode = nodes[src];
-					while (Integer.valueOf(currentNode.getId()) != dst) {
-						int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
-						energy += links[linkId].getCost() * commVol;
-						currentNode = nodes[Integer.valueOf(links[linkId].getDestinationNode())];
+				if (srcProc > -1 && dstProc > -1) {
+					int commVol = cores[srcProc].getToCommunication()[dstProc];
+					if (commVol > 0) {
+						NodeType currentNode = nodes[src];
+						while (Integer.valueOf(currentNode.getId()) != dst) {
+							int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
+							energy += links[linkId].getCost() * commVol;
+							currentNode = nodes[Integer.valueOf(links[linkId].getDestinationNode())];
+						}
 					}
 				}
 			}
@@ -1375,15 +1381,17 @@ public class BranchAndBoundMapper implements Mapper {
 			for (int dst = 0; dst < nodesNumber; dst++) {
 				int srcProc = Integer.valueOf(nodes[src].getCore());
 				int dstProc = Integer.valueOf(nodes[dst].getCore());
-				int commVol = cores[srcProc].getToCommunication()[dstProc];
-				if (commVol > 0) {
-					NodeType currentNode = nodes[src];
-					while (Integer.valueOf(currentNode.getId()) != dst) {
-						int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
-						energy += (bufReadEBit + bufWriteEBit) * commVol;
-						currentNode = nodes[Integer.valueOf(links[linkId].getDestinationNode())];
+				if (srcProc > -1 && dstProc > -1) {
+					int commVol = cores[srcProc].getToCommunication()[dstProc];
+					if (commVol > 0) {
+						NodeType currentNode = nodes[src];
+						while (Integer.valueOf(currentNode.getId()) != dst) {
+							int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
+							energy += (bufReadEBit + bufWriteEBit) * commVol;
+							currentNode = nodes[Integer.valueOf(links[linkId].getDestinationNode())];
+						}
+						energy += bufWriteEBit * commVol;
 					}
-					energy += bufWriteEBit * commVol;
 				}
 			}
 		}
@@ -1436,7 +1444,7 @@ public class BranchAndBoundMapper implements Mapper {
 			// (it
 			// is not enough to have cores <= tiles)
 			int tiles = 16;
-			int cores = 16;
+			int cores = 9;
 			int linkBandwidth = 1000000;
 			int priorityQueueSize = 2000;
 			float switchEBit = 0.284f;
@@ -1466,8 +1474,8 @@ public class BranchAndBoundMapper implements Mapper {
 							+ BranchAndBoundMapper.class.getPackage()
 									.getName().replace(".", File.separator)
 							+ File.separator + "input" + File.separator
-							+ "telecom_mocsyn_16tile_selectedpe"
-							+ File.separator + "apcg" + ".xml"))).getValue();
+							+ "auto-indust-mocsyn.tgff"
+							+ File.separator + "apcg-2" + ".xml"))).getValue();
 
 			jaxbContext = JAXBContext
 					.newInstance("ro.ulbsibiu.acaps.ctg.xml.ctg");
@@ -1479,8 +1487,8 @@ public class BranchAndBoundMapper implements Mapper {
 							+ BranchAndBoundMapper.class.getPackage()
 									.getName().replace(".", File.separator)
 							+ File.separator + "input" + File.separator
-							+ "telecom_mocsyn_16tile_selectedpe"
-							+ File.separator + "ctg" + ".xml"))).getValue();
+							+ "auto-indust-mocsyn.tgff"
+							+ File.separator + "ctg-2" + ".xml"))).getValue();
 
 			bbMapper.initializeCores();
 			bbMapper.initializeNocTopology(switchEBit, linkEBit);
