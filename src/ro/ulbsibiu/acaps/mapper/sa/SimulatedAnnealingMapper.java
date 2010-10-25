@@ -2,6 +2,7 @@ package ro.ulbsibiu.acaps.mapper.sa;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -108,6 +109,9 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 */
 	private LegalTurnSet legalTurnSet;
 
+	/** the link bandwidth */
+	private int linkBandwidth;
+	
 	/** energy consumption per bit read */
 	private float bufReadEBit;
 
@@ -319,14 +323,23 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 * 
 	 * @param topologyId
 	 *            the ID of the NoC topology used by this algorithm
-	 * @param nodesNumber
-	 *            the size of the 2D mesh (nodesNumber * nodesNumber)
+	 * @param topologyDir
+	 *            the topology directory is used to initialize the NoC topology
+	 *            for XML files. These files are split into two categories:
+	 *            nodes and links. The nodes are expected to be located into the
+	 *            "nodes" subdirectory, and the links into the "links"
+	 *            subdirectory
 	 * @param coresNumber
 	 *            the number of processes (tasks). Note that each core has only
 	 *            one task associated to it
+	 * @param linkBandwidth
+	 *            the bandwidth of each network link
 	 */
-	public SimulatedAnnealingMapper(String topologyId, int nodesNumber, int coresNumber) {
-		this(topologyId, nodesNumber, coresNumber, false, LegalTurnSet.WEST_FIRST, 1.056f, 2.831f);
+	public SimulatedAnnealingMapper(String topologyId, File topologyDir,
+			int coresNumber, int linkBandwidth, float switchEBit, float linkEBit)
+			throws JAXBException {
+		this(topologyId, topologyDir, coresNumber, linkBandwidth, false,
+				LegalTurnSet.WEST_FIRST, 1.056f, 2.831f, switchEBit, linkEBit);
 	}
 
 	/**
@@ -334,11 +347,17 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 * 
 	 * @param topologyId
 	 *            the ID of the NoC topology used by this algorithm
-	 * @param nodesNumber
-	 *            the size of the 2D mesh (nodesNumber * nodesNumber)
+	 * @param topologyDir
+	 *            the topology directory is used to initialize the NoC topology
+	 *            for XML files. These files are split into two categories:
+	 *            nodes and links. The nodes are expected to be located into the
+	 *            "nodes" subdirectory, and the links into the "links"
+	 *            subdirectory
 	 * @param coresNumber
 	 *            the number of processes (tasks). Note that each core has only
 	 *            one task associated to it
+	 * @param linkBandwidth
+	 *            the bandwidth of each network link
 	 * @param buildRoutingTable
 	 *            whether or not to build routing table too
 	 * @param legalTurnSet
@@ -348,30 +367,30 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 *            energy consumption per bit read
 	 * @param bufWriteEBit
 	 *            energy consumption per bit write
+	 * @param switchEBit
+	 *            the energy consumed for switching one bit of data
+	 * @param linkEBit
+	 *            the energy consumed for sending one data bit
+	 * @throws JAXBException
 	 */
-	public SimulatedAnnealingMapper(String topologyId, int nodesNumber, int coresNumber,
-			boolean buildRoutingTable, LegalTurnSet legalTurnSet,
-			float bufReadEBit, float bufWriteEBit) {
+	public SimulatedAnnealingMapper(String topologyId, File topologyDir,
+			int coresNumber, int linkBandwidth, boolean buildRoutingTable,
+			LegalTurnSet legalTurnSet, float bufReadEBit, float bufWriteEBit,
+			float switchEBit, float linkEBit) throws JAXBException {
 		this.topologyId = topologyId;
-		this.nodesNumber = nodesNumber;
-		this.edgeSize = (int) Math.sqrt(nodesNumber);
 		this.coresNumber = coresNumber;
-		// we have 2gEdgeSize(gEdgeSize - 1) bidirectional links =>
-		// 4gEdgeSize(gEdgeSize - 1) unidirectional links
-		this.linksNumber = 2 * (edgeSize - 1) * edgeSize * 2;
+		this.linkBandwidth = linkBandwidth;
 		this.buildRoutingTable = buildRoutingTable;
 		this.legalTurnSet = legalTurnSet;
 		this.bufReadEBit = bufReadEBit;
 		this.bufWriteEBit = bufWriteEBit;
 
-		nodes = new NodeType[nodesNumber];
-
-		cores = new Core[coresNumber];
-
-		links = new LinkType[linksNumber];
+		initializeNocTopology(topologyDir, switchEBit, linkEBit);
+		initializeCores();
 	}
 	
-	public void initializeCores() {
+	private void initializeCores() {
+		cores = new Core[coresNumber];
 		for (int i = 0; i < cores.length; i++) {
 			cores[i] = new Core(i, -1);
 			cores[i].setFromCommunication(new int[nodesNumber]);
@@ -435,97 +454,72 @@ public class SimulatedAnnealingMapper implements Mapper {
 		}
 	}
 	
-	public void initializeNocTopology(int bandwidth, float switchEBit,
-			float linkEBit) {
+	/**
+	 * Initializes the NoC topology for XML files. These files are split into
+	 * two categories: nodes and links. The nodes are expected to be located
+	 * into the "nodes" subdirectory, and the links into the "links"
+	 * subdirectory.
+	 * 
+	 * @param topologyDir
+	 *            the topology directory
+	 * @param switchEBit
+	 *            the energy consumed for switching a bit of data
+	 * @param linkEBit
+	 *            the energy consumed for sending a data bit
+	 * @throws JAXBException 
+	 */
+	private void initializeNocTopology(File topologyDir, float switchEBit, float linkEBit) throws JAXBException {
 		// initialize nodes
-		ObjectFactory nodeFactory = new ObjectFactory();
-		for (int i = 0; i < nodes.length; i++) {
-			NodeType node = nodeFactory.createNodeType();
-			node.setId(Integer.toString(i));
+		File nodesDir = new File(topologyDir, "nodes");
+		logger.assertLog(nodesDir.isDirectory(), nodesDir.getName() + " is not a directory!");
+		File[] nodeXmls = nodesDir.listFiles(new FileFilter() {
+			
+			@Override
+			public boolean accept(File pathname) {
+				return pathname.getName().endsWith(".xml");
+			}
+		});
+		logger.debug("Found " + nodeXmls.length + " nodes");
+		this.nodesNumber = nodeXmls.length;
+		nodes = new NodeType[nodesNumber];
+		this.edgeSize = (int) Math.sqrt(nodesNumber);
+		for (int i = 0; i < nodeXmls.length; i++) {
+			JAXBContext jaxbContext = JAXBContext
+					.newInstance("ro.ulbsibiu.acaps.noc.xml.node");
+			Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
+			@SuppressWarnings("unchecked")
+			NodeType node = ((JAXBElement<NodeType>) unmarshaller
+					.unmarshal(nodeXmls[i])).getValue();
+			
 			node.setCore(Integer.toString(-1));
-			TopologyParameterType row = new TopologyParameterType();
-			row.setTopology(topologyId);
-			row.setType(TopologyParameter.ROW.toString());
-			row.setValue(Integer.toString(i / edgeSize));
-			node.getTopologyParameter().add(row);
-			TopologyParameterType column = new TopologyParameterType();
-			column.setTopology(topologyId);
-			column.setType(TopologyParameter.COLUMN.toString());
-			column.setValue(Integer.toString(i % edgeSize));
-			node.getTopologyParameter().add(column);
 			node.setCost((double)switchEBit);
-			nodes[i] = node;
+			nodes[Integer.valueOf(node.getId())] = node;
 		}
 		// initialize links
-		for (int i = 0; i < links.length; i++) {
-			// There are totally 2*(gEdgeSize-1)*gEdgeSize*2 links. The first
-			// half links are horizontal
-			// the second half links are vertical links.
-			int fromNodeRow;
-			int fromNodeColumn;
-			int toNodeRow;
-			int toNodeColumn;
-			if (i < 2 * (edgeSize - 1) * edgeSize) {
-				fromNodeRow = i / (2 * (edgeSize - 1));
-				toNodeRow = i / (2 * (edgeSize - 1));
-				int localId = i % (2 * (edgeSize - 1));
-				if (localId < (edgeSize - 1)) {
-					// from west to east
-					fromNodeColumn = localId;
-					toNodeColumn = localId + 1;
-				} else {
-					// from east to west
-					localId = localId - (edgeSize - 1);
-					fromNodeColumn = localId + 1;
-					toNodeColumn = localId;
-				}
-			} else {
-				int localId = i - 2 * (edgeSize - 1) * edgeSize;
-				fromNodeColumn = localId / (2 * (edgeSize - 1));
-				toNodeColumn = localId / (2 * (edgeSize - 1));
-				localId = localId % (2 * (edgeSize - 1));
-				if (localId < (edgeSize - 1)) {
-					// from south to north
-					fromNodeRow = localId;
-					toNodeRow = localId + 1;
-				} else {
-					// from north to south
-					localId = localId - (edgeSize - 1);
-					fromNodeRow = localId + 1;
-					toNodeRow = localId;
-				}
+		File linksDir = new File(topologyDir, "links");
+		logger.assertLog(linksDir.isDirectory(), linksDir.getName() + " is not a directory!");
+		File[] linkXmls = linksDir.listFiles(new FileFilter() {
+			
+			@Override
+			public boolean accept(File pathname) {
+				return pathname.getName().endsWith(".xml");
 			}
-
-			int fromNodeId = fromNodeRow * edgeSize + fromNodeColumn;
-			int toNodeId = toNodeRow * edgeSize + toNodeColumn;
-
-			LinkType link = new LinkType();
+		});
+		logger.debug("Found " + linkXmls.length + " links");
+		this.linksNumber = linkXmls.length;
+		links = new LinkType[linksNumber];
+		for (int i = 0; i < linkXmls.length; i++) {
+			JAXBContext jaxbContext = JAXBContext
+					.newInstance("ro.ulbsibiu.acaps.noc.xml.link");
+			Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
+			@SuppressWarnings("unchecked")
+			LinkType link = ((JAXBElement<LinkType>) unmarshaller
+					.unmarshal(linkXmls[i])).getValue();
+			
 			link.setId(Integer.toString(i));
-			link.setBandwidth(bandwidth);
-			link.setSourceNode(Integer.toString(fromNodeId));
-			link.setDestinationNode(Integer.toString(toNodeId));
+			link.setBandwidth(linkBandwidth);
 			link.setCost((double)linkEBit);
-			ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType rowTo = new ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType();
-			rowTo.setTopology(topologyId);
-			rowTo.setType(TopologyParameter.ROW_TO.toString());
-			rowTo.setValue(Integer.toString(toNodeRow));
-			link.getTopologyParameter().add(rowTo);
-			ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType rowFrom = new ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType();
-			rowFrom.setTopology(topologyId);
-			rowFrom.setType(TopologyParameter.ROW_FROM.toString());
-			rowFrom.setValue(Integer.toString(fromNodeRow));
-			link.getTopologyParameter().add(rowFrom);
-			ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType columnTo = new ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType();
-			columnTo.setTopology(topologyId);
-			columnTo.setType(TopologyParameter.COLUMN_TO.toString());
-			columnTo.setValue(Integer.toString(toNodeColumn));
-			link.getTopologyParameter().add(columnTo);
-			ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType columnFrom = new ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType();
-			columnFrom.setTopology(topologyId);
-			columnFrom.setType(TopologyParameter.COLUMN_FROM.toString());
-			columnFrom.setValue(Integer.toString(fromNodeColumn));
-			link.getTopologyParameter().add(columnFrom);
-			links[i] = link;
+			links[Integer.valueOf(link.getId())] = link;
 		}
 		// attach the links to the NoC nodes
 		boolean inAdded = false;
@@ -1645,26 +1639,12 @@ public class SimulatedAnnealingMapper implements Mapper {
 							+ "topology" + File.separator + "mesh2D"
 							+ File.separator + "mesh-2D" + ".xml"))).getValue();
 			String topologyId = topology.getId();
-			// from the initial random mapping, I think nodes must equal cores (it
-			// is not enough to have cores <= nodes)
-			int nodes = 16;
-			int cores = 9;
 			int linkBandwidth = 1000000;
 			float switchEBit = 0.284f;
 			float linkEBit = 0.449f;
 			float bufReadEBit = 1.056f;
-			float burWriteEBit = 2.831f;
+			float bufWriteEBit = 2.831f;
 	
-			SimulatedAnnealingMapper saMapper;
-			if ("true".equals(args[0])) {
-				// SA with routing
-				saMapper = new SimulatedAnnealingMapper(topologyId, nodes, cores, true,
-						LegalTurnSet.ODD_EVEN, bufReadEBit, burWriteEBit);
-			} else {
-				// SA without routing
-				saMapper = new SimulatedAnnealingMapper(topologyId, nodes, cores);
-			}
-			
 			jaxbContext = JAXBContext
 					.newInstance("ro.ulbsibiu.acaps.ctg.xml.apcg");
 			unmarshaller = jaxbContext.createUnmarshaller();
@@ -1676,7 +1656,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 									.getName().replace(".", File.separator)
 							+ File.separator + "input" + File.separator
 							+ "auto-indust-mocsyn.tgff"
-							+ File.separator + "apcg-2" + ".xml"))).getValue();
+							+ File.separator + "apcg-0-2" + ".xml"))).getValue();
 			
 			jaxbContext = JAXBContext
 					.newInstance("ro.ulbsibiu.acaps.ctg.xml.ctg");
@@ -1689,10 +1669,29 @@ public class SimulatedAnnealingMapper implements Mapper {
 									.getName().replace(".", File.separator)
 							+ File.separator + "input" + File.separator
 							+ "auto-indust-mocsyn.tgff"
-							+ File.separator + "ctg-2" + ".xml"))).getValue();
-			
-			saMapper.initializeCores();
-			saMapper.initializeNocTopology(linkBandwidth, switchEBit, linkEBit);
+							+ File.separator + "ctg-0-2" + ".xml"))).getValue();
+
+			// working with a 4x4 2D mesh topology
+			File topologyDir = new File(".." + File.separator
+					+ "NoC-XML" + File.separator + "src" + File.separator
+					+ "ro" + File.separator + "ulbsibiu" + File.separator
+					+ "acaps" + File.separator + "noc" + File.separator
+					+ "topology" + File.separator + "mesh2D" + File.separator
+					+ "4x4");
+			SimulatedAnnealingMapper saMapper;
+			int cores = apcg.getCore().size();
+			logger.info("The APCG contains " + cores + " cores");
+			if ("true".equals(args[0])) {
+				// SA with routing
+				saMapper = new SimulatedAnnealingMapper(topologyId,
+						topologyDir, cores, linkBandwidth, true,
+						LegalTurnSet.ODD_EVEN, bufReadEBit, bufWriteEBit,
+						switchEBit, linkEBit);
+			} else {
+				// SA without routing
+				saMapper = new SimulatedAnnealingMapper(topologyId,
+						topologyDir, cores, linkBandwidth, switchEBit, linkEBit);
+			}
 
 //			// read the input data from a traffic.config file (NoCmap style)
 //			bbMapper.parseTrafficConfig(
