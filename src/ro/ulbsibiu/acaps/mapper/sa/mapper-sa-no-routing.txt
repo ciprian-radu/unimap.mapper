@@ -1,0 +1,551 @@
+2010-10-25 12:46:44 SimulatedAnnealingMapper [INFO] main(): The APCG contains 15 cores
+Core 0 is mapped to NoC node 2
+Core 1 is mapped to NoC node 13
+Core 2 is mapped to NoC node 4
+Core 3 is mapped to NoC node 15
+Core 4 is mapped to NoC node 5
+Core 5 is mapped to NoC node 8
+Core 6 is mapped to NoC node 1
+Core 7 is mapped to NoC node 7
+Core 8 is mapped to NoC node 6
+Core 9 is mapped to NoC node 0
+Core 10 is mapped to NoC node 3
+Core 11 is mapped to NoC node 12
+Core 12 is mapped to NoC node 10
+Core 13 is mapped to NoC node 11
+Core 14 is mapped to NoC node 9
+Start mapping...
+Round 0:
+Current Annealing temperature 100.0
+#########
+total delta cost -9.98544244E8
+Current cost 1455755.0
+Accept ratio 0.9711328125
+Round 1:
+Current Annealing temperature 90.0
+#########
+total delta cost 92400.0
+Current cost 1548155.0
+Accept ratio 0.966484375
+Round 2:
+Current Annealing temperature 81.0
+#########
+total delta cost 23100.0
+Current cost 1571255.0
+Accept ratio 0.9633203125
+Round 3:
+Current Annealing temperature 72.9
+#########
+total delta cost -60060.0
+Current cost 1511195.0
+Accept ratio 0.9608203125
+Round 4:
+Current Annealing temperature 65.61000000000001
+#########
+total delta cost 115500.0
+Current cost 1626695.0
+Accept ratio 0.9548046875
+Round 5:
+Current Annealing temperature 59.049000000000014
+#########
+total delta cost -632940.0
+Current cost 993755.0
+Accept ratio 0.9501953125
+Round 6:
+Current Annealing temperature 53.144100000000016
+#########
+total delta cost 554400.0
+Current cost 1548155.0
+Accept ratio 0.9459375
+Round 7:
+Current Annealing temperature 47.829690000000014
+#########
+total delta cost -4620.0
+Current cost 1543535.0
+Accept ratio 0.9350390625
+Round 8:
+Current Annealing temperature 43.04672100000001
+#########
+total delta cost 175560.0
+Current cost 1719095.0
+Accept ratio 0.929140625
+Round 9:
+Current Annealing temperature 38.742048900000015
+#########
+total delta cost -194040.0
+Current cost 1525055.0
+Accept ratio 0.921328125
+Round 10:
+Current Annealing temperature 34.86784401000001
+#########
+total delta cost 207900.0
+Current cost 1732955.0
+Accept ratio 0.9151171875
+Round 11:
+Current Annealing temperature 31.381059609000012
+#########
+total delta cost -300300.0
+Current cost 1432655.0
+Accept ratio 0.90046875
+Round 12:
+Current Annealing temperature 28.242953648100013
+#########
+total delta cost 18480.0
+Current cost 1451135.0
+Accept ratio 0.8892578125
+Round 13:
+Current Annealing temperature 25.41865828329001
+#########
+total delta cost 0.0
+Current cost 1451135.0
+Accept ratio 0.8837109375
+Round 14:
+Current Annealing temperature 22.87679245496101
+#########
+total delta cost -50820.0
+Current cost 1400315.0
+Accept ratio 0.863125
+Round 15:
+Current Annealing temperature 20.58911320946491
+#########
+total delta cost 240240.0
+Current cost 1640555.0
+Accept ratio 0.8525
+Round 16:
+Current Annealing temperature 18.53020188851842
+#########
+total delta cost -374220.0
+Current cost 1266335.0
+Accept ratio 0.8333203125
+Round 17:
+Current Annealing temperature 16.67718169966658
+#########
+total delta cost -318780.0
+Current cost 947555.0
+Accept ratio 0.821875
+Round 18:
+Current Annealing temperature 15.009463529699921
+#########
+total delta cost 226380.0
+Current cost 1173935.0
+Accept ratio 0.7982421875
+Round 19:
+Current Annealing temperature 13.50851717672993
+#########
+total delta cost 32340.0
+Current cost 1206275.0
+Accept ratio 0.771015625
+Round 20:
+Current Annealing temperature 12.157665459056936
+#########
+total delta cost -97020.0
+Current cost 1109255.0
+Accept ratio 0.750390625
+Round 21:
+Current Annealing temperature 10.941898913151244
+#########
+total delta cost -115500.0
+Current cost 993755.0
+Accept ratio 0.722578125
+Round 22:
+Current Annealing temperature 9.847709021836119
+#########
+total delta cost 637560.0
+Current cost 1631315.0
+Accept ratio 0.693125
+Round 23:
+Current Annealing temperature 8.862938119652506
+#########
+total delta cost -406560.0
+Current cost 1224755.0
+Accept ratio 0.6551953125
+Round 24:
+Current Annealing temperature 7.9766443076872555
+#########
+total delta cost -106260.0
+Current cost 1118495.0
+Accept ratio 0.62640625
+Round 25:
+Current Annealing temperature 7.17897987691853
+#########
+total delta cost 272580.0
+Current cost 1391075.0
+Accept ratio 0.5904296875
+Round 26:
+Current Annealing temperature 6.461081889226677
+#########
+total delta cost -212520.0
+Current cost 1178555.0
+Accept ratio 0.5521875
+Round 27:
+Current Annealing temperature 5.81497370030401
+#########
+total delta cost -18480.0
+Current cost 1160075.0
+Accept ratio 0.501171875
+Round 28:
+Current Annealing temperature 5.233476330273609
+#########
+total delta cost -18480.0
+Current cost 1141595.0
+Accept ratio 0.466171875
+Round 29:
+Current Annealing temperature 4.710128697246248
+#########
+total delta cost -50820.0
+Current cost 1090775.0
+Accept ratio 0.4145703125
+Round 30:
+Current Annealing temperature 4.239115827521624
+#########
+total delta cost 4620.0
+Current cost 1095395.0
+Accept ratio 0.3758203125
+Round 31:
+Current Annealing temperature 3.815204244769461
+#########
+total delta cost -64680.0
+Current cost 1030715.0
+Accept ratio 0.33234375
+Round 32:
+Current Annealing temperature 3.433683820292515
+#########
+total delta cost 50820.0
+Current cost 1081535.0
+Accept ratio 0.295546875
+Round 33:
+Current Annealing temperature 3.090315438263264
+#########
+total delta cost -166320.0
+Current cost 915215.0
+Accept ratio 0.236953125
+Round 34:
+Current Annealing temperature 2.7812838944369376
+#########
+total delta cost 152460.0
+Current cost 1067675.0
+Accept ratio 0.21140625
+Round 35:
+Current Annealing temperature 2.5031555049932437
+#########
+total delta cost -124740.0
+Current cost 942935.0
+Accept ratio 0.18140625
+Round 36:
+Current Annealing temperature 2.2528399544939193
+#########
+total delta cost -27720.0
+Current cost 915215.0
+Accept ratio 0.1462890625
+Round 37:
+Current Annealing temperature 2.0275559590445273
+#########
+total delta cost 18480.0
+Current cost 933695.0
+Accept ratio 0.1258203125
+Round 38:
+Current Annealing temperature 1.8248003631400747
+#########
+total delta cost -101640.0
+Current cost 832055.0
+Accept ratio 0.11171875
+Round 39:
+Current Annealing temperature 1.6423203268260673
+#########
+total delta cost 13860.0
+Current cost 845915.0
+Accept ratio 0.09140625
+Round 40:
+Current Annealing temperature 1.4780882941434605
+#########
+total delta cost -46200.0
+Current cost 799715.0
+Accept ratio 0.07203125
+Round 41:
+Current Annealing temperature 1.3302794647291145
+#########
+total delta cost 23100.0
+Current cost 822815.0
+Accept ratio 0.0594140625
+Round 42:
+Current Annealing temperature 1.1972515182562031
+#########
+total delta cost -23100.0
+Current cost 799715.0
+Accept ratio 0.05375
+Round 43:
+Current Annealing temperature 1.0775263664305827
+#########
+total delta cost -13860.0
+Current cost 785855.0
+Accept ratio 0.046484375
+Round 44:
+Current Annealing temperature 0.9697737297875245
+#########
+total delta cost 4620.0
+Current cost 790475.0
+Accept ratio 0.040859375
+Round 45:
+Current Annealing temperature 0.8727963568087721
+#########
+total delta cost 13860.0
+Current cost 804335.0
+Accept ratio 0.0334765625
+Round 46:
+Current Annealing temperature 0.785516721127895
+#########
+total delta cost -23100.0
+Current cost 781235.0
+Accept ratio 0.025234375
+Round 47:
+Current Annealing temperature 0.7069650490151055
+#########
+total delta cost 4620.0
+Current cost 785855.0
+Accept ratio 0.0291015625
+Round 48:
+Current Annealing temperature 0.6362685441135949
+#########
+total delta cost -4620.0
+Current cost 781235.0
+Accept ratio 0.02609375
+Round 49:
+Current Annealing temperature 0.5726416897022354
+#########
+total delta cost 4620.0
+Current cost 785855.0
+Accept ratio 0.0260546875
+Round 50:
+Current Annealing temperature 0.5153775207320118
+#########
+total delta cost -4620.0
+Current cost 781235.0
+Accept ratio 0.0244921875
+Round 51:
+Current Annealing temperature 0.46383976865881066
+#########
+total delta cost 4620.0
+Current cost 785855.0
+Accept ratio 0.0218359375
+Round 52:
+Current Annealing temperature 0.4174557917929296
+#########
+total delta cost 0.0
+Current cost 785855.0
+Accept ratio 0.0199609375
+Round 53:
+Current Annealing temperature 0.37571021261363663
+#########
+total delta cost -4620.0
+Current cost 781235.0
+Accept ratio 0.0169140625
+Round 54:
+Current Annealing temperature 0.338139191352273
+#########
+total delta cost 0.0
+Current cost 781235.0
+Accept ratio 0.017734375
+Round 55:
+Current Annealing temperature 0.3043252722170457
+#########
+total delta cost 0.0
+Current cost 781235.0
+Accept ratio 0.0164453125
+Round 56:
+Current Annealing temperature 0.2738927449953411
+#########
+total delta cost 0.0
+Current cost 781235.0
+Accept ratio 0.0166015625
+Round 57:
+Current Annealing temperature 0.246503470495807
+#########
+total delta cost 0.0
+Current cost 781235.0
+Accept ratio 0.0159375
+Round 58:
+Current Annealing temperature 0.22185312344622632
+#########
+total delta cost 0.0
+Current cost 781235.0
+Accept ratio 0.0134765625
+Round 59:
+Current Annealing temperature 0.1996678111016037
+#########
+total delta cost 0.0
+Current cost 781235.0
+Accept ratio 0.0130078125
+Round 60:
+Current Annealing temperature 0.17970102999144333
+#########
+total delta cost 0.0
+Current cost 781235.0
+Accept ratio 0.0128125
+Round 61:
+Current Annealing temperature 0.161730926992299
+#########
+total delta cost 0.0
+Current cost 781235.0
+Accept ratio 0.0125
+Round 62:
+Current Annealing temperature 0.1455578342930691
+#########
+total delta cost 0.0
+Current cost 781235.0
+Accept ratio 0.0116015625
+Round 63:
+Current Annealing temperature 0.13100205086376218
+#########
+total delta cost 0.0
+Current cost 781235.0
+Accept ratio 0.01234375
+Round 64:
+Current Annealing temperature 0.11790184577738597
+#########
+total delta cost 0.0
+Current cost 781235.0
+Accept ratio 0.0117578125
+Round 65:
+Current Annealing temperature 0.10611166119964738
+#########
+total delta cost 0.0
+Current cost 781235.0
+Accept ratio 0.0118359375
+Round 66:
+Current Annealing temperature 0.09550049507968264
+#########
+total delta cost 0.0
+Current cost 781235.0
+Accept ratio 0.0119921875
+Round 67:
+Current Annealing temperature 0.08595044557171438
+#########
+total delta cost 0.0
+Current cost 781235.0
+Accept ratio 0.0115234375
+Round 68:
+Current Annealing temperature 0.07735540101454295
+#########
+total delta cost 0.0
+Current cost 781235.0
+Accept ratio 0.0123046875
+Round 69:
+Current Annealing temperature 0.06961986091308867
+#########
+total delta cost 0.0
+Current cost 781235.0
+Accept ratio 0.0118359375
+Round 70:
+Current Annealing temperature 0.0626578748217798
+#########
+total delta cost 0.0
+Current cost 781235.0
+Accept ratio 0.0119921875
+Round 71:
+Current Annealing temperature 0.05639208733960182
+#########
+total delta cost 0.0
+Current cost 781235.0
+Accept ratio 0.012109375
+Round 72:
+Current Annealing temperature 0.050752878605641635
+#########
+total delta cost 0.0
+Current cost 781235.0
+Accept ratio 0.01171875
+Round 73:
+Current Annealing temperature 0.045677590745077476
+#########
+total delta cost 0.0
+Current cost 781235.0
+Accept ratio 0.011953125
+Mapping process finished successfully.
+Time: 196 seconds
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveRoutingTables(): Saving the routing tables
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for node 0
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for node 1
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for node 2
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for node 3
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for node 4
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for node 5
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for node 6
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for node 7
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for node 8
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for node 9
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for node 10
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for node 11
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for node 12
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for node 13
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for node 14
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for node 15
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 0
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 1
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 2
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 3
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 4
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 5
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 6
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 7
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 8
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 9
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 10
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 11
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 12
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 13
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 14
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 15
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 16
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 17
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 18
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 19
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 20
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 21
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 22
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 23
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 24
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 25
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 26
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 27
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 28
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 29
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 30
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 31
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 32
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 33
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 34
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 35
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 36
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 37
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 38
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 39
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 40
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 41
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 42
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 43
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 44
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 45
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 46
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] saveTopology(): Saving the XML for link 47
+2010-10-25 12:50:01 SimulatedAnnealingMapper [INFO] main(): Saving the mapping XML file
+Core 0 is mapped to NoC node 2
+Core 1 is mapped to NoC node 3
+Core 2 is mapped to NoC node 7
+Core 3 is mapped to NoC node 11
+Core 4 is mapped to NoC node 10
+Core 5 is mapped to NoC node 6
+Core 6 is mapped to NoC node 4
+Core 7 is mapped to NoC node 0
+Core 8 is mapped to NoC node 1
+Core 9 is mapped to NoC node 5
+Core 10 is mapped to NoC node 8
+Core 11 is mapped to NoC node 9
+Core 12 is mapped to NoC node 13
+Core 13 is mapped to NoC node 14
+Core 14 is mapped to NoC node 15
+Verify the communication load of each link...Succeed.
+Energy consumption estimation 
+(note that this is not exact numbers, but serve as a relative energy indication) 
+Energy consumed in link is 45349.0
+Energy consumed in switch is 57368.0
+Energy consumed in buffer is 678518.0
+Total communication energy consumption is 781235.0
