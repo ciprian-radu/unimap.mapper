@@ -1601,10 +1601,15 @@ class MappingNode {
 		}
 		int linkId;
 		for (linkId = 0; linkId < bbMapper.linksNumber; linkId++) {
-			if (Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getSourceNode())], ROW)) == origRow
-					&& Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getSourceNode())], COLUMN)) == origColumn
-					&& Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getDestinationNode())], ROW)) == row
-					&& Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getDestinationNode())], COLUMN)) == column)
+			if (Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getFirstNode())], ROW)) == origRow
+					&& Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getFirstNode())], COLUMN)) == origColumn
+					&& Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getSecondNode())], ROW)) == row
+					&& Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getSecondNode())], COLUMN)) == column)
+				break;
+			if (Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getSecondNode())], ROW)) == origRow
+					&& Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getSecondNode())], COLUMN)) == origColumn
+					&& Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getFirstNode())], ROW)) == row
+					&& Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getFirstNode())], COLUMN)) == column)
 				break;
 		}
 		if (linkId == bbMapper.linksNumber) {
