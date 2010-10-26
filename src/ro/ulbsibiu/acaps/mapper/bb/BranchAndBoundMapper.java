@@ -256,59 +256,61 @@ public class BranchAndBoundMapper implements Mapper {
 	/** routingTables[nodeId][sourceNode][destinationNode] = link ID */
 	int[][][] routingTables;
 	
-	public void generateXYRoutingTable(NodeType node, int nodesNumber, int gEdgeSize, LinkType[] links) {
-		for (int i = 0; i < nodesNumber; i++) {
-			for (int j = 0; j < nodesNumber; j++) {
-				routingTables[Integer.valueOf(node.getId())][i][j] = -2;
-			}
-		}
-
-		for (int dstNode = 0; dstNode < nodesNumber; dstNode++) {
-			if (dstNode == Integer.valueOf(node.getId())) { // deliver to me
-				routingTables[Integer.valueOf(node.getId())][0][dstNode] = -1;
-				continue;
-			}
-
-			// check out the dst Node's position first
-			int dstRow = dstNode / gEdgeSize;
-			int dstCol = dstNode % gEdgeSize;
-
-			int row = Integer.valueOf(getNodeTopologyParameter(node, TopologyParameter.ROW));
-			int column = Integer.valueOf(getNodeTopologyParameter(node, TopologyParameter.COLUMN));
-			int nextStepRow = row;
-			int nextStepCol = column;
-
-			if (dstCol != column) { // We should go horizontally
-				if (column > dstCol) {
-					nextStepCol--;
-				} else {
-					nextStepCol++;
-				}
-			} else { // We should go vertically
-				if (row > dstRow) {
-					nextStepRow--;
-				} else {
-					nextStepRow++;
+	public void generateXYRoutingTable() {
+		for (int n = 0; n < nodes.length; n++) {
+			NodeType node = nodes[n];
+			for (int i = 0; i < nodesNumber; i++) {
+				for (int j = 0; j < nodesNumber; j++) {
+					routingTables[Integer.valueOf(node.getId())][i][j] = -2;
 				}
 			}
-
-			for (int i = 0; i < node.getLink().size(); i++) {
-				if (LINK_OUT.equals(node.getLink().get(i).getType())) {
-					if (Integer.valueOf(getLinkTopologyParameter(links[Integer.valueOf(node.getLink().get(i).getValue())], TopologyParameter.ROW_TO)) == nextStepRow
-							&& Integer.valueOf(getLinkTopologyParameter(links[Integer.valueOf(node.getLink().get(i).getValue())], TopologyParameter.COLUMN_TO)) == nextStepCol) {
-						routingTables[Integer.valueOf(node.getId())][0][dstNode] = Integer.valueOf(links[Integer
-								.valueOf(node.getLink().get(i).getValue())]
-								.getId());
-						break;
+	
+			for (int dstNode = 0; dstNode < nodesNumber; dstNode++) {
+				if (dstNode == Integer.valueOf(node.getId())) { // deliver to me
+					routingTables[Integer.valueOf(node.getId())][0][dstNode] = -1;
+				} else {
+					// check out the dst Node's position first
+					int dstRow = dstNode / edgeSize;
+					int dstCol = dstNode % edgeSize;
+		
+					int row = Integer.valueOf(getNodeTopologyParameter(node, TopologyParameter.ROW));
+					int column = Integer.valueOf(getNodeTopologyParameter(node, TopologyParameter.COLUMN));
+					int nextStepRow = row;
+					int nextStepCol = column;
+		
+					if (dstCol != column) { // We should go horizontally
+						if (column > dstCol) {
+							nextStepCol--;
+						} else {
+							nextStepCol++;
+						}
+					} else { // We should go vertically
+						if (row > dstRow) {
+							nextStepRow--;
+						} else {
+							nextStepRow++;
+						}
+					}
+		
+					for (int i = 0; i < node.getLink().size(); i++) {
+						if (LINK_OUT.equals(node.getLink().get(i).getType())) {
+							if (Integer.valueOf(getLinkTopologyParameter(links[Integer.valueOf(node.getLink().get(i).getValue())], TopologyParameter.ROW_TO)) == nextStepRow
+									&& Integer.valueOf(getLinkTopologyParameter(links[Integer.valueOf(node.getLink().get(i).getValue())], TopologyParameter.COLUMN_TO)) == nextStepCol) {
+								routingTables[Integer.valueOf(node.getId())][0][dstNode] = Integer.valueOf(links[Integer
+										.valueOf(node.getLink().get(i).getValue())]
+										.getId());
+								break;
+							}
+						}
 					}
 				}
 			}
-		}
-
-		// Duplicate this routing row to the other routing rows.
-		for (int i = 1; i < nodesNumber; i++) {
-			for (int j = 0; j < nodesNumber; j++) {
-				routingTables[Integer.valueOf(node.getId())][i][j] = routingTables[Integer.valueOf(node.getId())][0][j];
+	
+			// Duplicate this routing row to the other routing rows.
+			for (int i = 1; i < nodesNumber; i++) {
+				for (int j = 0; j < nodesNumber; j++) {
+					routingTables[Integer.valueOf(node.getId())][i][j] = routingTables[Integer.valueOf(node.getId())][0][j];
+				}
 			}
 		}
 	}
@@ -528,42 +530,15 @@ public class BranchAndBoundMapper implements Mapper {
 			LinkType link = ((JAXBElement<LinkType>) unmarshaller
 					.unmarshal(linkXmls[i])).getValue();
 			
-			link.setId(Integer.toString(i));
 			link.setBandwidth(linkBandwidth);
 			link.setCost((double)linkEBit);
 			links[Integer.valueOf(link.getId())] = link;
 		}
-		// attach the links to the NoC nodes
-		boolean inAdded = false;
-		boolean outAdded = false;
-		for (int i = 0; i < nodesNumber; i++) {
-			for (int j = 0; j < links.length; j++) {
-				if (Integer.valueOf(getLinkTopologyParameter(links[j], TopologyParameter.ROW_FROM)).intValue() == Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.ROW)).intValue()
-						&& Integer.valueOf(getLinkTopologyParameter(links[j], TopologyParameter.COLUMN_FROM)).intValue() == Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.COLUMN)).intValue()) {
-					ro.ulbsibiu.acaps.noc.xml.node.LinkType linkType = new ro.ulbsibiu.acaps.noc.xml.node.LinkType();
-					linkType.setType(LINK_OUT);
-					linkType.setValue(links[j].getId());
-					nodes[i].getLink().add(linkType);
-					outAdded = true;
-				}
-				if (Integer.valueOf(getLinkTopologyParameter(links[j], TopologyParameter.ROW_TO)).intValue() == Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.ROW)).intValue()
-						&& Integer.valueOf(getLinkTopologyParameter(links[j], TopologyParameter.COLUMN_TO)).intValue() == Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.COLUMN)).intValue()) {
-					ro.ulbsibiu.acaps.noc.xml.node.LinkType linkType = new ro.ulbsibiu.acaps.noc.xml.node.LinkType();
-					linkType.setType(LINK_IN);
-					linkType.setValue(links[j].getId());
-					nodes[i].getLink().add(linkType);
-					inAdded = true;
-				}
-			}
-			logger.assertLog(inAdded, null);
-			logger.assertLog(outAdded, null);
-		}
+		
 		// for each router generate a routing table provided by the XY routing
 		// protocol
 		routingTables = new int[nodesNumber][nodesNumber][nodesNumber];
-		for (int i = 0; i < nodesNumber; i++) {
-			generateXYRoutingTable(nodes[i], nodesNumber, edgeSize, links);
-		}
+		generateXYRoutingTable();
 
 		generateLinkUsageList();
 	}
