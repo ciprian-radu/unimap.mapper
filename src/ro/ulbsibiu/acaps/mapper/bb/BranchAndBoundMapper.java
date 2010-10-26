@@ -203,14 +203,6 @@ public class BranchAndBoundMapper implements Mapper {
 		ROW,
 		/** on what column of a 2D mesh the node is located */
 		COLUMN,
-		/** on what row of a 2D mesh the source node of a link is located */
-		ROW_TO,
-		/** on what row of a 2D mesh the destination node of a link is located */
-		ROW_FROM,
-		/** on what column of a 2D mesh the source node of a link is located */
-		COLUMN_TO,
-		/** on what column of a 2D mesh the destination node of a link is located */
-		COLUMN_FROM
 	};
 	
 	private static final String LINK_IN = "in";
@@ -235,24 +227,6 @@ public class BranchAndBoundMapper implements Mapper {
 		return value;
 	}
 
-	private String getLinkTopologyParameter(LinkType link,
-			TopologyParameter parameter) {
-		String value = null;
-		List<ro.ulbsibiu.acaps.noc.xml.link.TopologyParameterType> topologyParameters = link
-				.getTopologyParameter();
-		for (int i = 0; i < topologyParameters.size(); i++) {
-			if (parameter.toString().equalsIgnoreCase(
-					topologyParameters.get(i).getType())) {
-				value = topologyParameters.get(i).getValue();
-				break;
-			}
-		}
-		logger.assertLog(value != null,
-				"Couldn't find the topology parameter '" + parameter
-						+ "' in the link " + link.getId());
-		return value;
-	}
-	
 	/** routingTables[nodeId][sourceNode][destinationNode] = link ID */
 	int[][][] routingTables;
 	
@@ -294,8 +268,28 @@ public class BranchAndBoundMapper implements Mapper {
 		
 					for (int i = 0; i < node.getLink().size(); i++) {
 						if (LINK_OUT.equals(node.getLink().get(i).getType())) {
-							if (Integer.valueOf(getLinkTopologyParameter(links[Integer.valueOf(node.getLink().get(i).getValue())], TopologyParameter.ROW_TO)) == nextStepRow
-									&& Integer.valueOf(getLinkTopologyParameter(links[Integer.valueOf(node.getLink().get(i).getValue())], TopologyParameter.COLUMN_TO)) == nextStepCol) {
+							String nodeRow = "-1";
+							String nodeColumn = "-1";
+							// the links are bidirectional
+							if (links[Integer.valueOf(node.getLink().get(i).getValue())].getFirstNode().equals(node.getId())) {
+								nodeRow = getNodeTopologyParameter(
+										nodes[Integer.valueOf(links[Integer.valueOf(node.getLink().get(i).getValue())].getSecondNode())],
+										TopologyParameter.ROW);
+								nodeColumn = getNodeTopologyParameter(
+										nodes[Integer.valueOf(links[Integer.valueOf(node.getLink().get(i).getValue())].getSecondNode())],
+										TopologyParameter.COLUMN);
+							} else {
+								if (links[Integer.valueOf(node.getLink().get(i).getValue())].getSecondNode().equals(node.getId())) {
+									nodeRow = getNodeTopologyParameter(
+											nodes[Integer.valueOf(links[Integer.valueOf(node.getLink().get(i).getValue())].getFirstNode())],
+											TopologyParameter.ROW);
+									nodeColumn = getNodeTopologyParameter(
+											nodes[Integer.valueOf(links[Integer.valueOf(node.getLink().get(i).getValue())].getFirstNode())],
+											TopologyParameter.COLUMN);
+								}
+							}
+							if (Integer.valueOf(nodeRow) == nextStepRow
+									&& Integer.valueOf(nodeColumn) == nextStepCol) {
 								routingTables[Integer.valueOf(node.getId())][0][dstNode] = Integer.valueOf(links[Integer
 										.valueOf(node.getLink().get(i).getValue())]
 										.getId());
@@ -561,7 +555,16 @@ public class BranchAndBoundMapper implements Mapper {
 						int linkId = routingTables[Integer.valueOf(currentNode.getId())][srcId][dstId];
 						LinkType link = links[linkId];
 						linkUsageMatrix[srcId][dstId][linkId] = 1;
-						currentNode = nodes[Integer.valueOf(link.getDestinationNode())];
+						String node = "-1";
+						// we work with with bidirectional links
+						if (currentNode.getId().equals(link.getFirstNode())) {
+							node = link.getSecondNode();
+						} else {
+							if (currentNode.getId().equals(link.getSecondNode())) {
+								node = link.getFirstNode();
+							}
+						}
+						currentNode = nodes[Integer.valueOf(node)];
 					}
 				}
 			}
@@ -685,7 +688,16 @@ public class BranchAndBoundMapper implements Mapper {
 					int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
 					LinkType link = links[linkId];
 					energy += link.getCost();
-					currentNode = nodes[Integer.valueOf(link.getDestinationNode())];
+					String node = "-1";
+					// we work with with bidirectional links
+					if (currentNode.getId().equals(link.getFirstNode())) {
+						node = link.getSecondNode();
+					} else {
+						if (currentNode.getId().equals(link.getSecondNode())) {
+							node = link.getFirstNode();
+						}
+					}
+					currentNode = nodes[Integer.valueOf(node)];
 					energy += currentNode.getCost();
 				}
 				archMatrix[src][dst] = energy;
@@ -1246,7 +1258,16 @@ public class BranchAndBoundMapper implements Mapper {
 		            while (Integer.valueOf(currentNode.getId()) != dst) {
 		                int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
 		                LinkType link = links[linkId];
-		                currentNode = nodes[Integer.valueOf(link.getDestinationNode())];
+						String node = "-1";
+						// we work with with bidirectional links
+						if (currentNode.getId().equals(link.getFirstNode())) {
+							node = link.getSecondNode();
+						} else {
+							if (currentNode.getId().equals(link.getSecondNode())) {
+								node = link.getFirstNode();
+							}
+						}
+						currentNode = nodes[Integer.valueOf(node)];
 		                usedBandwidth[linkId] += commLoad;
 		            }
 	            }
@@ -1304,7 +1325,17 @@ public class BranchAndBoundMapper implements Mapper {
 						}
 						while (Integer.valueOf(currentNode.getId()) != dst) {
 							int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
-							currentNode = nodes[Integer.valueOf(links[linkId].getDestinationNode())];
+							LinkType link = links[linkId];
+							String node = "-1";
+							// we work with with bidirectional links
+							if (currentNode.getId().equals(link.getFirstNode())) {
+								node = link.getSecondNode();
+							} else {
+								if (currentNode.getId().equals(link.getSecondNode())) {
+									node = link.getFirstNode();
+								}
+							}
+							currentNode = nodes[Integer.valueOf(node)];
 							energy += currentNode.getCost() * commVol;
 							if (logger.isTraceEnabled()) {
 								logger.trace("adding " + currentNode.getCost()
@@ -1334,7 +1365,17 @@ public class BranchAndBoundMapper implements Mapper {
 						while (Integer.valueOf(currentNode.getId()) != dst) {
 							int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
 							energy += links[linkId].getCost() * commVol;
-							currentNode = nodes[Integer.valueOf(links[linkId].getDestinationNode())];
+							LinkType link = links[linkId];
+							String node = "-1";
+							// we work with with bidirectional links
+							if (currentNode.getId().equals(link.getFirstNode())) {
+								node = link.getSecondNode();
+							} else {
+								if (currentNode.getId().equals(link.getSecondNode())) {
+									node = link.getFirstNode();
+								}
+							}
+							currentNode = nodes[Integer.valueOf(node)];
 						}
 					}
 				}
@@ -1356,7 +1397,17 @@ public class BranchAndBoundMapper implements Mapper {
 						while (Integer.valueOf(currentNode.getId()) != dst) {
 							int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
 							energy += (bufReadEBit + bufWriteEBit) * commVol;
-							currentNode = nodes[Integer.valueOf(links[linkId].getDestinationNode())];
+							LinkType link = links[linkId];
+							String node = "-1";
+							// we work with with bidirectional links
+							if (currentNode.getId().equals(link.getFirstNode())) {
+								node = link.getSecondNode();
+							} else {
+								if (currentNode.getId().equals(link.getSecondNode())) {
+									node = link.getFirstNode();
+								}
+							}
+							currentNode = nodes[Integer.valueOf(node)];
 						}
 						energy += bufWriteEBit * commVol;
 					}
@@ -1447,7 +1498,7 @@ public class BranchAndBoundMapper implements Mapper {
 					+ "ro" + File.separator + "ulbsibiu" + File.separator
 					+ "acaps" + File.separator + "noc" + File.separator
 					+ "topology" + File.separator + "mesh2D" + File.separator
-					+ "4x4");
+					+ "4x4-bidir");
 			
 			BranchAndBoundMapper bbMapper;
 			int cores = apcg.getCore().size();
