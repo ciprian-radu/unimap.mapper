@@ -1,1 +1,56 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?><ns2:core xmlns:ns2="http://webspace.ulbsibiu.ro/ciprian.radu/research/noc/application_mapping/unified_framework/schema/core"><ID>21</ID><name>AMD K6-IIIE+ 550Mhz/ACR -- rectangle</name><frequency>5.5E8</frequency><width>0.00418</width><height>0.0167</height><idlePower>1.6</idlePower><task type="0" execTime="1.1E-6" power="16.0"/><task type="1" execTime="2.1E-6" power="16.0"/><task type="2" execTime="6.6E-5" power="16.0"/><task type="3" execTime="3.1E-7" power="16.0"/><task type="4" execTime="2.3E-7" power="16.0"/><task type="5" execTime="0.0010" power="16.0"/><task type="6" execTime="7.0E-6" power="16.0"/><task type="7" execTime="8.4E-6" power="16.0"/><task type="8" execTime="6.1E-5" power="16.0"/><task type="9" execTime="9.3E-4" power="16.0"/><task type="10" execTime="5.8E-4" power="16.0"/><task type="11" execTime="3.5E-5" power="16.0"/><task type="12" execTime="4.4E-7" power="16.0"/><task type="13" execTime="3.3E-7" power="16.0"/><task type="14" execTime="2.6E-6" power="16.0"/><task type="15" execTime="6.0E-6" power="16.0"/><task type="16" execTime="9.8E-5" power="16.0"/><task type="17" execTime="4.6E-4" power="16.0"/><task type="18" execTime="1.1E-4" power="16.0"/><task type="19" execTime="2.2E-4" power="16.0"/><task type="20" execTime="4.4E-4" power="16.0"/><task type="21" execTime="2.0E-6" power="16.0"/><task type="22" execTime="2.7E-4" power="16.0"/><task type="23" execTime="2.5E-4" power="16.0"/><task type="24" execTime="7.6E-5" power="16.0"/><task type="25" execTime="8.9E-5" power="16.0"/><task type="26" execTime="9.9E-5" power="16.0"/><task type="27" execTime="6.0E-4" power="16.0"/><task type="28" execTime="4.5E-5" power="16.0"/><task type="29" execTime="4.0E-4" power="16.0"/><task type="30" execTime="1.0E-4" power="16.0"/><task type="31" execTime="1.0E-4" power="16.0"/><task type="32" execTime="1.0E-4" power="16.0"/><task type="33" execTime="4.6E-4" power="16.0"/><task type="34" execTime="4.5E-4" power="16.0"/><task type="35" execTime="4.4E-4" power="16.0"/><task type="36" execTime="4.3E-4" power="16.0"/><task type="37" execTime="0.0" power="16.0"/><task type="38" execTime="0.0" power="16.0"/><task type="39" execTime="0.0" power="16.0"/><task type="40" execTime="0.0" power="16.0"/><task type="41" execTime="0.0" power="16.0"/><task type="42" execTime="0.0035" power="16.0"/><task type="43" execTime="0.0011" power="16.0"/><task type="44" execTime="0.0014" power="16.0"/><task type="45" execTime="1.0E-5" power="16.0"/></ns2:core>
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ns2:core
+	xmlns:ns2="http://webspace.ulbsibiu.ro/ciprian.radu/research/noc/application_mapping/unified_framework/schema/core">
+	<ID>21</ID>
+	<name>AMD K6-IIIE+ 550Mhz/ACR -- rectangle</name>
+	<frequency>5.5E8</frequency>
+	<width>0.00418</width>
+	<height>0.0167</height>
+	<idlePower>1.6</idlePower>
+	<task type="0" execTime="1.1E-6" power="16.0" />
+	<task type="1" execTime="2.1E-6" power="16.0" />
+	<task type="2" execTime="6.6E-5" power="16.0" />
+	<task type="3" execTime="3.1E-7" power="16.0" />
+	<task type="4" execTime="2.3E-7" power="16.0" />
+	<task type="5" execTime="0.0010" power="16.0" />
+	<task type="6" execTime="7.0E-6" power="16.0" />
+	<task type="7" execTime="8.4E-6" power="16.0" />
+	<task type="8" execTime="6.1E-5" power="16.0" />
+	<task type="9" execTime="9.3E-4" power="16.0" />
+	<task type="10" execTime="5.8E-4" power="16.0" />
+	<task type="11" execTime="3.5E-5" power="16.0" />
+	<task type="12" execTime="4.4E-7" power="16.0" />
+	<task type="13" execTime="3.3E-7" power="16.0" />
+	<task type="14" execTime="2.6E-6" power="16.0" />
+	<task type="15" execTime="6.0E-6" power="16.0" />
+	<task type="16" execTime="9.8E-5" power="16.0" />
+	<task type="17" execTime="4.6E-4" power="16.0" />
+	<task type="18" execTime="1.1E-4" power="16.0" />
+	<task type="19" execTime="2.2E-4" power="16.0" />
+	<task type="20" execTime="4.4E-4" power="16.0" />
+	<task type="21" execTime="2.0E-6" power="16.0" />
+	<task type="22" execTime="2.7E-4" power="16.0" />
+	<task type="23" execTime="2.5E-4" power="16.0" />
+	<task type="24" execTime="7.6E-5" power="16.0" />
+	<task type="25" execTime="8.9E-5" power="16.0" />
+	<task type="26" execTime="9.9E-5" power="16.0" />
+	<task type="27" execTime="6.0E-4" power="16.0" />
+	<task type="28" execTime="4.5E-5" power="16.0" />
+	<task type="29" execTime="4.0E-4" power="16.0" />
+	<task type="30" execTime="1.0E-4" power="16.0" />
+	<task type="31" execTime="1.0E-4" power="16.0" />
+	<task type="32" execTime="1.0E-4" power="16.0" />
+	<task type="33" execTime="4.6E-4" power="16.0" />
+	<task type="34" execTime="4.5E-4" power="16.0" />
+	<task type="35" execTime="4.4E-4" power="16.0" />
+	<task type="36" execTime="4.3E-4" power="16.0" />
+	<task type="37" execTime="0.0" power="16.0" />
+	<task type="38" execTime="0.0" power="16.0" />
+	<task type="39" execTime="0.0" power="16.0" />
+	<task type="40" execTime="0.0" power="16.0" />
+	<task type="41" execTime="0.0" power="16.0" />
+	<task type="42" execTime="0.0035" power="16.0" />
+	<task type="43" execTime="0.0011" power="16.0" />
+	<task type="44" execTime="0.0014" power="16.0" />
+	<task type="45" execTime="1.0E-5" power="16.0" />
+</ns2:core>

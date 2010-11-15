@@ -1,1 +1,56 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?><ns2:core xmlns:ns2="http://webspace.ulbsibiu.ro/ciprian.radu/research/noc/application_mapping/unified_framework/schema/core"><ID>31</ID><name>NEC  VR5432 - 167 MHz -- rectangle</name><frequency>1.67E8</frequency><width>0.00219</width><height>0.00876</height><idlePower>0.25</idlePower><task type="0" execTime="2.8E-5" power="2.5"/><task type="1" execTime="1.6E-4" power="2.5"/><task type="2" execTime="0.0010" power="2.5"/><task type="3" execTime="3.8E-6" power="2.5"/><task type="4" execTime="2.5E-6" power="2.5"/><task type="5" execTime="0.018" power="2.5"/><task type="6" execTime="3.8E-5" power="2.5"/><task type="7" execTime="8.3E-5" power="2.5"/><task type="8" execTime="8.4E-4" power="2.5"/><task type="9" execTime="0.016" power="2.5"/><task type="10" execTime="0.036" power="2.5"/><task type="11" execTime="4.9E-4" power="2.5"/><task type="12" execTime="3.9E-6" power="2.5"/><task type="13" execTime="3.1E-6" power="2.5"/><task type="14" execTime="1.3E-4" power="2.5"/><task type="15" execTime="8.4E-5" power="2.5"/><task type="16" execTime="0.0014" power="2.5"/><task type="17" execTime="0.0040" power="2.5"/><task type="18" execTime="0.0011" power="2.5"/><task type="19" execTime="0.0019" power="2.5"/><task type="20" execTime="0.0042" power="2.5"/><task type="21" execTime="1.1E-5" power="2.5"/><task type="22" execTime="0.0013" power="2.5"/><task type="23" execTime="0.0013" power="2.5"/><task type="24" execTime="0.0011" power="2.5"/><task type="25" execTime="9.5E-4" power="2.5"/><task type="26" execTime="8.8E-4" power="2.5"/><task type="27" execTime="0.0043" power="2.5"/><task type="28" execTime="2.6E-4" power="2.5"/><task type="29" execTime="0.0027" power="2.5"/><task type="30" execTime="5.8E-4" power="2.5"/><task type="31" execTime="5.8E-4" power="2.5"/><task type="32" execTime="5.8E-4" power="2.5"/><task type="33" execTime="0.0030" power="2.5"/><task type="34" execTime="0.0030" power="2.5"/><task type="35" execTime="0.0030" power="2.5"/><task type="36" execTime="0.0030" power="2.5"/><task type="37" execTime="0.41" power="2.5"/><task type="38" execTime="0.24" power="2.5"/><task type="39" execTime="0.052" power="2.5"/><task type="40" execTime="0.023" power="2.5"/><task type="41" execTime="0.04" power="2.5"/><task type="42" execTime="0.031" power="2.5"/><task type="43" execTime="0.0083" power="2.5"/><task type="44" execTime="0.017" power="2.5"/><task type="45" execTime="1.0E-5" power="2.5"/></ns2:core>
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ns2:core
+	xmlns:ns2="http://webspace.ulbsibiu.ro/ciprian.radu/research/noc/application_mapping/unified_framework/schema/core">
+	<ID>31</ID>
+	<name>NEC VR5432 - 167 MHz -- rectangle</name>
+	<frequency>1.67E8</frequency>
+	<width>0.00219</width>
+	<height>0.00876</height>
+	<idlePower>0.25</idlePower>
+	<task type="0" execTime="2.8E-5" power="2.5" />
+	<task type="1" execTime="1.6E-4" power="2.5" />
+	<task type="2" execTime="0.0010" power="2.5" />
+	<task type="3" execTime="3.8E-6" power="2.5" />
+	<task type="4" execTime="2.5E-6" power="2.5" />
+	<task type="5" execTime="0.018" power="2.5" />
+	<task type="6" execTime="3.8E-5" power="2.5" />
+	<task type="7" execTime="8.3E-5" power="2.5" />
+	<task type="8" execTime="8.4E-4" power="2.5" />
+	<task type="9" execTime="0.016" power="2.5" />
+	<task type="10" execTime="0.036" power="2.5" />
+	<task type="11" execTime="4.9E-4" power="2.5" />
+	<task type="12" execTime="3.9E-6" power="2.5" />
+	<task type="13" execTime="3.1E-6" power="2.5" />
+	<task type="14" execTime="1.3E-4" power="2.5" />
+	<task type="15" execTime="8.4E-5" power="2.5" />
+	<task type="16" execTime="0.0014" power="2.5" />
+	<task type="17" execTime="0.0040" power="2.5" />
+	<task type="18" execTime="0.0011" power="2.5" />
+	<task type="19" execTime="0.0019" power="2.5" />
+	<task type="20" execTime="0.0042" power="2.5" />
+	<task type="21" execTime="1.1E-5" power="2.5" />
+	<task type="22" execTime="0.0013" power="2.5" />
+	<task type="23" execTime="0.0013" power="2.5" />
+	<task type="24" execTime="0.0011" power="2.5" />
+	<task type="25" execTime="9.5E-4" power="2.5" />
+	<task type="26" execTime="8.8E-4" power="2.5" />
+	<task type="27" execTime="0.0043" power="2.5" />
+	<task type="28" execTime="2.6E-4" power="2.5" />
+	<task type="29" execTime="0.0027" power="2.5" />
+	<task type="30" execTime="5.8E-4" power="2.5" />
+	<task type="31" execTime="5.8E-4" power="2.5" />
+	<task type="32" execTime="5.8E-4" power="2.5" />
+	<task type="33" execTime="0.0030" power="2.5" />
+	<task type="34" execTime="0.0030" power="2.5" />
+	<task type="35" execTime="0.0030" power="2.5" />
+	<task type="36" execTime="0.0030" power="2.5" />
+	<task type="37" execTime="0.41" power="2.5" />
+	<task type="38" execTime="0.24" power="2.5" />
+	<task type="39" execTime="0.052" power="2.5" />
+	<task type="40" execTime="0.023" power="2.5" />
+	<task type="41" execTime="0.04" power="2.5" />
+	<task type="42" execTime="0.031" power="2.5" />
+	<task type="43" execTime="0.0083" power="2.5" />
+	<task type="44" execTime="0.017" power="2.5" />
+	<task type="45" execTime="1.0E-5" power="2.5" />
+</ns2:core>
