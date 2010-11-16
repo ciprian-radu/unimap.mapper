@@ -1113,7 +1113,8 @@ public class BranchAndBoundMapper implements Mapper {
 
 		MappingType mapping = new MappingType();
 		mapping.setId("0");
-		mapping.setApcg("0");
+		// FIXME map multiple CTGs simultaneously using the new mapping XSD
+//		mapping.setApcg("0");
 		for (int i = 0; i < nodes.length; i++) {
 			MapType map = new MapType();
 			map.setNode(nodes[i].getId());
