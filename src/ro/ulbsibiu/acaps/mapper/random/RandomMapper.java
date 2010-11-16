@@ -27,7 +27,10 @@ import ro.ulbsibiu.acaps.mapper.Mapper;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
 
 /**
- * This @link{Mapper} maps the cores to nodes in a random fashion.
+ * This @link{Mapper} maps the cores to nodes in a random fashion. The cores are
+ * described in APCG XML files. Each APCG has a corresponding CTG. The CTG
+ * describes the application, as a set of communicating tasks. Having more APCGs
+ * / CTGs allows building a mapping for all of them.
  * 
  * @author cipi
  * 
@@ -35,39 +38,79 @@ import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
 public class RandomMapper implements Mapper {
 
 	/**
+	 * Helper class that associates a core with its APCG
+	 * 
+	 * @author cradu
+	 *
+	 */
+	private static class ApcgCore {
+		
+		private String apcgId;
+		
+		private String coreId;
+
+		public ApcgCore(String apcgId, String coreId) {
+			this.apcgId = apcgId;
+			this.coreId = coreId;
+		}
+
+		public String getApcgId() {
+			return apcgId;
+		}
+
+		public String getCoreId() {
+			return coreId;
+		}
+		
+	}
+	
+	/**
 	 * Logger for this class
 	 */
 	private static final Logger logger = Logger.getLogger(RandomMapper.class);
 
-	/** the APCG XML file */
-	private File apcgFile;
+	/** the ID of the generated mapping XML */
+	private String id;
+	
+	/** the APCG XML files */
+	private List<File> apcgFiles;
 
 	/** a list with the IDs of all of the NoC nodes */
 	private List<String> nodeIds;
 
 	/** holds the mapping (cores are identified by IDs) */
-	private Map<String, String> coresToNodes;
+	private Map<ApcgCore, String> coresToNodes;
 
 	/**
 	 * Constructor
 	 * 
-	 * @param apcgFilePath
-	 *            the APCG XML file path (cannot be empty)
+	 * @param id (cannot be empty)
+	 *            the ID of the generated mapping XML
+	 * @param apcgFilePaths
+	 *            the APCG XML file paths (cannot be empty)
 	 * @param nodeIds
 	 *            a list with the IDs of all of the NoC nodes (cannot be empty)
 	 */
-	public RandomMapper(String apcgFilePath, List<String> nodeIds) {
-		logger.assertLog(apcgFilePath != null && apcgFilePath.length() > 0,
-				"Unspecified APCG");
-		logger.assertLog(apcgFilePath.endsWith(".xml"),
-				"The APCG must be an XML file");
+	public RandomMapper(String id, List<String> apcgFilePaths, List<String> nodeIds) {
+		logger.assertLog(id != null && id.length() > 0,
+				"No mapping XML ID specified");
+		logger.assertLog(apcgFilePaths != null && apcgFilePaths.size() > 0,
+				"No APCG specified");
 		logger.assertLog(nodeIds != null && nodeIds.size() > 0,
 				"The list of NoC nodes is not specified");
 
-		logger.info("Working with the APCG from the XML " + apcgFilePath);
-
-		apcgFile = new File(apcgFilePath);
-		logger.assertLog(apcgFile.isFile(), "The APCG is not a file");
+		this.id = id;
+		apcgFiles = new ArrayList<File>();
+		
+		for (int i = 0; i < apcgFilePaths.size(); i++) {
+			logger.assertLog(apcgFilePaths.get(i).endsWith(".xml"),
+					"The APCG must be an XML file");
+			File apcgFile = new File(apcgFilePaths.get(i));
+			logger.assertLog(apcgFile.isFile(), "The APCG is not a file");
+			
+			logger.info("Working with the APCG from the XML " + apcgFilePaths.get(i));
+			apcgFiles.add(apcgFile);
+		}
 
 		this.nodeIds = nodeIds;
 	}
@@ -88,20 +131,21 @@ public class RandomMapper implements Mapper {
 		String mappingXml = null;
 
 		try {
-			String[] coreIds = getCoreIds();
-			if (coreIds.length > nodeIds.size()) {
-				throw new TooFewNocNodesException(coreIds.length,
+			ApcgCore[] apcgCores = getApcgCores();
+			if (apcgCores.length > nodeIds.size()) {
+				throw new TooFewNocNodesException(apcgCores.length,
 						nodeIds.size());
 			}
-			coresToNodes = new HashMap<String, String>(coreIds.length);
+			coresToNodes = new HashMap<ApcgCore, String>(apcgCores.length);
 			Random random = new Random();
 			// using the following temporary list we ensure that each core gets
 			// mapped to a different node
 			List<String> tempNodeIds = new ArrayList<String>(nodeIds);
-			for (int i = 0; i < coreIds.length; i++) {
+			for (int i = 0; i < apcgCores.length; i++) {
 				int k = random.nextInt(tempNodeIds.size());
-				coresToNodes.put(coreIds[i], tempNodeIds.get(k));
-				logger.info("Core " + coreIds[i] + " is mapped to node "
+				coresToNodes.put(apcgCores[i], tempNodeIds.get(k));
+				logger.info("Core " + apcgCores[i].getCoreId() + "(APCG "
+						+ apcgCores[i].getApcgId() + ") is mapped to node "
 						+ tempNodeIds.get(k));
 				tempNodeIds.remove(k);
 			}
@@ -118,31 +162,26 @@ public class RandomMapper implements Mapper {
 		return mappingXml;
 	}
 
-	private String[] getCoreIds() throws JAXBException {
+	private ApcgCore[] getApcgCores() throws JAXBException {
+		List<ApcgCore> apcgCores = new ArrayList<ApcgCore>();
+
 		JAXBContext jaxbContext = JAXBContext
 				.newInstance("ro.ulbsibiu.acaps.ctg.xml.apcg");
 		Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
-		JAXBElement<ApcgType> apcgXml = (JAXBElement<ApcgType>) unmarshaller
-				.unmarshal(apcgFile);
-		List<ro.ulbsibiu.acaps.ctg.xml.apcg.CoreType> cores = apcgXml
-				.getValue().getCore();
+		for (int i = 0; i < apcgFiles.size(); i++) {
+			@SuppressWarnings("unchecked")
+			JAXBElement<ApcgType> apcgXml = (JAXBElement<ApcgType>) unmarshaller
+					.unmarshal(apcgFiles.get(i));
+			List<ro.ulbsibiu.acaps.ctg.xml.apcg.CoreType> cores = apcgXml
+					.getValue().getCore();
 
-		String[] coreIds = new String[cores.size()];
-		for (int i = 0; i < cores.size(); i++) {
-			coreIds[i] = cores.get(i).getId();
+			for (int j = 0; j < cores.size(); j++) {
+				apcgCores.add(new ApcgCore(apcgXml.getValue().getId(), cores
+						.get(j).getId()));
+			}
 		}
 
-		return coreIds;
-	}
-
-	private String getApcgId() throws JAXBException {
-		JAXBContext jaxbContext = JAXBContext
-				.newInstance("ro.ulbsibiu.acaps.ctg.xml.apcg");
-		Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
-		JAXBElement<ApcgType> apcgXml = (JAXBElement<ApcgType>) unmarshaller
-				.unmarshal(apcgFile);
-
-		return apcgXml.getValue().getId();
+		return apcgCores.toArray(new ApcgCore[apcgCores.size()]);
 	}
 
 	private String generateMap() throws JAXBException {
@@ -154,15 +193,14 @@ public class RandomMapper implements Mapper {
 
 		ObjectFactory mappingFactory = new ObjectFactory();
 		MappingType mappingType = new MappingType();
-		String id = getApcgId();
 		mappingType.setId(id);
-		mappingType.setApcg(id);
 
-		Set<String> cores = coresToNodes.keySet();
-		for (String core : cores) {
+		Set<ApcgCore> cores = coresToNodes.keySet();
+		for (ApcgCore apcgCore : cores) {
 			MapType mapType = new MapType();
-			mapType.setCore(core);
-			mapType.setNode(coresToNodes.get(core));
+			mapType.setApcg(apcgCore.getApcgId());
+			mapType.setCore(apcgCore.getCoreId());
+			mapType.setNode(coresToNodes.get(apcgCore));
 			mappingType.getMap().add(mapType);
 		}
 
@@ -180,19 +218,23 @@ public class RandomMapper implements Mapper {
 			TooFewNocNodesException {
 		String e3sBenchmark = "auto-indust-mocsyn.tgff";
 
+		// apply mapping for folders ctg-0, ctg-1, ctg-2, ctg-3 (we use an 4x4 2D mesh NoC)
 		for (int i = 0; i < 2; i++) {
-			String mappingId = Integer.toString(i);
-			String apcgId = Integer.toString(i);
 			for (int j = 0; j < 4; j++) {
 				String ctgId = Integer.toString(j);
+				String apcgId = ctgId + "_"  + Integer.toString(i);
+				String mappingId = apcgId + "_"  + Integer.toString(i);
 				String path = "xml" + File.separator + "e3s" + File.separator
 						+ e3sBenchmark + File.separator;
 				List<String> nodeIds = new ArrayList<String>();
 				for (int k = 0; k < 16; k++) {
 					nodeIds.add(Integer.toString(k));
 				}
-				Mapper mapper = new RandomMapper(path + "ctg-" + ctgId
-						+ File.separator + "apcg-" + apcgId + ".xml", nodeIds);
+				List<String> apcgFilePaths = new ArrayList<String>();
+				apcgFilePaths.add(path + "ctg-" + ctgId + File.separator
+						+ "apcg-" + apcgId + ".xml");
+				Mapper mapper = new RandomMapper(mappingId, apcgFilePaths,
+						nodeIds);
 				String mappingXml = mapper.map();
 				PrintWriter pw = new PrintWriter(path + "ctg-" + ctgId
 						+ File.separator + "mapping-" + mappingId + ".xml");
@@ -200,6 +242,31 @@ public class RandomMapper implements Mapper {
 				pw.write(mappingXml);
 				pw.close();
 			}
+		}
+		
+		// apply mapping for CTGs 0 and 1 - folder ctg-0+1 (we use a 4x4 2D mesh NoC)
+		for (int i = 0; i < 2; i++) {
+			String ctgId = "0+1";
+			String apcgId = ctgId + "_" + Integer.toString(i);
+			String mappingId = apcgId + "_" + Integer.toString(i);
+			String path = "xml" + File.separator + "e3s" + File.separator
+					+ e3sBenchmark + File.separator;
+			List<String> nodeIds = new ArrayList<String>();
+			for (int k = 0; k < 16; k++) {
+				nodeIds.add(Integer.toString(k));
+			}
+			List<String> apcgFilePaths = new ArrayList<String>();
+			apcgFilePaths.add(path + "ctg-0" + File.separator + "apcg-"
+					+ "0_" + Integer.toString(i) + ".xml");
+			apcgFilePaths.add(path + "ctg-1" + File.separator + "apcg-"
+					+ "1_" + Integer.toString(i) + ".xml");
+			Mapper mapper = new RandomMapper(mappingId, apcgFilePaths, nodeIds);
+			String mappingXml = mapper.map();
+			PrintWriter pw = new PrintWriter(path + "ctg-" + ctgId
+					+ File.separator + "mapping-" + mappingId + ".xml");
+			logger.info("Saving the mapping XML file");
+			pw.write(mappingXml);
+			pw.close();
 		}
 	}
 
