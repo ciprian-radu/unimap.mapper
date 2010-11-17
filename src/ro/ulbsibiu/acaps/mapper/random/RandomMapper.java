@@ -223,7 +223,7 @@ public class RandomMapper implements Mapper {
 			for (int j = 0; j < 4; j++) {
 				String ctgId = Integer.toString(j);
 				String apcgId = ctgId + "_"  + Integer.toString(i);
-				String mappingId = apcgId + "_"  + Integer.toString(i);
+				String mappingId = apcgId + "_0";
 				String path = "xml" + File.separator + "e3s" + File.separator
 						+ e3sBenchmark + File.separator;
 				List<String> nodeIds = new ArrayList<String>();
@@ -245,10 +245,10 @@ public class RandomMapper implements Mapper {
 		}
 		
 		// apply mapping for CTGs 0 and 1 - folder ctg-0+1 (we use a 4x4 2D mesh NoC)
+		String ctgId = "0+1";
 		for (int i = 0; i < 2; i++) {
-			String ctgId = "0+1";
 			String apcgId = ctgId + "_" + Integer.toString(i);
-			String mappingId = apcgId + "_" + Integer.toString(i);
+			String mappingId = apcgId + "_0";
 			String path = "xml" + File.separator + "e3s" + File.separator
 					+ e3sBenchmark + File.separator;
 			List<String> nodeIds = new ArrayList<String>();
@@ -256,10 +256,12 @@ public class RandomMapper implements Mapper {
 				nodeIds.add(Integer.toString(k));
 			}
 			List<String> apcgFilePaths = new ArrayList<String>();
-			apcgFilePaths.add(path + "ctg-0" + File.separator + "apcg-"
-					+ "0_" + Integer.toString(i) + ".xml");
-			apcgFilePaths.add(path + "ctg-1" + File.separator + "apcg-"
-					+ "1_" + Integer.toString(i) + ".xml");
+			String[] ctgIds = ctgId.split("\\+");
+			for (int j = 0; j < ctgIds.length; j++) {
+				apcgFilePaths.add(path + "ctg-" + ctgId + File.separator
+						+ "apcg-" + ctgIds[j] + "_" + Integer.toString(i)
+						+ ".xml");
+			}
 			Mapper mapper = new RandomMapper(mappingId, apcgFilePaths, nodeIds);
 			String mappingXml = mapper.map();
 			PrintWriter pw = new PrintWriter(path + "ctg-" + ctgId

@@ -2,21 +2,21 @@
 <apcg id="0_1" ctg="0"
 	xmlns="http://webspace.ulbsibiu.ro/ciprian.radu/research/noc/application_mapping/unified_framework/schema/apcg">
 	<core id="1">
-		<task id="1" execTime="0.0" power="11.0" />
+		<task id="0_1" execTime="0.0" power="11.0" />
 	</core>
 	<core id="2">
-		<task id="2" execTime="2.9E-6" power="10.0" />
+		<task id="0_2" execTime="2.9E-6" power="10.0" />
 	</core>
 	<core id="4">
-		<task id="4" execTime="4.4E-7" power="16.0" />
+		<task id="0_4" execTime="4.4E-7" power="16.0" />
 	</core>
 	<core id="0">
-		<task id="0" execTime="1.0E-5" power="1.6" />
+		<task id="0_0" execTime="1.0E-5" power="1.6" />
 	</core>
 	<core id="3">
-		<task id="3" execTime="1.2E-6" power="14.0" />
+		<task id="0_3" execTime="1.2E-6" power="14.0" />
 	</core>
 	<core id="5">
-		<task id="5" execTime="1.0E-5" power="0.91" />
+		<task id="0_5" execTime="1.0E-5" power="0.91" />
 	</core>
 </apcg>
