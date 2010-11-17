@@ -12,6 +12,9 @@ public class Core {
 
 	/** the ID of this core */
 	private int coreId = -1;
+	
+	/** the ID of the APCG to which this cores belongs to */
+	private String apcgId = null;
 
 	/** the ID of the NoC node to which this core is mapped to */
 	private int nodeId = -1;
@@ -39,12 +42,14 @@ public class Core {
 	 * 
 	 * @param coreId
 	 *            the ID of the core
+	 * @param apcgId
+	 *            the ID of the APCG to which this cores belongs to
 	 * @param nodeId
 	 *            the ID of the node to which this core is assigned to
 	 */
-	public Core(int coreId, int nodeId) {
-		super();
+	public Core(int coreId, String apcgId, int nodeId) {
 		this.coreId = coreId;
+		this.apcgId = apcgId;
 		this.nodeId = nodeId;
 	}
 
@@ -54,6 +59,14 @@ public class Core {
 
 	public void setCoreId(int coreId) {
 		this.coreId = coreId;
+	}
+
+	public String getApcgId() {
+		return apcgId;
+	}
+
+	public void setApcgId(String apcgId) {
+		this.apcgId = apcgId;
 	}
 
 	public int getNodeId() {

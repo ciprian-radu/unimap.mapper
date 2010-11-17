@@ -132,6 +132,9 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 * associated to it.
 	 */
 	private int coresNumber;
+	
+	/** counts how many cores were parsed from the parsed APCGs */
+	int previousCoreCount = 0;
 
 	/**
 	 * the number of links from the NoC
@@ -387,7 +390,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 	private void initializeCores() {
 		cores = new Core[coresNumber];
 		for (int i = 0; i < cores.length; i++) {
-			cores[i] = new Core(i, -1);
+			cores[i] = new Core(i, null, -1);
 			cores[i].setFromCommunication(new int[nodesNumber]);
 			cores[i].setToCommunication(new int[nodesNumber]);
 			cores[i].setFromBandwidthRequirement(new int[nodesNumber]);
@@ -416,6 +419,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 		logger.assertLog(apcg != null, "The APCG cannot be null");
 		logger.assertLog(ctg != null, "The CTG cannot be null");
 		
+		// we use previousCoreCount to shift the cores from each APCG
+		int tasks = 0;
 		List<CoreType> coreList = apcg.getCore();
 		for (int i = 0; i < coreList.size(); i++) {
 			CoreType coreType = coreList.get(i);
@@ -426,27 +431,40 @@ public class SimulatedAnnealingMapper implements Mapper {
 				List<CommunicationType> communications = getCommunications(ctg, taskId);
 				for (int k = 0; k < communications.size(); k++) {
 					CommunicationType communicationType = communications.get(k);
-					cores[Integer
-							.valueOf(communicationType.getSource().getId())]
-							.getToCommunication()[Integer
-							.valueOf(communicationType.getDestination().getId())] = (int) communicationType
+					String sourceId = communicationType.getSource().getId();
+					if (sourceId.contains("_")) {
+						sourceId = sourceId.substring(ctg.getId().length() + 1);
+					}
+					String destinationId = communicationType.getDestination().getId();
+					if (destinationId.contains("_")) {
+						destinationId = destinationId.substring(ctg.getId().length() + 1);
+					}
+					cores[previousCoreCount + Integer.valueOf(sourceId)].setCoreId(Integer.valueOf(sourceId));
+					cores[previousCoreCount + Integer.valueOf(sourceId)].setApcgId(apcg.getId());
+					cores[previousCoreCount + Integer.valueOf(destinationId)].setCoreId(Integer.valueOf(destinationId));
+					cores[previousCoreCount + Integer.valueOf(destinationId)].setApcgId(apcg.getId());
+					
+					cores[previousCoreCount + Integer.valueOf(sourceId)]
+							.getToCommunication()[previousCoreCount
+							+ Integer.valueOf(destinationId)] = (int) communicationType
 							.getVolume();
-					cores[Integer
-							.valueOf(communicationType.getSource().getId())]
-							.getToBandwidthRequirement()[Integer
-							.valueOf(communicationType.getDestination().getId())] = (int) (3 * (communicationType
+					cores[previousCoreCount + Integer.valueOf(sourceId)]
+							.getToBandwidthRequirement()[previousCoreCount
+							+ Integer.valueOf(destinationId)] = (int) (3 * (communicationType
 							.getVolume() / 1000000) * linkBandwidth);
-					cores[Integer.valueOf(communicationType.getDestination()
-							.getId())].getFromCommunication()[Integer
-							.valueOf(communicationType.getSource().getId())] = (int) communicationType
+					cores[previousCoreCount + Integer.valueOf(destinationId)]
+							.getFromCommunication()[previousCoreCount
+							+ Integer.valueOf(sourceId)] = (int) communicationType
 							.getVolume();
-					cores[Integer.valueOf(communicationType.getDestination()
-							.getId())].getFromBandwidthRequirement()[Integer
-							.valueOf(communicationType.getSource().getId())] = (int) (3 * (communicationType
+					cores[previousCoreCount + Integer.valueOf(destinationId)]
+							.getFromBandwidthRequirement()[previousCoreCount
+							+ Integer.valueOf(sourceId)] = (int) (3 * (communicationType
 							.getVolume() / 1000000) * linkBandwidth);
 				}
 			}
+			tasks += taskList.size();
 		}
+		previousCoreCount += tasks;
 	}
 	
 	/**
@@ -600,8 +618,9 @@ public class SimulatedAnnealingMapper implements Mapper {
 
 	private void printCurrentMapping() {
 		for (int i = 0; i < coresNumber; i++) {
-			System.out.println("Core " + cores[i].getCoreId()
-					+ " is mapped to NoC node " + cores[i].getNodeId());
+			System.out.println("Core " + cores[i].getCoreId() + " (APCG "
+					+ cores[i].getApcgId() + ") is mapped to NoC node "
+					+ cores[i].getNodeId());
 		}
 	}
 
@@ -922,7 +941,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 		if (p1 != -1) {
 			Core process = cores[p1];
 			if (process == null) {
-				process = new Core(p1, t2);
+				process = new Core(p1, null, t2);
 			} else {
 				process.setNodeId(t2);
 			}
@@ -930,7 +949,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 		if (p2 != -1) {
 			Core process = cores[p2];
 			if (process == null) {
-				process = new Core(p2, t1);
+				process = new Core(p2, null, t1);
 			} else {
 				process.setNodeId(t1);
 			}
@@ -1551,12 +1570,13 @@ public class SimulatedAnnealingMapper implements Mapper {
 
 		MappingType mapping = new MappingType();
 		mapping.setId("sa");
-		// FIXME map multiple CTGs simultaneously using the new mapping XSD
-//		mapping.setApcg("0");
 		for (int i = 0; i < nodes.length; i++) {
 			MapType map = new MapType();
 			map.setNode(nodes[i].getId());
 			map.setCore(nodes[i].getCore());
+			if (!"-1".equals(nodes[i].getCore())) {
+				map.setApcg(cores[Integer.parseInt(nodes[i].getCore())].getApcgId());
+			}
 			mapping.getMap().add(map);
 		}
 		StringWriter stringWriter = new StringWriter();
@@ -1644,13 +1664,14 @@ public class SimulatedAnnealingMapper implements Mapper {
 		} else {
 			String e3sBenchmark = "auto-indust-mocsyn.tgff";
 			
-			String ctgXml = "ctg-0";
+			String ctgId = "0+1";
 			
-			String apcgXml = "apcg-0_1";
-
+			String apcgIndex = "1";
+			
 			String path = ".." + File.separator + "CTG-XML" + File.separator
-			+ "xml" + File.separator + "e3s" + File.separator
-			+ e3sBenchmark + File.separator + ctgXml + File.separator;
+					+ "xml" + File.separator + "e3s" + File.separator
+					+ e3sBenchmark + File.separator + "ctg-" + ctgId
+					+ File.separator;
 			
 			int linkBandwidth = 1000000;
 			float switchEBit = 0.284f;
@@ -1658,19 +1679,29 @@ public class SimulatedAnnealingMapper implements Mapper {
 			float bufReadEBit = 1.056f;
 			float bufWriteEBit = 2.831f;
 	
-			JAXBContext jaxbContext = JAXBContext
-					.newInstance("ro.ulbsibiu.acaps.ctg.xml.apcg");
-			Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
-			@SuppressWarnings("unchecked")
-			ApcgType apcg = ((JAXBElement<ApcgType>) unmarshaller
-					.unmarshal(new File(path + apcgXml + ".xml"))).getValue();
-			
-			jaxbContext = JAXBContext
-					.newInstance("ro.ulbsibiu.acaps.ctg.xml.ctg");
-			unmarshaller = jaxbContext.createUnmarshaller();
-			@SuppressWarnings("unchecked")
-			CtgType ctg = ((JAXBElement<CtgType>) unmarshaller
-					.unmarshal(new File(path + ctgXml + ".xml"))).getValue();
+			List<ApcgType> apcgs = new ArrayList<ApcgType>();
+			List<CtgType> ctgs = new ArrayList<CtgType>();
+			String[] ctgIds = ctgId.split("\\+");
+			for (int i = 0; i < ctgIds.length; i++) {
+				JAXBContext jaxbContext = JAXBContext
+						.newInstance("ro.ulbsibiu.acaps.ctg.xml.apcg");
+				Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
+				@SuppressWarnings("unchecked")
+				ApcgType apcg = ((JAXBElement<ApcgType>) unmarshaller
+						.unmarshal(new File(path + "apcg-" + ctgIds[i] + "_"
+								+ apcgIndex + ".xml"))).getValue();
+				apcgs.add(apcg);
+
+				jaxbContext = JAXBContext
+						.newInstance("ro.ulbsibiu.acaps.ctg.xml.ctg");
+				unmarshaller = jaxbContext.createUnmarshaller();
+				@SuppressWarnings("unchecked")
+				CtgType ctg = ((JAXBElement<CtgType>) unmarshaller
+						.unmarshal(new File(path + "ctg-" + ctgIds[i] + ".xml")))
+						.getValue();
+				ctgs.add(ctg);
+			}
+			logger.assertLog(apcgs.size() == ctgs.size(), "An equal number of CTGs and APCGs is expected!");
 
 			// working with a 4x4 2D mesh topology
 			File topologyDir = new File(".." + File.separator
@@ -1680,7 +1711,10 @@ public class SimulatedAnnealingMapper implements Mapper {
 					+ "topology" + File.separator + "mesh2D" + File.separator
 					+ "4x4-bidir");
 			SimulatedAnnealingMapper saMapper;
-			int cores = apcg.getCore().size();
+			int cores = 0;
+			for (int i = 0; i < apcgs.size(); i++) {
+				cores += apcgs.get(i).getCore().size();
+			}
 			logger.info("The APCG contains " + cores + " cores");
 			if ("true".equals(args[0])) {
 				// SA with routing
@@ -1698,8 +1732,10 @@ public class SimulatedAnnealingMapper implements Mapper {
 //					"telecom-mocsyn-16tile-selectedpe.traffic.config",
 //					linkBandwidth);
 			
-			// read the input data using the Unified Framework's XML interface
-			saMapper.parseApcg(apcg, ctg, linkBandwidth);
+			for (int i = 0; i < apcgs.size(); i++) {
+				// read the input data using the Unified Framework's XML interface
+				saMapper.parseApcg(apcgs.get(i), ctgs.get(i), linkBandwidth);
+			}
 			
 //			// This is just for checking that bbMapper.parseTrafficConfig(...)
 //			// and parseApcg(...) have the same effect
