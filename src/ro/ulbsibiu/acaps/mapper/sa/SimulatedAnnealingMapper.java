@@ -197,8 +197,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 	/** holds the generated routing table */
 	private int[][][][] saRoutingTable = null;
 
-	/** the ID of the NoC topology used by this algorithm */
-	private String topologyId;
+	/** the directory where the NoC topology is described */
+	private File topologyDir;
 	
 	private static enum TopologyParameter {
 		/** on what row of a 2D mesh the node is located */
@@ -317,8 +317,6 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 * No routing table is built.
 	 * </p>
 	 * 
-	 * @param topologyId
-	 *            the ID of the NoC topology used by this algorithm
 	 * @param topologyDir
 	 *            the topology directory is used to initialize the NoC topology
 	 *            for XML files. These files are split into two categories:
@@ -331,18 +329,16 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 * @param linkBandwidth
 	 *            the bandwidth of each network link
 	 */
-	public SimulatedAnnealingMapper(String topologyId, File topologyDir,
-			int coresNumber, int linkBandwidth, float switchEBit, float linkEBit)
+	public SimulatedAnnealingMapper(File topologyDir, int coresNumber,
+			int linkBandwidth, float switchEBit, float linkEBit)
 			throws JAXBException {
-		this(topologyId, topologyDir, coresNumber, linkBandwidth, false,
+		this(topologyDir, coresNumber, linkBandwidth, false,
 				LegalTurnSet.WEST_FIRST, 1.056f, 2.831f, switchEBit, linkEBit);
 	}
 
 	/**
 	 * Constructor
 	 * 
-	 * @param topologyId
-	 *            the ID of the NoC topology used by this algorithm
 	 * @param topologyDir
 	 *            the topology directory is used to initialize the NoC topology
 	 *            for XML files. These files are split into two categories:
@@ -369,11 +365,14 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 *            the energy consumed for sending one data bit
 	 * @throws JAXBException
 	 */
-	public SimulatedAnnealingMapper(String topologyId, File topologyDir,
-			int coresNumber, int linkBandwidth, boolean buildRoutingTable,
+	public SimulatedAnnealingMapper(File topologyDir, int coresNumber,
+			int linkBandwidth, boolean buildRoutingTable,
 			LegalTurnSet legalTurnSet, float bufReadEBit, float bufWriteEBit,
 			float switchEBit, float linkEBit) throws JAXBException {
-		this.topologyId = topologyId;
+		logger.assertLog(topologyDir != null, "Please specify the NoC topology directory!");
+		logger.assertLog(topologyDir.isDirectory(),
+				"The specified NoC topology directory does not exist or is not a directory!");
+		this.topologyDir = topologyDir;
 		this.coresNumber = coresNumber;
 		this.linkBandwidth = linkBandwidth;
 		this.buildRoutingTable = buildRoutingTable;
@@ -381,7 +380,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 		this.bufReadEBit = bufReadEBit;
 		this.bufWriteEBit = bufWriteEBit;
 
-		initializeNocTopology(topologyDir, switchEBit, linkEBit);
+		initializeNocTopology(switchEBit, linkEBit);
 		initializeCores();
 	}
 	
@@ -456,15 +455,13 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 * into the "nodes" subdirectory, and the links into the "links"
 	 * subdirectory.
 	 * 
-	 * @param topologyDir
-	 *            the topology directory
 	 * @param switchEBit
 	 *            the energy consumed for switching a bit of data
 	 * @param linkEBit
 	 *            the energy consumed for sending a data bit
 	 * @throws JAXBException 
 	 */
-	private void initializeNocTopology(File topologyDir, float switchEBit, float linkEBit) throws JAXBException {
+	private void initializeNocTopology(float switchEBit, float linkEBit) throws JAXBException {
 		// initialize nodes
 		File nodesDir = new File(topologyDir, "nodes");
 		logger.assertLog(nodesDir.isDirectory(), nodesDir.getName() + " is not a directory!");
@@ -1495,13 +1492,11 @@ public class SimulatedAnnealingMapper implements Mapper {
 				StringWriter stringWriter = new StringWriter();
 				JAXBElement<NodeType> node = nodeFactory.createNode(nodes[i]);
 				marshaller.marshal(node, stringWriter);	
-				PrintWriter pw = new PrintWriter("src"
-						+ File.separator
-						+ this.getClass().getPackage().getName()
-								.replace(".", File.separator) + File.separator
-						+ "output" + File.separator + topologyId
-						+ File.separator + "nodes" + File.separator + "node-"
-						+ i + ".xml");
+				File file = new File(topologyDir + File.separator + "sa"
+						+ File.separator + "nodes");
+				file.mkdirs();
+				PrintWriter pw = new PrintWriter(file + File.separator
+						+ "node-" + i + ".xml");
 				logger.info("Saving the XML for node " + i);
 				pw.write(stringWriter.toString());
 				pw.close();
@@ -1513,14 +1508,12 @@ public class SimulatedAnnealingMapper implements Mapper {
 			for (int i = 0; i < links.length; i++) {
 				StringWriter stringWriter = new StringWriter();
 				JAXBElement<LinkType> link = linkFactory.createLink(links[i]);
-				marshaller.marshal(link, stringWriter);	
-				PrintWriter pw = new PrintWriter("src"
-						+ File.separator
-						+ this.getClass().getPackage().getName()
-								.replace(".", File.separator) + File.separator
-						+ "output" + File.separator + topologyId
-						+ File.separator + "links" + File.separator + "link-"
-						+ i + ".xml");
+				marshaller.marshal(link, stringWriter);
+				File file = new File(topologyDir + File.separator + "sa"
+						+ File.separator + "links");
+				file.mkdirs();
+				PrintWriter pw = new PrintWriter(file + File.separator
+						+ "link-" + i + ".xml");
 				logger.info("Saving the XML for link " + i);
 				pw.write(stringWriter.toString());
 				pw.close();
@@ -1557,7 +1550,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 		saveTopology();
 
 		MappingType mapping = new MappingType();
-		mapping.setId("0");
+		mapping.setId("sa");
 		// FIXME map multiple CTGs simultaneously using the new mapping XSD
 //		mapping.setApcg("0");
 		for (int i = 0; i < nodes.length; i++) {
@@ -1655,32 +1648,19 @@ public class SimulatedAnnealingMapper implements Mapper {
 			
 			String apcgXml = "apcg-0_1";
 
-			String path = "../CTG-XML/xml" + File.separator + "e3s"
-					+ File.separator + e3sBenchmark + File.separator + ctgXml
-					+ File.separator;
+			String path = ".." + File.separator + "CTG-XML" + File.separator
+			+ "xml" + File.separator + "e3s" + File.separator
+			+ e3sBenchmark + File.separator + ctgXml + File.separator;
 			
-			// the mesh-2D.xml from NoC-XML
-			JAXBContext jaxbContext = JAXBContext
-					.newInstance("ro.ulbsibiu.acaps.noc.xml.topologyParameter");
-			Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
-			@SuppressWarnings("unchecked")
-			TopologyType topology = ((JAXBElement<TopologyType>) unmarshaller
-					.unmarshal(new File(".." + File.separator + "NoC-XML"
-							+ File.separator + "src" + File.separator + "ro"
-							+ File.separator + "ulbsibiu" + File.separator
-							+ "acaps" + File.separator + "noc" + File.separator
-							+ "topology" + File.separator + "mesh2D"
-							+ File.separator + "mesh-2D" + ".xml"))).getValue();
-			String topologyId = topology.getId();
 			int linkBandwidth = 1000000;
 			float switchEBit = 0.284f;
 			float linkEBit = 0.449f;
 			float bufReadEBit = 1.056f;
 			float bufWriteEBit = 2.831f;
 	
-			jaxbContext = JAXBContext
+			JAXBContext jaxbContext = JAXBContext
 					.newInstance("ro.ulbsibiu.acaps.ctg.xml.apcg");
-			unmarshaller = jaxbContext.createUnmarshaller();
+			Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
 			@SuppressWarnings("unchecked")
 			ApcgType apcg = ((JAXBElement<ApcgType>) unmarshaller
 					.unmarshal(new File(path + apcgXml + ".xml"))).getValue();
@@ -1704,14 +1684,13 @@ public class SimulatedAnnealingMapper implements Mapper {
 			logger.info("The APCG contains " + cores + " cores");
 			if ("true".equals(args[0])) {
 				// SA with routing
-				saMapper = new SimulatedAnnealingMapper(topologyId,
-						topologyDir, cores, linkBandwidth, true,
-						LegalTurnSet.ODD_EVEN, bufReadEBit, bufWriteEBit,
-						switchEBit, linkEBit);
+				saMapper = new SimulatedAnnealingMapper(topologyDir, cores,
+						linkBandwidth, true, LegalTurnSet.ODD_EVEN,
+						bufReadEBit, bufWriteEBit, switchEBit, linkEBit);
 			} else {
 				// SA without routing
-				saMapper = new SimulatedAnnealingMapper(topologyId,
-						topologyDir, cores, linkBandwidth, switchEBit, linkEBit);
+				saMapper = new SimulatedAnnealingMapper(topologyDir, cores,
+						linkBandwidth, switchEBit, linkEBit);
 			}
 
 //			// read the input data from a traffic.config file (NoCmap style)
@@ -1727,12 +1706,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 //			saMapper.printCores();
 	
 			String mappingXml = saMapper.map();
-			PrintWriter pw = new PrintWriter("src"
-					+ File.separator
-					+ SimulatedAnnealingMapper.class.getPackage().getName()
-							.replace(".", File.separator) + File.separator
-					+ "output" + File.separator + topologyId + File.separator
-					+ "mapping" + ".xml");
+			PrintWriter pw = new PrintWriter(path + "mapping-sa" + ".xml");
 			logger.info("Saving the mapping XML file");
 			pw.write(mappingXml);
 			pw.close();
