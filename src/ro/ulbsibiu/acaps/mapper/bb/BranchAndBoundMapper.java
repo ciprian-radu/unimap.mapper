@@ -1447,6 +1447,16 @@ public class BranchAndBoundMapper implements Mapper {
 			System.err
 					.println("(where routing may be true or false; any other value means false)");
 		} else {
+			String e3sBenchmark = "auto-indust-mocsyn.tgff";
+			
+			String ctgXml = "ctg-0";
+			
+			String apcgXml = "apcg-0_1";
+
+			String path = "../CTG-XML/xml" + File.separator + "e3s"
+					+ File.separator + e3sBenchmark + File.separator + ctgXml
+					+ File.separator;
+			
 			// the mesh-2D.xml from NoC-XML
 			JAXBContext jaxbContext = JAXBContext
 					.newInstance("ro.ulbsibiu.acaps.noc.xml.topologyParameter");
@@ -1472,26 +1482,14 @@ public class BranchAndBoundMapper implements Mapper {
 			unmarshaller = jaxbContext.createUnmarshaller();
 			@SuppressWarnings("unchecked")
 			ApcgType apcg = ((JAXBElement<ApcgType>) unmarshaller
-					.unmarshal(new File("src"
-							+ File.separator
-							+ BranchAndBoundMapper.class.getPackage()
-									.getName().replace(".", File.separator)
-							+ File.separator + "input" + File.separator
-							+ "auto-indust-mocsyn.tgff"
-							+ File.separator + "apcg-0-2" + ".xml"))).getValue();
+					.unmarshal(new File(path + apcgXml + ".xml"))).getValue();
 
 			jaxbContext = JAXBContext
 					.newInstance("ro.ulbsibiu.acaps.ctg.xml.ctg");
 			unmarshaller = jaxbContext.createUnmarshaller();
 			@SuppressWarnings("unchecked")
 			CtgType ctg = ((JAXBElement<CtgType>) unmarshaller
-					.unmarshal(new File("src"
-							+ File.separator
-							+ BranchAndBoundMapper.class.getPackage()
-									.getName().replace(".", File.separator)
-							+ File.separator + "input" + File.separator
-							+ "auto-indust-mocsyn.tgff"
-							+ File.separator + "ctg-0-2" + ".xml"))).getValue();
+					.unmarshal(new File(path + ctgXml + ".xml"))).getValue();
 
 			// working with a 4x4 2D mesh topology
 			File topologyDir = new File(".." + File.separator
