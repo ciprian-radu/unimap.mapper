@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<apcg id="30" ctg="3"
+<apcg id="3_0" ctg="3"
 	xmlns="http://webspace.ulbsibiu.ro/ciprian.radu/research/noc/application_mapping/unified_framework/schema/apcg">
 	<core id="31">
 		<task id="4" execTime="1.0E-5" power="2.5" />
