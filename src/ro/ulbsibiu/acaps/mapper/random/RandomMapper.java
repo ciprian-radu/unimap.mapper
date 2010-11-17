@@ -217,6 +217,9 @@ public class RandomMapper implements Mapper {
 	public static void main(String[] args) throws FileNotFoundException,
 			TooFewNocNodesException {
 		String e3sBenchmark = "auto-indust-mocsyn.tgff";
+		
+		String path = "../CTG-XML/xml" + File.separator + "e3s" + File.separator
+		+ e3sBenchmark + File.separator;
 
 		// apply mapping for folders ctg-0, ctg-1, ctg-2, ctg-3 (we use an 4x4 2D mesh NoC)
 		for (int i = 0; i < 2; i++) {
@@ -224,8 +227,6 @@ public class RandomMapper implements Mapper {
 				String ctgId = Integer.toString(j);
 				String apcgId = ctgId + "_"  + Integer.toString(i);
 				String mappingId = apcgId + "_0";
-				String path = "xml" + File.separator + "e3s" + File.separator
-						+ e3sBenchmark + File.separator;
 				List<String> nodeIds = new ArrayList<String>();
 				for (int k = 0; k < 16; k++) {
 					nodeIds.add(Integer.toString(k));
@@ -249,8 +250,6 @@ public class RandomMapper implements Mapper {
 		for (int i = 0; i < 2; i++) {
 			String apcgId = ctgId + "_" + Integer.toString(i);
 			String mappingId = apcgId + "_0";
-			String path = "xml" + File.separator + "e3s" + File.separator
-					+ e3sBenchmark + File.separator;
 			List<String> nodeIds = new ArrayList<String>();
 			for (int k = 0; k < 16; k++) {
 				nodeIds.add(Integer.toString(k));
