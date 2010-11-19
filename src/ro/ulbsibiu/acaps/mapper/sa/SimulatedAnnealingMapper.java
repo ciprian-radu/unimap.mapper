@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -31,6 +32,9 @@ import ro.ulbsibiu.acaps.ctg.xml.mapping.MapType;
 import ro.ulbsibiu.acaps.ctg.xml.mapping.MappingType;
 import ro.ulbsibiu.acaps.mapper.Mapper;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
+import ro.ulbsibiu.acaps.mapper.bb.BranchAndBoundMapper;
+import ro.ulbsibiu.acaps.mapper.bb.BranchAndBoundMapper.LegalTurnSet;
+import ro.ulbsibiu.acaps.mapper.util.ApcgFilenameFilter;
 import ro.ulbsibiu.acaps.mapper.util.MathUtils;
 import ro.ulbsibiu.acaps.noc.xml.link.LinkType;
 import ro.ulbsibiu.acaps.noc.xml.node.NodeType;
@@ -58,6 +62,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 */
 	private static final Logger logger = Logger
 			.getLogger(SimulatedAnnealingMapper.class);
+	
+	private static final String MAPPER_ID = "sa";
 
 	private static final int NORTH = 0;
 
@@ -214,7 +220,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 	
 	private static final String LINK_OUT = "out";
 	
-	private String getNodeTopologyParameter(NodeType node,
+	private static String getNodeTopologyParameter(NodeType node,
 			TopologyParameter parameter) {
 		String value = null;
 		List<TopologyParameterType> topologyParameters = node
@@ -387,6 +393,11 @@ public class SimulatedAnnealingMapper implements Mapper {
 		initializeCores();
 	}
 	
+	@Override
+	public String getMapperId() {
+		return MAPPER_ID;
+	}
+
 	private void initializeCores() {
 		cores = new Core[coresNumber];
 		for (int i = 0; i < cores.length; i++) {
@@ -415,7 +426,23 @@ public class SimulatedAnnealingMapper implements Mapper {
 		return communications;
 	}
 
-	public void parseApcg(ApcgType apcg, CtgType ctg, int linkBandwidth) {
+	/**
+	 * Reads the information from the (Application Characterization Graph) APCG
+	 * and its corresponding (Communication Task Graph) CTG. Additionally, it
+	 * informs the algorithm about the application's bandwidth requirement. The
+	 * bandwidth requirements of the application are expressed as a multiple of
+	 * the communication volume. For example, a value of 2 means that each two
+	 * communicating IP cores require a bandwidth twice their communication
+	 * volume.
+	 * 
+	 * @param apcg
+	 *            the APCG XML
+	 * @param ctg
+	 *            the CTG XML
+	 * @param applicationBandwithRequirement
+	 *            the bandwidth requirement of the application
+	 */
+	public void parseApcg(ApcgType apcg, CtgType ctg, int applicationBandwithRequirement) {
 		logger.assertLog(apcg != null, "The APCG cannot be null");
 		logger.assertLog(ctg != null, "The CTG cannot be null");
 		
@@ -428,38 +455,35 @@ public class SimulatedAnnealingMapper implements Mapper {
 			for (int j = 0; j < taskList.size(); j++) {
 				TaskType taskType = taskList.get(j);
 				String taskId = taskType.getId();
+				cores[previousCoreCount + Integer.valueOf(taskId)].setApcgId(apcg.getId());
 				List<CommunicationType> communications = getCommunications(ctg, taskId);
 				for (int k = 0; k < communications.size(); k++) {
 					CommunicationType communicationType = communications.get(k);
 					String sourceId = communicationType.getSource().getId();
-					if (sourceId.contains("_")) {
-						sourceId = sourceId.substring(ctg.getId().length() + 1);
-					}
+//					if (sourceId.contains("_")) {
+//						sourceId = sourceId.substring(ctg.getId().length() + 1);
+//					}
 					String destinationId = communicationType.getDestination().getId();
-					if (destinationId.contains("_")) {
-						destinationId = destinationId.substring(ctg.getId().length() + 1);
-					}
+//					if (destinationId.contains("_")) {
+//						destinationId = destinationId.substring(ctg.getId().length() + 1);
+//					}
 					cores[previousCoreCount + Integer.valueOf(sourceId)].setCoreId(Integer.valueOf(sourceId));
-					cores[previousCoreCount + Integer.valueOf(sourceId)].setApcgId(apcg.getId());
+//					cores[previousCoreCount + Integer.valueOf(sourceId)].setApcgId(apcg.getId());
 					cores[previousCoreCount + Integer.valueOf(destinationId)].setCoreId(Integer.valueOf(destinationId));
-					cores[previousCoreCount + Integer.valueOf(destinationId)].setApcgId(apcg.getId());
+//					cores[previousCoreCount + Integer.valueOf(destinationId)].setApcgId(apcg.getId());
 					
 					cores[previousCoreCount + Integer.valueOf(sourceId)]
-							.getToCommunication()[previousCoreCount
-							+ Integer.valueOf(destinationId)] = (int) communicationType
-							.getVolume();
-					cores[previousCoreCount + Integer.valueOf(sourceId)]
 							.getToBandwidthRequirement()[previousCoreCount
-							+ Integer.valueOf(destinationId)] = (int) (3 * (communicationType
-							.getVolume() / 1000000) * linkBandwidth);
+							+ Integer.valueOf(destinationId)] = (int) (applicationBandwithRequirement * communicationType
+							.getVolume());
 					cores[previousCoreCount + Integer.valueOf(destinationId)]
 							.getFromCommunication()[previousCoreCount
 							+ Integer.valueOf(sourceId)] = (int) communicationType
 							.getVolume();
 					cores[previousCoreCount + Integer.valueOf(destinationId)]
 							.getFromBandwidthRequirement()[previousCoreCount
-							+ Integer.valueOf(sourceId)] = (int) (3 * (communicationType
-							.getVolume() / 1000000) * linkBandwidth);
+							+ Integer.valueOf(sourceId)] = (int) (applicationBandwithRequirement * communicationType
+							.getVolume());
 				}
 			}
 			tasks += taskList.size();
@@ -616,6 +640,9 @@ public class SimulatedAnnealingMapper implements Mapper {
 		// }
 	}
 
+	/**
+	 * Prints the current mapping
+	 */
 	private void printCurrentMapping() {
 		for (int i = 0; i < coresNumber; i++) {
 			System.out.println("Core " + cores[i].getCoreId() + " (APCG "
@@ -1465,19 +1492,21 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 * components).
 	 */
 	public void analyzeIt() {
-	    System.out.print("Verify the communication load of each link...");
+	    logger.info("Verify the communication load of each link...");
 	    if (verifyBandwidthRequirement()) {
-	    	System.out.println("Succeed.");
+	    	logger.info("Succeed.");
 	    }
 	    else {
-	    	System.out.println("Fail.");
+	    	logger.info("Fail.");
 	    }
-	    System.out.println("Energy consumption estimation ");
-	    System.out.println("(note that this is not exact numbers, but serve as a relative energy indication) ");
-	    System.out.println("Energy consumed in link is " + calculateLinkEnergy());
-	    System.out.println("Energy consumed in switch is " + calculateSwitchEnergy());
-	    System.out.println("Energy consumed in buffer is " + calculateBufferEnergy());
-	    System.out.println("Total communication energy consumption is " + calculateCommunicationEnergy());
+	    if (logger.isDebugEnabled()) {
+		    logger.debug("Energy consumption estimation ");
+		    logger.debug("(note that this is not exact numbers, but serve as a relative energy indication) ");
+		    logger.debug("Energy consumed in link is " + calculateLinkEnergy());
+		    logger.debug("Energy consumed in switch is " + calculateSwitchEnergy());
+		    logger.debug("Energy consumed in buffer is " + calculateBufferEnergy());
+	    }
+	    logger.info("Total communication energy consumption is " + calculateCommunicationEnergy());
 	}
 	
 	private void saveRoutingTables() {
@@ -1506,6 +1535,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 			// save the nodes
 			JAXBContext jaxbContext = JAXBContext.newInstance(NodeType.class);
 			Marshaller marshaller = jaxbContext.createMarshaller();
+			marshaller.setProperty("jaxb.formatted.output", Boolean.TRUE);
 			ObjectFactory nodeFactory = new ObjectFactory();
 			for (int i = 0; i < nodes.length; i++) {
 				StringWriter stringWriter = new StringWriter();
@@ -1516,7 +1546,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 				file.mkdirs();
 				PrintWriter pw = new PrintWriter(file + File.separator
 						+ "node-" + i + ".xml");
-				logger.info("Saving the XML for node " + i);
+				logger.debug("Saving the XML for node " + i);
 				pw.write(stringWriter.toString());
 				pw.close();
 			}
@@ -1533,7 +1563,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 				file.mkdirs();
 				PrintWriter pw = new PrintWriter(file + File.separator
 						+ "link-" + i + ".xml");
-				logger.info("Saving the XML for link " + i);
+				logger.debug("Saving the XML for link " + i);
 				pw.write(stringWriter.toString());
 				pw.close();
 			}
@@ -1554,30 +1584,36 @@ public class SimulatedAnnealingMapper implements Mapper {
 
 		printCurrentMapping();
 
+		if (coresNumber == 1) {
+			logger.info("Branch and Bound will not start for mapping a single core. This core simply mapped randomly.");
+		} else {
+			logger.info("Start mapping...");
+
+			logger.assertLog((coresNumber == ((int) cores.length)), null);
+
+		}
 		long start = System.currentTimeMillis();
-		System.out.println("Start mapping...");
-
-		logger.assertLog((coresNumber == ((int) cores.length)), null);
-
-		anneal();
+		if (coresNumber > 1) {
+			anneal();
+		}
 		long end = System.currentTimeMillis();
-		System.out.println("Mapping process finished successfully.");
-		System.out.println("Time: " + (end - start) / 1000 + " seconds");
-
+		logger.info("Mapping process finished successfully.");
+		logger.info("Time: " + (end - start) / 1000 + " seconds");
+		
 		saveRoutingTables();
 		
 		saveTopology();
 
 		MappingType mapping = new MappingType();
-		mapping.setId("sa");
+		mapping.setId(MAPPER_ID);
 		for (int i = 0; i < nodes.length; i++) {
-			MapType map = new MapType();
-			map.setNode(nodes[i].getId());
-			map.setCore(nodes[i].getCore());
 			if (!"-1".equals(nodes[i].getCore())) {
+				MapType map = new MapType();
+				map.setNode(nodes[i].getId());
+				map.setCore(Integer.toString(cores[Integer.parseInt(nodes[i].getCore())].getCoreId()));
 				map.setApcg(cores[Integer.parseInt(nodes[i].getCore())].getApcgId());
+				mapping.getMap().add(map);
 			}
-			mapping.getMap().add(map);
 		}
 		StringWriter stringWriter = new StringWriter();
 		ro.ulbsibiu.acaps.ctg.xml.mapping.ObjectFactory mappingFactory = new ro.ulbsibiu.acaps.ctg.xml.mapping.ObjectFactory();
@@ -1585,6 +1621,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 		try {
 			JAXBContext jaxbContext = JAXBContext.newInstance(MappingType.class);
 			Marshaller marshaller = jaxbContext.createMarshaller();
+			marshaller.setProperty("jaxb.formatted.output", Boolean.TRUE);
 			marshaller.marshal(jaxbElement, stringWriter);
 		} catch (JAXBException e) {
 			logger.error("JAXB encountered an error", e);
@@ -1658,99 +1695,152 @@ public class SimulatedAnnealingMapper implements Mapper {
 
 	public static void main(String[] args) throws TooFewNocNodesException,
 			IOException, JAXBException {
+		int applicationBandwithRequirement = 3; // a multiple of the communication volume
+		int linkBandwidth = 1000000;
+		float switchEBit = 0.284f;
+		float linkEBit = 0.449f;
+		float bufReadEBit = 1.056f;
+		float bufWriteEBit = 2.831f;
+		
+		// working with a 4x4 2D mesh topology
+		File topologyDir = new File(".." + File.separator
+				+ "NoC-XML" + File.separator + "src" + File.separator
+				+ "ro" + File.separator + "ulbsibiu" + File.separator
+				+ "acaps" + File.separator + "noc" + File.separator
+				+ "topology" + File.separator + "mesh2D" + File.separator
+				+ "4x4-bidir");
+		
 		if (args == null || args.length < 1) {
-			System.err.println("usage: SimulatedAnnealingMapper {routing}");
-			System.err.println("(where routing may be true or false; any other value means false)");
+			System.err.println("usage:   java SimulatedAnnealingMapper.class [E3S benchmarks] {false|true}");
+			System.err.println("	     Note that false or true specifies if the algorithm should generate routes (routing may be true or false; any other value means false)");
+			System.err.println("example 1 (specify the tgff file): java SimulatedAnnealingMapper.class ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff ../CTG-XML/xml/e3s/telecom-mocsyn.tgff false");
+			System.err.println("example 2 (map the entire E3S benchmark suite): java SimulatedAnnealingMapper.class false");
 		} else {
-			String e3sBenchmark = "auto-indust-mocsyn.tgff";
-			
-			String ctgId = "0+1";
-			
-			String apcgIndex = "1";
-			
-			String path = ".." + File.separator + "CTG-XML" + File.separator
-					+ "xml" + File.separator + "e3s" + File.separator
-					+ e3sBenchmark + File.separator + "ctg-" + ctgId
-					+ File.separator;
-			
-			int linkBandwidth = 1000000;
-			float switchEBit = 0.284f;
-			float linkEBit = 0.449f;
-			float bufReadEBit = 1.056f;
-			float bufWriteEBit = 2.831f;
+			File[] tgffFiles = null;
+			if (args.length == 1) {
+				File e3sDir = new File(".." + File.separator + "CTG-XML"
+						+ File.separator + "xml" + File.separator + "e3s");
+				logger.assertLog(e3sDir.isDirectory(),
+						"Could not find the E3S benchmarks directory!");
+				tgffFiles = e3sDir.listFiles(new FilenameFilter() {
 	
-			List<ApcgType> apcgs = new ArrayList<ApcgType>();
-			List<CtgType> ctgs = new ArrayList<CtgType>();
-			String[] ctgIds = ctgId.split("\\+");
-			for (int i = 0; i < ctgIds.length; i++) {
-				JAXBContext jaxbContext = JAXBContext
-						.newInstance("ro.ulbsibiu.acaps.ctg.xml.apcg");
-				Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
-				@SuppressWarnings("unchecked")
-				ApcgType apcg = ((JAXBElement<ApcgType>) unmarshaller
-						.unmarshal(new File(path + "apcg-" + ctgIds[i] + "_"
-								+ apcgIndex + ".xml"))).getValue();
-				apcgs.add(apcg);
-
-				jaxbContext = JAXBContext
-						.newInstance("ro.ulbsibiu.acaps.ctg.xml.ctg");
-				unmarshaller = jaxbContext.createUnmarshaller();
-				@SuppressWarnings("unchecked")
-				CtgType ctg = ((JAXBElement<CtgType>) unmarshaller
-						.unmarshal(new File(path + "ctg-" + ctgIds[i] + ".xml")))
-						.getValue();
-				ctgs.add(ctg);
-			}
-			logger.assertLog(apcgs.size() == ctgs.size(), "An equal number of CTGs and APCGs is expected!");
-
-			// working with a 4x4 2D mesh topology
-			File topologyDir = new File(".." + File.separator
-					+ "NoC-XML" + File.separator + "src" + File.separator
-					+ "ro" + File.separator + "ulbsibiu" + File.separator
-					+ "acaps" + File.separator + "noc" + File.separator
-					+ "topology" + File.separator + "mesh2D" + File.separator
-					+ "4x4-bidir");
-			SimulatedAnnealingMapper saMapper;
-			int cores = 0;
-			for (int i = 0; i < apcgs.size(); i++) {
-				cores += apcgs.get(i).getCore().size();
-			}
-			logger.info("The APCG contains " + cores + " cores");
-			if ("true".equals(args[0])) {
-				// SA with routing
-				saMapper = new SimulatedAnnealingMapper(topologyDir, cores,
-						linkBandwidth, true, LegalTurnSet.ODD_EVEN,
-						bufReadEBit, bufWriteEBit, switchEBit, linkEBit);
+					@Override
+					public boolean accept(File dir, String name) {
+						return name.endsWith(".tgff");
+					}
+				});
 			} else {
-				// SA without routing
-				saMapper = new SimulatedAnnealingMapper(topologyDir, cores,
-						linkBandwidth, switchEBit, linkEBit);
+				tgffFiles = new File[args.length - 1];
+				for (int i = 0; i < args.length - 1; i++) {
+					tgffFiles[i] = new File(args[i]);
+				}
 			}
 
-//			// read the input data from a traffic.config file (NoCmap style)
-//			bbMapper.parseTrafficConfig(
-//					"telecom-mocsyn-16tile-selectedpe.traffic.config",
-//					linkBandwidth);
+			for (int i = 0; i < tgffFiles.length; i++) {
+				String path = ".." + File.separator + "CTG-XML" + File.separator
+						+ "xml" + File.separator + "e3s" + File.separator
+						+ tgffFiles[i].getName() + File.separator;
+				
+				File e3sBenchmark = new File(path);
+				String[] ctgs = e3sBenchmark.list(new FilenameFilter() {
+
+					@Override
+					public boolean accept(File dir, String name) {
+						return dir.isDirectory() && name.startsWith("ctg-");
+					}
+				});
+				
+				for (int j = 0; j < ctgs.length; j++) {
+					String ctgId = ctgs[j].substring("ctg-".length());
+					List<CtgType> ctgTypes = new ArrayList<CtgType>();
+					// if the ctg ID contains + => we need to map multiple CTGs in one mapping XML
+					String[] ctgIds = ctgId.split("\\+");
+					List<File> apcgsList = new ArrayList<File>();
+					for (int k = 0; k < ctgIds.length; k++) {
+						JAXBContext jaxbContext = JAXBContext
+								.newInstance("ro.ulbsibiu.acaps.ctg.xml.ctg");
+						Unmarshaller unmarshaller = jaxbContext
+								.createUnmarshaller();
+						@SuppressWarnings("unchecked")
+						CtgType ctgType = ((JAXBElement<CtgType>) unmarshaller
+								.unmarshal(new File(path + "ctg-" + ctgIds[k]
+										+ File.separator + "ctg-" + ctgIds[k]
+										+ ".xml"))).getValue();
+						ctgTypes.add(ctgType);
+						
+						File ctg = new File(path + "ctg-" + ctgIds[k]);
+						apcgsList.addAll(Arrays.asList(ctg.listFiles(new ApcgFilenameFilter(ctgIds[k]))));
+					}
+					File[] apcgFiles = apcgsList.toArray(new File[apcgsList.size()]);
+					for (int l = 0; l < apcgFiles.length / ctgIds.length; l++) {
+						String apcgId = ctgId + "_" + l;
+						List<ApcgType> apcgTypes = new ArrayList<ApcgType>();
+						for (int k = 0; k < apcgFiles.length; k++) {
+							if (apcgFiles[k].getName().endsWith(l + ".xml")) {
+								JAXBContext jaxbContext = JAXBContext
+										.newInstance("ro.ulbsibiu.acaps.ctg.xml.apcg");
+								Unmarshaller unmarshaller = jaxbContext
+										.createUnmarshaller();
+								@SuppressWarnings("unchecked")
+								ApcgType apcg = ((JAXBElement<ApcgType>) unmarshaller
+										.unmarshal(new File(apcgFiles[k]
+												.getAbsolutePath())))
+										.getValue();
+								apcgTypes.add(apcg);
+							}
+						}
+						logger.assertLog(apcgTypes.size() == ctgTypes.size(), 
+								"An equal number of CTGs and APCGs is expected!");
+						
+						logger.info("Using a Branch and Bound mapper for "
+								+ path + "ctg-" + ctgId + " (APCG " + apcgId + ")");
+						
+						SimulatedAnnealingMapper saMapper;
+						int cores = 0;
+						for (int k = 0; k < apcgTypes.size(); k++) {
+							cores += apcgTypes.get(k).getCore().size();
+						}
+						if ("true".equals(args[args.length - 1])) {
+							// SA with routing
+							saMapper = new SimulatedAnnealingMapper(topologyDir, cores,
+									linkBandwidth, true, LegalTurnSet.ODD_EVEN,
+									bufReadEBit, bufWriteEBit, switchEBit, linkEBit);
+						} else {
+							// SA without routing
+							saMapper = new SimulatedAnnealingMapper(topologyDir, cores,
+									linkBandwidth, switchEBit, linkEBit);
+						}
 			
-			for (int i = 0; i < apcgs.size(); i++) {
-				// read the input data using the Unified Framework's XML interface
-				saMapper.parseApcg(apcgs.get(i), ctgs.get(i), linkBandwidth);
+			//			// read the input data from a traffic.config file (NoCmap style)
+			//			saMapper(
+			//					"telecom-mocsyn-16tile-selectedpe.traffic.config",
+			//					linkBandwidth);
+						
+						for (int k = 0; k < apcgTypes.size(); k++) {
+							// read the input data using the Unified Framework's XML interface
+							saMapper.parseApcg(apcgTypes.get(k), ctgTypes.get(k), applicationBandwithRequirement);
+						}
+						
+			//			// This is just for checking that bbMapper.parseTrafficConfig(...)
+			//			// and parseApcg(...) have the same effect
+			//			bbMapper.printCores();
+			
+						String mappingXml = saMapper.map();
+						PrintWriter pw = new PrintWriter(path + "ctg-" + ctgId
+								+ File.separator + "mapping-" + apcgId + "_" + saMapper.getMapperId() + ".xml");
+						logger.info("Saving the mapping XML file");
+						pw.write(mappingXml);
+						pw.close();
+			
+						if (logger.isDebugEnabled()) {
+							saMapper.printCurrentMapping();
+						}
+						
+						saMapper.analyzeIt();
+					}
+				}
 			}
-			
-//			// This is just for checking that bbMapper.parseTrafficConfig(...)
-//			// and parseApcg(...) have the same effect
-//			saMapper.printCores();
-	
-			String mappingXml = saMapper.map();
-			PrintWriter pw = new PrintWriter(path + "mapping-sa" + ".xml");
-			logger.info("Saving the mapping XML file");
-			pw.write(mappingXml);
-			pw.close();
-	
-			saMapper.printCurrentMapping();
-			
-			saMapper.analyzeIt();
-			
+			logger.info("Done.");
 		}
 	}
 }

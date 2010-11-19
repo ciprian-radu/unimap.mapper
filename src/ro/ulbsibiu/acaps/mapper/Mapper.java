@@ -14,6 +14,14 @@ import ro.ulbsibiu.acaps.ctg.xml.mapping.MappingType;
 public interface Mapper {
 
 	/**
+	 * A {@link Mapper} is uniquely identified with a {@link String}. This
+	 * helps differentiating mapping XMLs produced with different mappers.
+	 * 
+	 * @return the unique identifier of this mapper
+	 */
+	public abstract String getMapperId();
+	
+	/**
 	 * Maps the cores from the APCG to the nodes from the NoC.
 	 * 
 	 * @see MappingType

@@ -2,9 +2,11 @@ package ro.ulbsibiu.acaps.mapper.random;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FilenameFilter;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +27,7 @@ import ro.ulbsibiu.acaps.ctg.xml.mapping.MappingType;
 import ro.ulbsibiu.acaps.ctg.xml.mapping.ObjectFactory;
 import ro.ulbsibiu.acaps.mapper.Mapper;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
+import ro.ulbsibiu.acaps.mapper.util.ApcgFilenameFilter;
 
 /**
  * This @link{Mapper} maps the cores to nodes in a random fashion. The cores are
@@ -68,6 +71,8 @@ public class RandomMapper implements Mapper {
 	 * Logger for this class
 	 */
 	private static final Logger logger = Logger.getLogger(RandomMapper.class);
+	
+	private static final String MAPPER_ID = "0";
 
 	/** the ID of the generated mapping XML */
 	private String id;
@@ -84,22 +89,22 @@ public class RandomMapper implements Mapper {
 	/**
 	 * Constructor
 	 * 
-	 * @param id (cannot be empty)
-	 *            the ID of the generated mapping XML
+	 * @param apcgId
+	 *            the ID of the APCG (cannot be empty)
 	 * @param apcgFilePaths
 	 *            the APCG XML file paths (cannot be empty)
 	 * @param nodeIds
 	 *            a list with the IDs of all of the NoC nodes (cannot be empty)
 	 */
-	public RandomMapper(String id, List<String> apcgFilePaths, List<String> nodeIds) {
-		logger.assertLog(id != null && id.length() > 0,
-				"No mapping XML ID specified");
+	public RandomMapper(String apcgId, List<String> apcgFilePaths, List<String> nodeIds) {
+		logger.assertLog(apcgId != null && apcgId.length() > 0,
+				"No APCG XML ID specified");
 		logger.assertLog(apcgFilePaths != null && apcgFilePaths.size() > 0,
 				"No APCG specified");
 		logger.assertLog(nodeIds != null && nodeIds.size() > 0,
 				"The list of NoC nodes is not specified");
 
-		this.id = id;
+		this.id = apcgId + "_" + getMapperId();
 		apcgFiles = new ArrayList<File>();
 		
 		for (int i = 0; i < apcgFilePaths.size(); i++) {
@@ -113,6 +118,11 @@ public class RandomMapper implements Mapper {
 		}
 
 		this.nodeIds = nodeIds;
+	}
+	
+	@Override
+	public String getMapperId() {
+		return MAPPER_ID;
 	}
 
 	/**
@@ -144,7 +154,7 @@ public class RandomMapper implements Mapper {
 			for (int i = 0; i < apcgCores.length; i++) {
 				int k = random.nextInt(tempNodeIds.size());
 				coresToNodes.put(apcgCores[i], tempNodeIds.get(k));
-				logger.info("Core " + apcgCores[i].getCoreId() + "(APCG "
+				logger.info("Core " + apcgCores[i].getCoreId() + " (APCG "
 						+ apcgCores[i].getApcgId() + ") is mapped to node "
 						+ tempNodeIds.get(k));
 				tempNodeIds.remove(k);
@@ -206,6 +216,7 @@ public class RandomMapper implements Mapper {
 
 		JAXBContext jaxbContext = JAXBContext.newInstance(MappingType.class);
 		Marshaller marshaller = jaxbContext.createMarshaller();
+		marshaller.setProperty("jaxb.formatted.output", Boolean.TRUE);
 		StringWriter stringWriter = new StringWriter();
 		JAXBElement<MappingType> mapping = mappingFactory
 				.createMapping(mappingType);
@@ -216,59 +227,83 @@ public class RandomMapper implements Mapper {
 
 	public static void main(String[] args) throws FileNotFoundException,
 			TooFewNocNodesException {
-		String e3sBenchmark = "auto-indust-mocsyn.tgff";
-		
-		String path = "../CTG-XML/xml" + File.separator + "e3s" + File.separator
-		+ e3sBenchmark + File.separator;
+		System.err.println("usage:   java RandomMapper.class [E3S benchmarks]");
+		System.err.println("example 1 (specify the tgff file): java RandomMapper.class ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff ../CTG-XML/xml/e3s/telecom-mocsyn.tgff");
+		System.err.println("example 2 (map the entire E3S benchmark suite): java RandomMapper.class");
+		File[] tgffFiles = null;
+		if (args == null || args.length == 0) {
+			File e3sDir = new File(".." + File.separator + "CTG-XML"
+					+ File.separator + "xml" + File.separator + "e3s");
+			logger.assertLog(e3sDir.isDirectory(),
+					"Could not find the E3S benchmarks directory!");
+			tgffFiles = e3sDir.listFiles(new FilenameFilter() {
 
-		// apply mapping for folders ctg-0, ctg-1, ctg-2, ctg-3 (we use an 4x4 2D mesh NoC)
-		for (int i = 0; i < 2; i++) {
-			for (int j = 0; j < 4; j++) {
-				String ctgId = Integer.toString(j);
-				String apcgId = ctgId + "_"  + Integer.toString(i);
-				String mappingId = apcgId + "_0";
-				List<String> nodeIds = new ArrayList<String>();
-				for (int k = 0; k < 16; k++) {
-					nodeIds.add(Integer.toString(k));
+				@Override
+				public boolean accept(File dir, String name) {
+					return name.endsWith(".tgff");
 				}
-				List<String> apcgFilePaths = new ArrayList<String>();
-				apcgFilePaths.add(path + "ctg-" + ctgId + File.separator
-						+ "apcg-" + apcgId + ".xml");
-				Mapper mapper = new RandomMapper(mappingId, apcgFilePaths,
-						nodeIds);
-				String mappingXml = mapper.map();
-				PrintWriter pw = new PrintWriter(path + "ctg-" + ctgId
-						+ File.separator + "mapping-" + mappingId + ".xml");
-				logger.info("Saving the mapping XML file");
-				pw.write(mappingXml);
-				pw.close();
+			});
+		} else {
+			tgffFiles = new File[args.length];
+			for (int i = 0; i < args.length; i++) {
+				tgffFiles[i] = new File(args[i]);
 			}
 		}
-		
-		// apply mapping for CTGs 0 and 1 - folder ctg-0+1 (we use a 4x4 2D mesh NoC)
-		String ctgId = "0+1";
-		for (int i = 0; i < 2; i++) {
-			String apcgId = ctgId + "_" + Integer.toString(i);
-			String mappingId = apcgId + "_0";
-			List<String> nodeIds = new ArrayList<String>();
-			for (int k = 0; k < 16; k++) {
-				nodeIds.add(Integer.toString(k));
+		for (int i = 0; i < tgffFiles.length; i++) {
+			String path = ".." + File.separator + "CTG-XML" + File.separator
+					+ "xml" + File.separator + "e3s" + File.separator
+					+ tgffFiles[i].getName() + File.separator;
+			File e3sBenchmark = new File(path);
+			String[] ctgs = e3sBenchmark.list(new FilenameFilter() {
+
+				@Override
+				public boolean accept(File dir, String name) {
+					return dir.isDirectory() && name.startsWith("ctg-");
+				}
+			});
+			for (int j = 0; j < ctgs.length; j++) {
+				String ctgId = ctgs[j].substring("ctg-".length());
+				// if the ctg ID contains + => we need to map multiple CTGs in one mapping XML
+				String[] ctgIds = ctgId.split("\\+");
+				List<File> apcgsList = new ArrayList<File>();
+				for (int k = 0; k < ctgIds.length; k++) {
+					File ctg = new File(path + "ctg-" + ctgIds[k]);
+					apcgsList.addAll(Arrays.asList(ctg.listFiles(new ApcgFilenameFilter(ctgIds[k]))));
+				}
+				File[] apcgFiles = apcgsList.toArray(new File[apcgsList.size()]);
+				for (int l = 0; l < apcgFiles.length / ctgIds.length; l++) {
+					String apcgId = ctgId + "_" + l;
+					List<String> apcgFilePaths = new ArrayList<String>();
+					for (int k = 0; k < apcgFiles.length; k++) {
+						if (apcgFiles[k].getName().endsWith(l + ".xml")) {
+							apcgFilePaths.add(apcgFiles[k].getAbsolutePath());
+						}
+					}
+
+					List<String> nodeIds = new ArrayList<String>();
+					for (int n = 0; n < 64; n++) {
+						nodeIds.add(Integer.toString(n));
+					}
+
+					logger.info("Using a random mapper for "
+							+ path + ctgId + " (APCG " + apcgId + ")");
+					
+					Mapper mapper = new RandomMapper(apcgId, apcgFilePaths,
+							nodeIds);
+					String mappingXml = mapper.map();
+					String mappingId = apcgId + "_" + mapper.getMapperId();
+					String xmlFileName = path + "ctg-" + ctgId + File.separator
+							+ "mapping-" + mappingId + ".xml";
+					PrintWriter pw = new PrintWriter(xmlFileName);
+					logger.info("Saving the mapping XML file " + xmlFileName);
+					pw.write(mappingXml);
+					pw.close();
+				}
 			}
-			List<String> apcgFilePaths = new ArrayList<String>();
-			String[] ctgIds = ctgId.split("\\+");
-			for (int j = 0; j < ctgIds.length; j++) {
-				apcgFilePaths.add(path + "ctg-" + ctgId + File.separator
-						+ "apcg-" + ctgIds[j] + "_" + Integer.toString(i)
-						+ ".xml");
-			}
-			Mapper mapper = new RandomMapper(mappingId, apcgFilePaths, nodeIds);
-			String mappingXml = mapper.map();
-			PrintWriter pw = new PrintWriter(path + "ctg-" + ctgId
-					+ File.separator + "mapping-" + mappingId + ".xml");
-			logger.info("Saving the mapping XML file");
-			pw.write(mappingXml);
-			pw.close();
+			logger.info("Finished with e3s" + File.separator
+					+ tgffFiles[i].getName());
 		}
+		logger.info("Done.");
 	}
 
 }
