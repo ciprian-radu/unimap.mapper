@@ -1582,7 +1582,9 @@ public class SimulatedAnnealingMapper implements Mapper {
 
 		mapCoresToNocNodesRandomly();
 
-		printCurrentMapping();
+		if (logger.isDebugEnabled()) {
+			printCurrentMapping();
+		}
 
 		if (coresNumber == 1) {
 			logger.info("Branch and Bound will not start for mapping a single core. This core simply mapped randomly.");
@@ -1826,15 +1828,18 @@ public class SimulatedAnnealingMapper implements Mapper {
 			//			bbMapper.printCores();
 			
 						String mappingXml = saMapper.map();
-						PrintWriter pw = new PrintWriter(path + "ctg-" + ctgId
-								+ File.separator + "mapping-" + apcgId + "_" + saMapper.getMapperId() + ".xml");
+						String mappingXmlFilePath = path + "ctg-" + ctgId
+								+ File.separator + "mapping-" + apcgId + "_"
+								+ saMapper.getMapperId() + ".xml";
+						PrintWriter pw = new PrintWriter(mappingXmlFilePath);
+						logger.info("Saving the mapping XML file"
+								+ mappingXmlFilePath);
 						logger.info("Saving the mapping XML file");
 						pw.write(mappingXml);
 						pw.close();
 			
-						if (logger.isDebugEnabled()) {
-							saMapper.printCurrentMapping();
-						}
+						logger.info("The generated mapping is:");
+						saMapper.printCurrentMapping();
 						
 						saMapper.analyzeIt();
 					}
