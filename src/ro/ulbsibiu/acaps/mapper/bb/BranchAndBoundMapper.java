@@ -1,7 +1,5 @@
 package ro.ulbsibiu.acaps.mapper.bb;
 
-import org.apache.log4j.Logger;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileFilter;
@@ -23,6 +21,8 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 
+import org.apache.log4j.Logger;
+
 import ro.ulbsibiu.acaps.ctg.xml.apcg.ApcgType;
 import ro.ulbsibiu.acaps.ctg.xml.apcg.CoreType;
 import ro.ulbsibiu.acaps.ctg.xml.apcg.TaskType;
@@ -41,7 +41,6 @@ import ro.ulbsibiu.acaps.noc.xml.node.NodeType;
 import ro.ulbsibiu.acaps.noc.xml.node.ObjectFactory;
 import ro.ulbsibiu.acaps.noc.xml.node.RoutingTableEntryType;
 import ro.ulbsibiu.acaps.noc.xml.node.TopologyParameterType;
-import ro.ulbsibiu.acaps.noc.xml.topologyParameter.TopologyType;
 
 /**
  * Branch-and-Bound algorithm for Network-on-Chip (NoC) application mapping. The
@@ -1153,7 +1152,9 @@ public class BranchAndBoundMapper implements Mapper {
 
 		mapCoresToNocNodesRandomly();
 
-		printCurrentMapping();
+		if (logger.isDebugEnabled()) {
+			printCurrentMapping();
+		}
 		
 		if (coresNumber == 1) {
 			logger.info("Branch and Bound will not start for mapping a single core. This core simply mapped randomly.");
@@ -1644,15 +1645,16 @@ public class BranchAndBoundMapper implements Mapper {
 			//			bbMapper.printCores();
 			
 						String mappingXml = bbMapper.map();
-						PrintWriter pw = new PrintWriter(path + "ctg-" + ctgId
-								+ File.separator + "mapping-" + apcgId + "_" + bbMapper.getMapperId() + ".xml");
-						logger.info("Saving the mapping XML file");
+						String mappingXmlFilePath = path + "ctg-" + ctgId
+								+ File.separator + "mapping-" + apcgId + "_"
+								+ bbMapper.getMapperId() + ".xml";
+						PrintWriter pw = new PrintWriter(mappingXmlFilePath);
+						logger.info("Saving the mapping XML file" + mappingXmlFilePath);
 						pw.write(mappingXml);
 						pw.close();
 			
-						if (logger.isDebugEnabled()) {
-							bbMapper.printCurrentMapping();
-						}
+						logger.info("The generated mapping is:");
+						bbMapper.printCurrentMapping();
 						
 						bbMapper.analyzeIt();
 					}
