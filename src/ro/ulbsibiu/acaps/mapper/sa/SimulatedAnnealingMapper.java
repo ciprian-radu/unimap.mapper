@@ -1710,7 +1710,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 				+ "ro" + File.separator + "ulbsibiu" + File.separator
 				+ "acaps" + File.separator + "noc" + File.separator
 				+ "topology" + File.separator + "mesh2D" + File.separator
-				+ "4x4-bidir");
+				+ "4x4");
 		
 		if (args == null || args.length < 1) {
 			System.err.println("usage:   java SimulatedAnnealingMapper.class [E3S benchmarks] {false|true}");
