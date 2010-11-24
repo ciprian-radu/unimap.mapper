@@ -483,9 +483,13 @@ public class BranchAndBoundMapper implements Mapper {
 //					if (destinationId.contains("_")) {
 //						destinationId = destinationId.substring(ctg.getId().length() + 1);
 //					}
-					cores[previousCoreCount + Integer.valueOf(sourceId)].setCoreId(Integer.valueOf(sourceId));
+					if (taskId.equals(sourceId)) {
+						cores[previousCoreCount + Integer.valueOf(sourceId)].setCoreId(Integer.valueOf(coreType.getUid()));
+					}
 //					cores[previousCoreCount + Integer.valueOf(sourceId)].setApcgId(apcg.getId());
-					cores[previousCoreCount + Integer.valueOf(destinationId)].setCoreId(Integer.valueOf(destinationId));
+					if (taskId.equals(destinationId)) {
+						cores[previousCoreCount + Integer.valueOf(destinationId)].setCoreId(Integer.valueOf(coreType.getUid()));
+					}
 //					cores[previousCoreCount + Integer.valueOf(destinationId)].setApcgId(apcg.getId());
 					
 					cores[previousCoreCount + Integer.valueOf(sourceId)]

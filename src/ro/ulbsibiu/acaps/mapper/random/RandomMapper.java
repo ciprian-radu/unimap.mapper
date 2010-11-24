@@ -187,7 +187,7 @@ public class RandomMapper implements Mapper {
 
 			for (int j = 0; j < cores.size(); j++) {
 				apcgCores.add(new ApcgCore(apcgXml.getValue().getId(), cores
-						.get(j).getId()));
+						.get(j).getUid()));
 			}
 		}
 
