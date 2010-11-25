@@ -477,6 +477,10 @@ public class SimulatedAnnealingMapper implements Mapper {
 //					cores[previousCoreCount + Integer.valueOf(destinationId)].setApcgId(apcg.getId());
 					
 					cores[previousCoreCount + Integer.valueOf(sourceId)]
+							.getToCommunication()[previousCoreCount
+							+ Integer.valueOf(destinationId)] = (int) communicationType
+							.getVolume();
+					cores[previousCoreCount + Integer.valueOf(sourceId)]
 							.getToBandwidthRequirement()[previousCoreCount
 							+ Integer.valueOf(destinationId)] = (int) (applicationBandwithRequirement * communicationType
 							.getVolume());
@@ -773,8 +777,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 			int node2 = nodes[1];
 			double newCost = calculateTotalCost();
 			double deltaCost = newCost - currentCost;
-			if (logger.isDebugEnabled()) {
-				logger.debug("deltaCost " + deltaCost + " newCost " + newCost
+			if (logger.isTraceEnabled()) {
+				logger.trace("deltaCost " + deltaCost + " newCost " + newCost
 						+ " currentCost " + currentCost);
 			}
 	        double deltac = deltaCost / currentCost;
@@ -897,8 +901,22 @@ public class SimulatedAnnealingMapper implements Mapper {
 				tol2 = -tol2;
 			}
 
+			logger.debug("tol3 < TOLERANCE ? "
+					+ MathUtils.definitelyLessThan((float) tol3, TOLERANCE)
+					+ " (tol3 " + tol3 + " TOLERANCE " + TOLERANCE +")");
+			logger.debug("tol2 < TOLERANCE ? "
+					+ MathUtils.definitelyLessThan((float) tol2, TOLERANCE)
+					+ " (tol2 " + tol2 + " TOLERANCE " + TOLERANCE + ")");
+			logger.debug("tempCount > TEMP ? " + (tempCount > TEMPS)
+					+ " (tempCount " + tempCount + " TEMPS " + TEMPS + ")");
+			logger.debug("acceptRatio < MINACCEPT ? "
+					+ MathUtils.definitelyLessThan((float) acceptRatio,
+							(float) MINACCEPT) + " (acceptRatio " + acceptRatio
+					+ " MINACCEPT " + MINACCEPT + ")");
+			logger.debug("needStop "+ needStop);
+			
 			if (MathUtils.definitelyLessThan((float) tol3, TOLERANCE)
-					&& MathUtils.definitelyLessThan((float) tol3, TOLERANCE)
+					&& MathUtils.definitelyLessThan((float) tol2, TOLERANCE)
 					&& tempCount > TEMPS
 					&& (MathUtils.definitelyLessThan((float) acceptRatio,
 							(float) MINACCEPT) || needStop)) {
