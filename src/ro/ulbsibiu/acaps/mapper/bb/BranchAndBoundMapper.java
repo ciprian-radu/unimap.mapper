@@ -1127,6 +1127,7 @@ public class BranchAndBoundMapper implements Mapper {
 			// save the links
 			jaxbContext = JAXBContext.newInstance(LinkType.class);
 			marshaller = jaxbContext.createMarshaller();
+			marshaller.setProperty("jaxb.formatted.output", Boolean.TRUE);
 			ro.ulbsibiu.acaps.noc.xml.link.ObjectFactory linkFactory = new ro.ulbsibiu.acaps.noc.xml.link.ObjectFactory();
 			for (int i = 0; i < links.length; i++) {
 				StringWriter stringWriter = new StringWriter();
