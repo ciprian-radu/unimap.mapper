@@ -1114,8 +1114,12 @@ public class BranchAndBoundMapper implements Mapper {
 			for (int i = 0; i < nodes.length; i++) {
 				StringWriter stringWriter = new StringWriter();
 				JAXBElement<NodeType> node = nodeFactory.createNode(nodes[i]);
-				marshaller.marshal(node, stringWriter);	
-				File file = new File(topologyDir + File.separator + "bb"
+				marshaller.marshal(node, stringWriter);
+				String routing = "";
+				if (buildRoutingTable) {
+					routing = "_routing";
+				}
+				File file = new File(topologyDir + File.separator + "bb" + routing
 						+ File.separator + "nodes");
 				file.mkdirs();
 				PrintWriter pw = new PrintWriter(file + File.separator
@@ -1133,7 +1137,11 @@ public class BranchAndBoundMapper implements Mapper {
 				StringWriter stringWriter = new StringWriter();
 				JAXBElement<LinkType> link = linkFactory.createLink(links[i]);
 				marshaller.marshal(link, stringWriter);
-				File file = new File(topologyDir + File.separator + "bb"
+				String routing = "";
+				if (buildRoutingTable) {
+					routing = "_routing";
+				}
+				File file = new File(topologyDir + File.separator + "bb" + routing
 						+ File.separator + "links");
 				file.mkdirs();
 				PrintWriter pw = new PrintWriter(file + File.separator
@@ -1712,9 +1720,13 @@ public class BranchAndBoundMapper implements Mapper {
 						String mappingXml = bbMapper.map();
 						File dir = new File(path + "ctg-" + ctgId);
 						dir.mkdirs();
+						String routing = "";
+						if ("true".equals(args[args.length - 1])) {
+							routing = "_routing";
+						}
 						String mappingXmlFilePath = path + "ctg-" + ctgId
 								+ File.separator + "mapping-" + apcgId + "_"
-								+ bbMapper.getMapperId() + ".xml";
+								+ bbMapper.getMapperId() + routing + ".xml";
 						PrintWriter pw = new PrintWriter(mappingXmlFilePath);
 						logger.info("Saving the mapping XML file" + mappingXmlFilePath);
 						pw.write(mappingXml);

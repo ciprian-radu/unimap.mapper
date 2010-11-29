@@ -1563,7 +1563,11 @@ public class SimulatedAnnealingMapper implements Mapper {
 				StringWriter stringWriter = new StringWriter();
 				JAXBElement<NodeType> node = nodeFactory.createNode(nodes[i]);
 				marshaller.marshal(node, stringWriter);	
-				File file = new File(topologyDir + File.separator + "sa"
+				String routing = "";
+				if (buildRoutingTable) {
+					routing = "_routing";
+				}
+				File file = new File(topologyDir + File.separator + "sa" + routing
 						+ File.separator + "nodes");
 				file.mkdirs();
 				PrintWriter pw = new PrintWriter(file + File.separator
@@ -1581,7 +1585,11 @@ public class SimulatedAnnealingMapper implements Mapper {
 				StringWriter stringWriter = new StringWriter();
 				JAXBElement<LinkType> link = linkFactory.createLink(links[i]);
 				marshaller.marshal(link, stringWriter);
-				File file = new File(topologyDir + File.separator + "sa"
+				String routing = "";
+				if (buildRoutingTable) {
+					routing = "_routing";
+				}
+				File file = new File(topologyDir + File.separator + "sa" + routing
 						+ File.separator + "links");
 				file.mkdirs();
 				PrintWriter pw = new PrintWriter(file + File.separator
@@ -1913,9 +1921,13 @@ public class SimulatedAnnealingMapper implements Mapper {
 						String mappingXml = saMapper.map();
 						File dir = new File(path + "ctg-" + ctgId);
 						dir.mkdirs();
+						String routing = "";
+						if ("true".equals(args[args.length - 1])) {
+							routing = "_routing";
+						}
 						String mappingXmlFilePath = path + "ctg-" + ctgId
 								+ File.separator + "mapping-" + apcgId + "_"
-								+ saMapper.getMapperId() + ".xml";
+								+ saMapper.getMapperId() + routing + ".xml";
 						PrintWriter pw = new PrintWriter(mappingXmlFilePath);
 						logger.info("Saving the mapping XML file"
 								+ mappingXmlFilePath);
