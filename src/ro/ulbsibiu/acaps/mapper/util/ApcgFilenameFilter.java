@@ -12,14 +12,25 @@ import java.io.FilenameFilter;
 public class ApcgFilenameFilter implements FilenameFilter {
 
 	private String ctgId;
+	
+	private String apcgId;
 
 	public ApcgFilenameFilter(String ctgId) {
+		this(ctgId, null);
+	}
+	
+	public ApcgFilenameFilter(String ctgId, String apcgId) {
 		this.ctgId = ctgId;
+		this.apcgId = apcgId;
 	}
 
 	@Override
 	public boolean accept(File dir, String name) {
-		return name.endsWith(".xml") && name.contains("apcg-" + ctgId);
+		String apcgName = "apcg-" + ctgId;
+		if (apcgId != null) {
+			apcgName += "_" + apcgId;
+		}
+		return name.endsWith(".xml") && name.contains(apcgName);
 	}
 
 }
