@@ -1183,6 +1183,7 @@ public class BranchAndBoundMapper implements Mapper {
 
 		MappingType mapping = new MappingType();
 		mapping.setId(MAPPER_ID);
+		mapping.setRuntime(new Double(end - start));
 		for (int i = 0; i < nodes.length; i++) {
 			if (!"-1".equals(nodes[i].getCore())) {
 				MapType map = new MapType();
