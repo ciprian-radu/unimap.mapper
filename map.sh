@@ -5,7 +5,10 @@
 #
 # Note that only APCGs with ID 2 (MinExecTimeScheduler) are used
 
-MAPPER="ro.ulbsibiu.acaps.mapper.sa.SimulatedAnnealingMapper ro.ulbsibiu.acaps.mapper.bb.BranchAndBoundMapper"
+if [ -z $MAPPER ]
+then
+	MAPPER="ro.ulbsibiu.acaps.mapper.sa.SimulatedAnnealingMapper ro.ulbsibiu.acaps.mapper.bb.BranchAndBoundMapper"
+fi
 
 ROUTING="false true"
 
