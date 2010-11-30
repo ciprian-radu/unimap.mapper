@@ -818,6 +818,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 		}
 
 		if (zeroTempCnt == 10) {
+			logger.info("The last 10 accepted mappings have zero cost. The algorithm will stop.");
 			needStop = true;
 		}
 
@@ -948,7 +949,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 			// select two nodes to swap
 			node2 = (int) uniformIntegerRandomVariable(0, nodesNumber - 1);
 			if (node1 != node2
-					&& (nodes[node1] != null || nodes[node2] != null)) {
+					&& (!"-1".equals(nodes[node1].getCore()) || !"-1"
+							.equals(nodes[node2].getCore()))) {
 				break;
 			}
 		}
