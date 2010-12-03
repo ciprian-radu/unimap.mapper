@@ -91,7 +91,7 @@ public class BranchAndBoundMapper implements Mapper {
 	int coresNumber;
 
 	/** counts how many cores were parsed from the parsed APCGs */
-	int previousCoreCount = 0;
+	private int previousCoreCount = 0;
 	
 	/**
 	 * the number of links from the NoC
@@ -1183,7 +1183,7 @@ public class BranchAndBoundMapper implements Mapper {
 		}
 		long end = System.currentTimeMillis();
 		logger.info("Mapping process finished successfully.");
-		logger.info("Time: " + (end - start) / 1000 + " seconds");
+		logger.info("Time: " + (end - start) / 1000.0 + " seconds");
 
 		saveRoutingTables();
 		

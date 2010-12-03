@@ -1,4 +1,4 @@
-package ro.ulbsibiu.acaps.mapper.sa;
+package ro.ulbsibiu.acaps.mapper.sa.test;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -34,6 +34,7 @@ import ro.ulbsibiu.acaps.mapper.Mapper;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
 import ro.ulbsibiu.acaps.mapper.bb.BranchAndBoundMapper;
 import ro.ulbsibiu.acaps.mapper.bb.BranchAndBoundMapper.LegalTurnSet;
+import ro.ulbsibiu.acaps.mapper.sa.Core;
 import ro.ulbsibiu.acaps.mapper.util.ApcgFilenameFilter;
 import ro.ulbsibiu.acaps.mapper.util.MathUtils;
 import ro.ulbsibiu.acaps.noc.xml.link.LinkType;
@@ -55,15 +56,15 @@ import ro.ulbsibiu.acaps.noc.xml.topologyParameter.TopologyType;
  * @author cipi
  * 
  */
-public class SimulatedAnnealingMapper implements Mapper {
+public class SimulatedAnnealingTestMapper implements Mapper {
 	
 	/**
 	 * Logger for this class
 	 */
 	private static final Logger logger = Logger
-			.getLogger(SimulatedAnnealingMapper.class);
+			.getLogger(SimulatedAnnealingTestMapper.class);
 	
-	private static final String MAPPER_ID = "sa";
+	private static final String MAPPER_ID = "sa_test";
 
 	private static final int NORTH = 0;
 
@@ -140,7 +141,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 	private int coresNumber;
 	
 	/** counts how many cores were parsed from the parsed APCGs */
-	private int previousCoreCount = 0;
+	int previousCoreCount = 0;
 
 	/**
 	 * the number of links from the NoC
@@ -338,7 +339,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 * @param linkBandwidth
 	 *            the bandwidth of each network link
 	 */
-	public SimulatedAnnealingMapper(File topologyDir, int coresNumber,
+	public SimulatedAnnealingTestMapper(File topologyDir, int coresNumber,
 			double linkBandwidth, float switchEBit, float linkEBit)
 			throws JAXBException {
 		this(topologyDir, coresNumber, linkBandwidth, false,
@@ -374,7 +375,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 *            the energy consumed for sending one data bit
 	 * @throws JAXBException
 	 */
-	public SimulatedAnnealingMapper(File topologyDir, int coresNumber,
+	public SimulatedAnnealingTestMapper(File topologyDir, int coresNumber,
 			double linkBandwidth, boolean buildRoutingTable,
 			LegalTurnSet legalTurnSet, float bufReadEBit, float bufWriteEBit,
 			float switchEBit, float linkEBit) throws JAXBException {
@@ -760,83 +761,113 @@ public class SimulatedAnnealingMapper implements Mapper {
 		int acceptCount = 0;
 		double totalDeltaCost = 0;
 
+		attempts = nodesNumber * (nodesNumber - 1) / 2 - (nodesNumber - coresNumber - 1) * (nodesNumber - coresNumber) / 2;
+		
 		int unit = attempts / 10;
 
 		// clear the zeroCostAcceptance
 		zeroCostAcceptance = 0;
 
-		// this is the main loop doing moves. We do 'attempts' moves in all,
-		// then quit at this temperature
-
 		if (logger.isTraceEnabled()) {
 			logger.trace("attempts = " + attempts);
 		}
+		
 //		List<String[]> uniqueMappings = new ArrayList<String[]>(); 
 //		List<Integer> uniqueMappingsFrequencies = new ArrayList<Integer>();
-		for (int m = 1; m < attempts; m++) {
-			int[] swappedNodes = makeRandomSwap();
-			
-//			// computes the unique mappings (start)
-//			boolean isNewMapping = true;
-//			for (int i = 0; i < uniqueMappings.size(); i++) {
-//				boolean found = true;
-//				logger.assertLog(this.nodes.length == uniqueMappings.get(i).length, null);
-//				for (int j = 0; j < uniqueMappings.get(i).length; j++) {
-//					if (!uniqueMappings.get(i)[j].equals(this.nodes[j].getCore())) {
-//						found = false;
-//						break;
-//					}
-//				}
-//				if (found) {
-//					isNewMapping = false;
-//					uniqueMappingsFrequencies.set(i, uniqueMappingsFrequencies.get(i) + 1);
-//				}
-//			}
-//			if (isNewMapping) {
-//				String[] map = new String[this.nodes.length];
-//				for (int i = 0; i < this.nodes.length; i++) {
-//					map[i] = this.nodes[i].getCore();
-//				}
-//				uniqueMappings.add(map);
-//				uniqueMappingsFrequencies.add(1);
-//			}
-//			// computes the unique mappings (end)
-			
-			int node1 = swappedNodes[0];
-			int node2 = swappedNodes[1];
-			double newCost = calculateTotalCost();
-			double deltaCost = newCost - currentCost;
-			if (logger.isTraceEnabled()) {
-				logger.trace("deltaCost " + deltaCost + " newCost " + newCost
-						+ " currentCost " + currentCost);
-			}
-	        double deltac = deltaCost / currentCost;
-			// Note that we use machine epsilon to perform the following
-			// comparison between the float numbers
-	        if (MathUtils.approximatelyEqual((float)deltac, 0)) {
-	            deltac = 0;
-	        } else {
-	            deltac = deltac * 100;
-	        }
-			if (accept(deltac, t)) {
-				if (logger.isTraceEnabled()) {
-					logger.trace("Accepting...");
+		
+		int neighbors = 0;
+		float bestCost = Float.MAX_VALUE;
+		String[] bestNeighbor = new String[nodes.length];
+		boolean foundBestNeighbor = false;
+		for (int i = 0; i < nodes.length; i++) {
+			if (!"-1".equals(nodes[i].getCore())) {
+				int currentCore = Integer.valueOf(nodes[i].getCore());
+				for (int j = 0; j < nodes.length; j++) {
+					if (Integer.valueOf(nodes[j].getCore()) > currentCore || "-1".equals(nodes[j].getCore())) {
+						swapProcesses(i, j);
+						
+//						// computes the unique mappings (start)
+//						boolean isNewMapping = true;
+//						for (int k = 0; k < uniqueMappings.size(); k++) {
+//							boolean found = true;
+//							logger.assertLog(this.nodes.length == uniqueMappings.get(k).length, null);
+//							for (int l = 0; l < uniqueMappings.get(k).length; l++) {
+//								if (!uniqueMappings.get(k)[l].equals(this.nodes[l].getCore())) {
+//									found = false;
+//									break;
+//								}
+//							}
+//							if (found) {
+//								isNewMapping = false;
+//								uniqueMappingsFrequencies.set(k, uniqueMappingsFrequencies.get(k) + 1);
+//							}
+//						}
+//						if (isNewMapping) {
+//							String[] map = new String[this.nodes.length];
+//							for (int k = 0; k < this.nodes.length; k++) {
+//								map[k] = this.nodes[k].getCore();
+//							}
+//							uniqueMappings.add(map);
+//							uniqueMappingsFrequencies.add(1);
+//						}
+//						// computes the unique mappings (end)
+						
+						neighbors++;
+						float newCost = calculateTotalCost();
+						double deltaCost = newCost - currentCost;
+						if (logger.isTraceEnabled()) {
+							logger.trace("deltaCost " + deltaCost + " newCost " + newCost
+									+ " currentCost " + currentCost);
+						}
+				        double deltac = deltaCost / currentCost;
+						// Note that we use machine epsilon to perform the following
+						// comparison between the float numbers
+				        if (MathUtils.approximatelyEqual((float)deltac, 0)) {
+				            deltac = 0;
+				        } else {
+				            deltac = deltac * 100;
+				        }
+						if (accept(deltac, t)) {
+							if (logger.isTraceEnabled()) {
+								logger.trace("Accepting...");
+							}
+							acceptCount++;
+							totalDeltaCost += deltaCost;
+							if (MathUtils.definitelyLessThan(newCost, bestCost)) {
+								bestCost = newCost;
+								for (int k = 0; k < nodes.length; k++) {
+									bestNeighbor[k] = nodes[k].getCore();
+								}
+								foundBestNeighbor = true;
+							}
+						}
+						if (neighbors % unit == 0) {
+							// This is just to print out the process of the algorithm
+							System.out.print("#");
+						}
+						if (logger.isTraceEnabled()) {
+							logger.trace("Rolling back nodes " + j + " and " + i);
+						}
+						swapProcesses(j, i); // roll back
+					}
 				}
-				acceptCount++;
-				totalDeltaCost += deltaCost;
-				currentCost = newCost;
-			} else {
-				if (logger.isTraceEnabled()) {
-					logger.trace("Rolling back nodes " + node1 + " and " + node2);
-				}
-				swapProcesses(node1, node2); // roll back
-			}
-			if (m % unit == 0) {
-				// This is just to print out the process of the algorithm
-				System.out.print("#");
 			}
 		}
 		System.out.println();
+		
+		logger.assertLog(attempts == neighbors, "The number of visited neighbors is " + neighbors + " instead of " + attempts);
+		if (!foundBestNeighbor) {
+			logger.info("No neighbor is better than the current solution. The algorithm will stop.");
+			needStop = true;
+		} else {
+			currentCost = bestCost;
+			for (int k = 0; k < bestNeighbor.length; k++) {
+				logger.assertLog(bestNeighbor[k] != null, "Found null instead of core number on node " + k + " of the best neighbor");
+				nodes[k].setCore(bestNeighbor[k]);
+			}
+			logger.debug("The best neighbor found has cost " + bestCost + ". Its mapping is");
+			printCurrentMapping();
+		}
 		
 //		// prints the unique mappings
 //		System.out.println("Found " + uniqueMappings.size() + " unique mappings (from a total of " + attempts + " mappings)");
@@ -865,8 +896,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 		}
 
 		return totalDeltaCost;
-	}
-
+	}	
+	
 	private void anneal() {
 		double cost3, cost2;
 		boolean done;
@@ -1781,10 +1812,10 @@ public class SimulatedAnnealingMapper implements Mapper {
 		float bufWriteEBit = 2.831f;
 		
 		if (args == null || args.length < 1) {
-			System.err.println("usage:   java SimulatedAnnealingMapper.class [E3S benchmarks] {false|true}");
+			System.err.println("usage:   java SimulatedAnnealingTestMapper.class [E3S benchmarks] {false|true}");
 			System.err.println("	     Note that false or true specifies if the algorithm should generate routes (routing may be true or false; any other value means false)");
-			System.err.println("example 1 (specify the tgff file): java SimulatedAnnealingMapper.class ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff ../CTG-XML/xml/e3s/telecom-mocsyn.tgff false");
-			System.err.println("example 2 (map the entire E3S benchmark suite): java SimulatedAnnealingMapper.class false");
+			System.err.println("example 1 (specify the tgff file): java SimulatedAnnealingTestMapper.class ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff ../CTG-XML/xml/e3s/telecom-mocsyn.tgff false");
+			System.err.println("example 2 (map the entire E3S benchmark suite): java SimulatedAnnealingTestMapper.class false");
 		} else {
 			File[] tgffFiles = null;
 			String specifiedCtgId = null;
@@ -1920,7 +1951,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 						logger.info("Using a Simulated annealing mapper for "
 								+ path + "ctg-" + ctgId + " (APCG " + apcgId + ")");
 						
-						SimulatedAnnealingMapper saMapper;
+						SimulatedAnnealingTestMapper saMapper;
 						int cores = 0;
 						for (int k = 0; k < apcgTypes.size(); k++) {
 							cores += apcgTypes.get(k).getCore().size();
@@ -1939,12 +1970,12 @@ public class SimulatedAnnealingMapper implements Mapper {
 								+ meshSize;
 						if ("true".equals(args[args.length - 1])) {
 							// SA with routing
-							saMapper = new SimulatedAnnealingMapper(new File(topologyDir), cores,
+							saMapper = new SimulatedAnnealingTestMapper(new File(topologyDir), cores,
 									linkBandwidth, true, LegalTurnSet.ODD_EVEN,
 									bufReadEBit, bufWriteEBit, switchEBit, linkEBit);
 						} else {
 							// SA without routing
-							saMapper = new SimulatedAnnealingMapper(new File(topologyDir), cores,
+							saMapper = new SimulatedAnnealingTestMapper(new File(topologyDir), cores,
 									linkBandwidth, switchEBit, linkEBit);
 						}
 			
