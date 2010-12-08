@@ -12,6 +12,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Random;
 
@@ -31,11 +32,13 @@ import ro.ulbsibiu.acaps.ctg.xml.ctg.CtgType;
 import ro.ulbsibiu.acaps.ctg.xml.mapping.MapType;
 import ro.ulbsibiu.acaps.ctg.xml.mapping.MappingType;
 import ro.ulbsibiu.acaps.mapper.Mapper;
+import ro.ulbsibiu.acaps.mapper.MapperDatabase;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
 import ro.ulbsibiu.acaps.mapper.bb.BranchAndBoundMapper;
 import ro.ulbsibiu.acaps.mapper.bb.BranchAndBoundMapper.LegalTurnSet;
 import ro.ulbsibiu.acaps.mapper.util.ApcgFilenameFilter;
 import ro.ulbsibiu.acaps.mapper.util.MathUtils;
+import ro.ulbsibiu.acaps.mapper.util.TimeUtils;
 import ro.ulbsibiu.acaps.noc.xml.link.LinkType;
 import ro.ulbsibiu.acaps.noc.xml.node.NodeType;
 import ro.ulbsibiu.acaps.noc.xml.node.ObjectFactory;
@@ -206,8 +209,23 @@ public class SimulatedAnnealingMapper implements Mapper {
 	/** holds the generated routing table */
 	private int[][][][] saRoutingTable = null;
 
+	/** the benchmark's name */
+	private String benchmarkName;
+	
+	/** the CTG ID */
+	private String ctgId;
+	
+	/** the ACPG ID */
+	private String apcgId;
+	
 	/** the directory where the NoC topology is described */
 	private File topologyDir;
+	
+	/** the topology name */
+	private String topologyName;
+	
+	/** the topology size */
+	private String topologySize;
 	
 	private static enum TopologyParameter {
 		/** on what row of a 2D mesh the node is located */
@@ -326,6 +344,14 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 * No routing table is built.
 	 * </p>
 	 * 
+	 * @param benchmarkName
+	 *            the benchmark's name
+	 * @param ctgId
+	 *            the CTG ID
+	 * @param topologyName
+	 *            the topology name
+	 * @param topologySize
+	 *            the topology size
 	 * @param topologyDir
 	 *            the topology directory is used to initialize the NoC topology
 	 *            for XML files. These files are split into two categories:
@@ -338,16 +364,28 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 * @param linkBandwidth
 	 *            the bandwidth of each network link
 	 */
-	public SimulatedAnnealingMapper(File topologyDir, int coresNumber,
-			double linkBandwidth, float switchEBit, float linkEBit)
-			throws JAXBException {
-		this(topologyDir, coresNumber, linkBandwidth, false,
+	public SimulatedAnnealingMapper(String benchmarkName, String ctgId,
+			String apcgId, String topologyName, String topologySize,
+			File topologyDir, int coresNumber, double linkBandwidth,
+			float switchEBit, float linkEBit) throws JAXBException {
+		this(benchmarkName, ctgId, apcgId, topologyName, topologySize,
+				topologyDir, coresNumber, linkBandwidth, false,
 				LegalTurnSet.WEST_FIRST, 1.056f, 2.831f, switchEBit, linkEBit);
 	}
 
 	/**
 	 * Constructor
 	 * 
+	 * @param benchmarkName
+	 *            the benchmark's name
+	 * @param ctgId
+	 *            the CTG ID
+	 * @param apcgId
+	 *            the APCG ID
+	 * @param topologyName
+	 *            the topology name
+	 * @param topologySize
+	 *            the topology size
 	 * @param topologyDir
 	 *            the topology directory is used to initialize the NoC topology
 	 *            for XML files. These files are split into two categories:
@@ -374,13 +412,19 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 *            the energy consumed for sending one data bit
 	 * @throws JAXBException
 	 */
-	public SimulatedAnnealingMapper(File topologyDir, int coresNumber,
+	public SimulatedAnnealingMapper(String benchmarkName, String ctgId, String apcgId,
+			String topologyName, String topologySize, File topologyDir, int coresNumber,
 			double linkBandwidth, boolean buildRoutingTable,
 			LegalTurnSet legalTurnSet, float bufReadEBit, float bufWriteEBit,
 			float switchEBit, float linkEBit) throws JAXBException {
 		logger.assertLog(topologyDir != null, "Please specify the NoC topology directory!");
 		logger.assertLog(topologyDir.isDirectory(),
 				"The specified NoC topology directory does not exist or is not a directory!");
+		this.benchmarkName = benchmarkName;
+		this.ctgId = ctgId;
+		this.apcgId = apcgId;
+		this.topologyName = topologyName;
+		this.topologySize = topologySize;
 		this.topologyDir = topologyDir;
 		this.coresNumber = coresNumber;
 		this.linkBandwidth = linkBandwidth;
@@ -1559,11 +1603,14 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 */
 	public void analyzeIt() {
 	    logger.info("Verify the communication load of each link...");
+	    String bandwidthRequirements;
 	    if (verifyBandwidthRequirement()) {
-	    	logger.info("Succeed.");
+	    	logger.info("Succes");
+	    	bandwidthRequirements = "Succes";
 	    }
 	    else {
-	    	logger.info("Fail.");
+	    	logger.info("Fail");
+	    	bandwidthRequirements = "Fail";
 	    }
 	    if (logger.isDebugEnabled()) {
 		    logger.debug("Energy consumption estimation ");
@@ -1572,7 +1619,12 @@ public class SimulatedAnnealingMapper implements Mapper {
 		    logger.debug("Energy consumed in switch is " + calculateSwitchEnergy());
 		    logger.debug("Energy consumed in buffer is " + calculateBufferEnergy());
 	    }
-	    logger.info("Total communication energy consumption is " + calculateCommunicationEnergy());
+	    float energy = calculateCommunicationEnergy();
+	    logger.info("Total communication energy consumption is " + energy);
+	    
+		MapperDatabase.getInstance().setOutputs(
+				new String[] { "bandwidthRequirements", "energy" },
+				new String[] { bandwidthRequirements, Float.toString(energy) });
 	}
 	
 	private void saveRoutingTables() {
@@ -1669,13 +1721,24 @@ public class SimulatedAnnealingMapper implements Mapper {
 			logger.assertLog((coresNumber == ((int) cores.length)), null);
 
 		}
-		long start = System.currentTimeMillis();
+		Date startDate = new Date();
+		long memoryStart = Runtime.getRuntime().totalMemory()
+				- Runtime.getRuntime().freeMemory();
+		long userStart = TimeUtils.getUserTime();
+		long sysStart = TimeUtils.getSystemTime();
+		long realStart = System.nanoTime();
 		if (coresNumber > 1) {
 			anneal();
 		}
-		long end = System.currentTimeMillis();
+		long userEnd = TimeUtils.getUserTime();
+		long sysEnd = TimeUtils.getSystemTime();
+		long realEnd = System.nanoTime();
+		long memoryEnd = Runtime.getRuntime().totalMemory()
+				- Runtime.getRuntime().freeMemory();
 		logger.info("Mapping process finished successfully.");
-		logger.info("Time: " + (end - start) / 1000.0 + " seconds");
+		logger.info("Time: " + (realEnd - realStart) / 1e9 + " seconds");
+		logger.info("Memory: " + (memoryEnd - memoryStart)
+				/ (1024 * 1024 * 1.0) + " MB");
 		
 		saveRoutingTables();
 		
@@ -1683,7 +1746,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 
 		MappingType mapping = new MappingType();
 		mapping.setId(MAPPER_ID);
-		mapping.setRuntime(new Double(end - start));
+		mapping.setRuntime(new Double(realEnd - realStart));
 		for (int i = 0; i < nodes.length; i++) {
 			if (!"-1".equals(nodes[i].getCore())) {
 				MapType map = new MapType();
@@ -1704,6 +1767,14 @@ public class SimulatedAnnealingMapper implements Mapper {
 		} catch (JAXBException e) {
 			logger.error("JAXB encountered an error", e);
 		}
+		
+		int benchmarkId = MapperDatabase.getInstance().getBenchmarkId(benchmarkName, ctgId);
+		int nocTopologyId = MapperDatabase.getInstance().getNocTopologyId(topologyName, topologySize);
+		MapperDatabase.getInstance().saveMapping(getMapperId(),
+				"Branch and Bound", benchmarkId, apcgId, nocTopologyId,
+				stringWriter.toString(), startDate,
+				(realEnd - realStart) / 1e9, (userEnd - userStart) / 1e9,
+				(sysEnd - sysStart) / 1e9, memoryEnd - memoryStart);
 
 		return stringWriter.toString();
 	}
@@ -1930,22 +2001,51 @@ public class SimulatedAnnealingMapper implements Mapper {
 						String meshSize = hSize + "x" + hSize;
 						logger.info("The algorithm has " + cores + " cores to map => working with a 2D mesh of size " + meshSize);
 						// working with a 2D mesh topology
+						String topologyName = "mesh2D";
 						String topologyDir = ".." + File.separator + "NoC-XML"
 								+ File.separator + "src" + File.separator
 								+ "ro" + File.separator + "ulbsibiu"
 								+ File.separator + "acaps" + File.separator
 								+ "noc" + File.separator + "topology"
-								+ File.separator + "mesh2D" + File.separator
+								+ File.separator + topologyName + File.separator
 								+ meshSize;
+						
+						String[] parameters = new String[] {
+								"applicationBandwithRequirement",
+								"linkBandwidth",
+								"switchEBit",
+								"linkEBit",
+								"bufReadEBit",
+								"bufWriteEBit",
+								"routing"};
+						String values[] = new String[] {
+								Integer.toString(applicationBandwithRequirement),
+								Double.toString(linkBandwidth),
+								Float.toString(switchEBit), Float.toString(linkEBit),
+								Float.toString(bufReadEBit),
+								Float.toString(bufWriteEBit),
+								null};
 						if ("true".equals(args[args.length - 1])) {
+							values[values.length - 1] = "true";
+							MapperDatabase.getInstance().setParameters(parameters, values);
+							
 							// SA with routing
-							saMapper = new SimulatedAnnealingMapper(new File(topologyDir), cores,
-									linkBandwidth, true, LegalTurnSet.ODD_EVEN,
-									bufReadEBit, bufWriteEBit, switchEBit, linkEBit);
+							saMapper = new SimulatedAnnealingMapper(
+									tgffFiles[i].getName(), ctgId, apcgId,
+									topologyName, meshSize, new File(
+											topologyDir), cores, linkBandwidth,
+									true, LegalTurnSet.ODD_EVEN, bufReadEBit,
+									bufWriteEBit, switchEBit, linkEBit);
 						} else {
+							values[values.length - 1] = "false";
+							MapperDatabase.getInstance().setParameters(parameters, values);
+							
 							// SA without routing
-							saMapper = new SimulatedAnnealingMapper(new File(topologyDir), cores,
-									linkBandwidth, switchEBit, linkEBit);
+							saMapper = new SimulatedAnnealingMapper(
+									tgffFiles[i].getName(), ctgId, apcgId,
+									topologyName, meshSize, new File(
+											topologyDir), cores, linkBandwidth,
+									switchEBit, linkEBit);
 						}
 			
 			//			// read the input data from a traffic.config file (NoCmap style)
@@ -1983,10 +2083,18 @@ public class SimulatedAnnealingMapper implements Mapper {
 						saMapper.printCurrentMapping();
 						
 						saMapper.analyzeIt();
+						
+						// increment the mapper database run ID after each
+						// mapped CTG, except the last one (no need to do this
+						// for the last one)
+						if (i < tgffFiles.length - 1 || j < ctgs.length - 1) {
+							MapperDatabase.getInstance().incrementRun();
+						}
 					}
 				}
 			}
 			logger.info("Done.");
+			
 		}
 	}
 }

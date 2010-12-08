@@ -12,7 +12,7 @@ fi
 
 ROUTING="false true"
 
-CLASSPATH="../CTG-XML/classes:../NoC-XML/classes:./classes:./lib/log4j-1.2.16.jar"
+CLASSPATH="../CTG-XML/classes:../NoC-XML/classes:./classes:./lib/log4j-1.2.16.jar:./lib/sqlitejdbc-v056.jar"
 
 APPLICATION="auto-indust-mocsyn.tgff consumer-mocsyn.tgff networking-mocsyn.tgff office-automation-mocsyn.tgff telecom-mocsyn.tgff auto-indust-mocsyn-asic.tgff consumer-mocsyn-asic.tgff networking-mocsyn-asic.tgff office-automation-mocsyn-asic.tgff telecom-mocsyn-asic.tgff"
 
