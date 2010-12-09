@@ -36,6 +36,7 @@ import ro.ulbsibiu.acaps.mapper.MapperDatabase;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
 import ro.ulbsibiu.acaps.mapper.util.ApcgFilenameFilter;
 import ro.ulbsibiu.acaps.mapper.util.MathUtils;
+import ro.ulbsibiu.acaps.mapper.util.MemoryUtils;
 import ro.ulbsibiu.acaps.mapper.util.TimeUtils;
 import ro.ulbsibiu.acaps.noc.xml.link.LinkType;
 import ro.ulbsibiu.acaps.noc.xml.node.NodeType;
@@ -1719,8 +1720,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 
 		}
 		Date startDate = new Date();
-		long memoryStart = Runtime.getRuntime().totalMemory()
-				- Runtime.getRuntime().freeMemory();
+		long memoryStart = MemoryUtils.getUsedHeapMemory();
 		long userStart = TimeUtils.getUserTime();
 		long sysStart = TimeUtils.getSystemTime();
 		long realStart = System.nanoTime();
@@ -1730,8 +1730,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 		long userEnd = TimeUtils.getUserTime();
 		long sysEnd = TimeUtils.getSystemTime();
 		long realEnd = System.nanoTime();
-		long memoryEnd = Runtime.getRuntime().totalMemory()
-				- Runtime.getRuntime().freeMemory();
+		long memoryEnd = MemoryUtils.getUsedHeapMemory();
 		logger.info("Mapping process finished successfully.");
 		logger.info("Time: " + (realEnd - realStart) / 1e9 + " seconds");
 		logger.info("Memory: " + (memoryEnd - memoryStart)
@@ -1771,7 +1770,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 				"Simulated Annealing", benchmarkId, apcgId, nocTopologyId,
 				stringWriter.toString(), startDate,
 				(realEnd - realStart) / 1e9, (userEnd - userStart) / 1e9,
-				(sysEnd - sysStart) / 1e9, memoryEnd - memoryStart);
+				(sysEnd - sysStart) / 1e9, memoryStart, memoryEnd);
 
 		return stringWriter.toString();
 	}
