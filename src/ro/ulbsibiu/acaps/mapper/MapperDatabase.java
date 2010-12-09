@@ -1,12 +1,10 @@
 package ro.ulbsibiu.acaps.mapper;
 
-import java.net.URI;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -23,7 +21,7 @@ public class MapperDatabase {
 	private static final String JDBC_DRIVER = "org.sqlite.JDBC";
 
 	/** default database URL */
-	public static final String URL = "jdbc:sqlite:/home/cipi/workspace/Mapper/data.db";
+	public static final String URL = "jdbc:sqlite:data.db";
 
 	/**
 	 * Logger for this class
@@ -331,7 +329,7 @@ public class MapperDatabase {
 	public void saveMapping(String mapperName, String mapperDescription,
 			int benchmarkId, String apcgId, int nocTopologyId,
 			String mappingXml, Date startTime, double realTime,
-			double userTime, double sysTime, double memory) {
+			double userTime, double sysTime, double memoryStart, double memoryEnd) {
 		try {
 			SimpleDateFormat sdf = new SimpleDateFormat();
 			sdf.applyPattern("yyyy-MM-dd HH:mm:ss");
@@ -339,7 +337,7 @@ public class MapperDatabase {
 
 			Statement statement = getConnection().createStatement();
 			statement
-					.executeUpdate("INSERT INTO MAPPER (NAME, DESCRIPTION, BENCHMARK, APCG_ID, NOC_TOPOLOGY, MAPPING_XML, START_DATETIME, REAL_TIME, USER_TIME, SYS_TIME, MEMORY, RUN) VALUES ('"
+					.executeUpdate("INSERT INTO MAPPER (NAME, DESCRIPTION, BENCHMARK, APCG_ID, NOC_TOPOLOGY, MAPPING_XML, START_DATETIME, REAL_TIME, USER_TIME, SYS_TIME, MEMORY_START, MEMORY_END, RUN) VALUES ('"
 							+ mapperName
 							+ "', '"
 							+ mapperDescription
@@ -360,7 +358,9 @@ public class MapperDatabase {
 							+ ", "
 							+ sysTime
 							+ ", "
-							+ memory
+							+ memoryStart
+							+ ", "
+							+ memoryEnd
 							+ ", "
 							+ run + ")");
 		} catch (SQLException e) {
