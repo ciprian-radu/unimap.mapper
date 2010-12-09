@@ -34,8 +34,6 @@ import ro.ulbsibiu.acaps.ctg.xml.mapping.MappingType;
 import ro.ulbsibiu.acaps.mapper.Mapper;
 import ro.ulbsibiu.acaps.mapper.MapperDatabase;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
-import ro.ulbsibiu.acaps.mapper.bb.BranchAndBoundMapper;
-import ro.ulbsibiu.acaps.mapper.bb.BranchAndBoundMapper.LegalTurnSet;
 import ro.ulbsibiu.acaps.mapper.util.ApcgFilenameFilter;
 import ro.ulbsibiu.acaps.mapper.util.MathUtils;
 import ro.ulbsibiu.acaps.mapper.util.TimeUtils;
@@ -44,7 +42,6 @@ import ro.ulbsibiu.acaps.noc.xml.node.NodeType;
 import ro.ulbsibiu.acaps.noc.xml.node.ObjectFactory;
 import ro.ulbsibiu.acaps.noc.xml.node.RoutingTableEntryType;
 import ro.ulbsibiu.acaps.noc.xml.node.TopologyParameterType;
-import ro.ulbsibiu.acaps.noc.xml.topologyParameter.TopologyType;
 
 /**
  * Simulated Annealing algorithm for Network-on-Chip (NoC) application mapping.
@@ -1771,7 +1768,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 		int benchmarkId = MapperDatabase.getInstance().getBenchmarkId(benchmarkName, ctgId);
 		int nocTopologyId = MapperDatabase.getInstance().getNocTopologyId(topologyName, topologySize);
 		MapperDatabase.getInstance().saveMapping(getMapperId(),
-				"Branch and Bound", benchmarkId, apcgId, nocTopologyId,
+				"Simulated Annealing", benchmarkId, apcgId, nocTopologyId,
 				stringWriter.toString(), startDate,
 				(realEnd - realStart) / 1e9, (userEnd - userStart) / 1e9,
 				(sysEnd - sysStart) / 1e9, memoryEnd - memoryStart);
