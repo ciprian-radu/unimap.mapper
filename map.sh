@@ -27,6 +27,7 @@ do
 	done
 done
 
+:<<commented_out
 for mapper in $MAPPER
 do
 	for routing in $ROUTING
@@ -44,9 +45,7 @@ do
 		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn-asic.tgff --ctg 0+1+2+3+4+5+6+7+8 --apcg 2 $routing
 	done
 done
-
-#CMD="INSERT INTO MAPPER (NAME, DESCRIPTION, PARAMETERS, BENCHMARK, NOC_TOPOLOGY, MAPPING_XML, RUNTIME) ...;"
-#sqlite3 -noheader data.db "$CMD"
+commented_out
 
 echo "Done"
 
