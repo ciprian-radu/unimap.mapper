@@ -21,29 +21,11 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/CTG-XML"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/NoC-XML"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="/usr/lib/jvm/java-6-sun/lib/visualvm/visualvm/modules/com-sun-tools-visualvm-tools.jar"/>
-	<classpathentry kind="lib" path="/usr/lib/jvm/java-6-sun-1.6.0.22/lib/visualvm/visualvm/modules/com-sun-tools-visualvm-api-caching.jar"/>
-	<classpathentry kind="lib" path="/usr/lib/jvm/java-6-sun-1.6.0.22/lib/visualvm/visualvm/modules/com-sun-tools-visualvm-application.jar"/>
-	<classpathentry kind="lib" path="/usr/lib/jvm/java-6-sun-1.6.0.22/lib/visualvm/visualvm/modules/com-sun-tools-visualvm-application-views.jar"/>
-	<classpathentry kind="lib" path="/usr/lib/jvm/java-6-sun-1.6.0.22/lib/visualvm/visualvm/modules/com-sun-tools-visualvm-attach.jar"/>
 	<classpathentry kind="lib" path="/usr/lib/jvm/java-6-sun-1.6.0.22/lib/visualvm/visualvm/modules/com-sun-tools-visualvm-charts.jar">
 		<attributes>
 			<attribute name="javadoc_location" value="https://visualvm.dev.java.net/nonav/apidocs/13"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="/usr/lib/jvm/java-6-sun-1.6.0.22/lib/visualvm/visualvm/modules/com-sun-tools-visualvm-core.jar"/>
-	<classpathentry kind="lib" path="/usr/lib/jvm/java-6-sun-1.6.0.22/lib/visualvm/visualvm/modules/com-sun-tools-visualvm-coredump.jar"/>
-	<classpathentry kind="lib" path="/usr/lib/jvm/java-6-sun-1.6.0.22/lib/visualvm/visualvm/modules/com-sun-tools-visualvm-heapdump.jar"/>
-	<classpathentry kind="lib" path="/usr/lib/jvm/java-6-sun-1.6.0.22/lib/visualvm/visualvm/modules/com-sun-tools-visualvm-host.jar"/>
-	<classpathentry kind="lib" path="/usr/lib/jvm/java-6-sun-1.6.0.22/lib/visualvm/visualvm/modules/com-sun-tools-visualvm-host-views.jar"/>
-	<classpathentry kind="lib" path="/usr/lib/jvm/java-6-sun-1.6.0.22/lib/visualvm/visualvm/modules/com-sun-tools-visualvm-jmx.jar"/>
-	<classpathentry kind="lib" path="/usr/lib/jvm/java-6-sun-1.6.0.22/lib/visualvm/visualvm/modules/com-sun-tools-visualvm-jvm.jar"/>
-	<classpathentry kind="lib" path="/usr/lib/jvm/java-6-sun-1.6.0.22/lib/visualvm/visualvm/modules/com-sun-tools-visualvm-jvmstat.jar"/>
-	<classpathentry kind="lib" path="/usr/lib/jvm/java-6-sun-1.6.0.22/lib/visualvm/visualvm/modules/com-sun-tools-visualvm-modules-appui.jar"/>
-	<classpathentry kind="lib" path="/usr/lib/jvm/java-6-sun-1.6.0.22/lib/visualvm/visualvm/modules/com-sun-tools-visualvm-profiler.jar"/>
-	<classpathentry kind="lib" path="/usr/lib/jvm/java-6-sun-1.6.0.22/lib/visualvm/visualvm/modules/com-sun-tools-visualvm-sa.jar"/>
-	<classpathentry kind="lib" path="/usr/lib/jvm/java-6-sun-1.6.0.22/lib/visualvm/visualvm/modules/com-sun-tools-visualvm-threaddump.jar"/>
-	<classpathentry kind="lib" path="/usr/lib/jvm/java-6-sun-1.6.0.22/lib/visualvm/visualvm/modules/com-sun-tools-visualvm-tools.jar"/>
 	<classpathentry kind="lib" path="/home/cipi/netbeans-6.9.1/profiler/modules/org-netbeans-lib-profiler-charts.jar"/>
 	<classpathentry kind="lib" path="/home/cipi/netbeans-6.9.1/platform/lib/org-openide-util.jar"/>
 	<classpathentry kind="lib" path="/home/cipi/netbeans-6.9.1/platform/lib/org-openide-util-lookup.jar"/>
