@@ -2,4 +2,4 @@
 
 MAPPER="ro.ulbsibiu.acaps.mapper.bb.BranchAndBoundMapper"
 export MAPPER=$MAPPER
-exec ./map.sh
+exec ./map-zamolxe.sh
