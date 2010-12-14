@@ -12,7 +12,7 @@ fi
 
 ROUTING="false true"
 
-CLASSPATH="../CTG-XML/classes:../NoC-XML/classes:./classes:./lib/log4j-1.2.16.jar:./lib/sqlitejdbc-v056.jar"
+CLASSPATH="../CTG-XML/classes:../NoC-XML/classes:./classes:./lib/log4j-1.2.16.jar:./lib/sqlite-jdbc-3.7.2.jar:/opt/java/jdk1.6.0_22/lib/visualvm/visualvm/modules/com-sun-tools-visualvm-charts.jar:/home/cradu/netbeans-6.9.1/profiler/modules/org-netbeans-lib-profiler-charts.jar:/home/cradu/netbeans-6.9.1/profiler/modules/org-netbeans-lib-profiler-ui.jar:/home/cradu/netbeans-6.9.1/platform/lib/org-openide-util.jar:/home/cradu/netbeans-6.9.1/platform/lib/org-openide-util-lookup.jar"
 
 APPLICATION="auto-indust-mocsyn.tgff consumer-mocsyn.tgff networking-mocsyn.tgff office-automation-mocsyn.tgff telecom-mocsyn.tgff auto-indust-mocsyn-asic.tgff consumer-mocsyn-asic.tgff networking-mocsyn-asic.tgff office-automation-mocsyn-asic.tgff telecom-mocsyn-asic.tgff"
 

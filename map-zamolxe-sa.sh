@@ -2,4 +2,4 @@
 
 MAPPER="ro.ulbsibiu.acaps.mapper.sa.SimulatedAnnealingMapper"
 export MAPPER=$MAPPER
-exec ./map.sh
+exec ./map-zamolxe.sh
