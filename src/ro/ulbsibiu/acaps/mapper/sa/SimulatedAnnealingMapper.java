@@ -7,6 +7,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -16,6 +17,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Random;
 
+import javax.imageio.ImageIO;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
@@ -35,6 +37,7 @@ import ro.ulbsibiu.acaps.mapper.Mapper;
 import ro.ulbsibiu.acaps.mapper.MapperDatabase;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
 import ro.ulbsibiu.acaps.mapper.util.ApcgFilenameFilter;
+import ro.ulbsibiu.acaps.mapper.util.HeapUsageMonitor;
 import ro.ulbsibiu.acaps.mapper.util.MathUtils;
 import ro.ulbsibiu.acaps.mapper.util.MemoryUtils;
 import ro.ulbsibiu.acaps.mapper.util.TimeUtils;
@@ -43,6 +46,7 @@ import ro.ulbsibiu.acaps.noc.xml.node.NodeType;
 import ro.ulbsibiu.acaps.noc.xml.node.ObjectFactory;
 import ro.ulbsibiu.acaps.noc.xml.node.RoutingTableEntryType;
 import ro.ulbsibiu.acaps.noc.xml.node.TopologyParameterType;
+import sun.font.CreatedFontTracker;
 
 /**
  * Simulated Annealing algorithm for Network-on-Chip (NoC) application mapping.
@@ -1720,20 +1724,24 @@ public class SimulatedAnnealingMapper implements Mapper {
 
 		}
 		Date startDate = new Date();
-		long memoryStart = MemoryUtils.getUsedHeapMemory();
+		HeapUsageMonitor monitor = new HeapUsageMonitor(1024, 768);
+		monitor.start();
 		long userStart = TimeUtils.getUserTime();
 		long sysStart = TimeUtils.getSystemTime();
 		long realStart = System.nanoTime();
+		
 		if (coresNumber > 1) {
 			anneal();
 		}
+		
 		long userEnd = TimeUtils.getUserTime();
 		long sysEnd = TimeUtils.getSystemTime();
 		long realEnd = System.nanoTime();
-		long memoryEnd = MemoryUtils.getUsedHeapMemory();
+		byte[] averageHeapMemoryChart = monitor.saveImageAsByteArray();
+		monitor.stop();
 		logger.info("Mapping process finished successfully.");
 		logger.info("Time: " + (realEnd - realStart) / 1e9 + " seconds");
-		logger.info("Memory: " + (memoryEnd - memoryStart)
+		logger.info("Memory: " + monitor.getAverageUsedHeap()
 				/ (1024 * 1024 * 1.0) + " MB");
 		
 		saveRoutingTables();
@@ -1770,7 +1778,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 				"Simulated Annealing", benchmarkId, apcgId, nocTopologyId,
 				stringWriter.toString(), startDate,
 				(realEnd - realStart) / 1e9, (userEnd - userStart) / 1e9,
-				(sysEnd - sysStart) / 1e9, memoryStart, memoryEnd);
+				(sysEnd - sysStart) / 1e9, monitor.getAverageUsedHeap(), averageHeapMemoryChart);
 
 		return stringWriter.toString();
 	}
