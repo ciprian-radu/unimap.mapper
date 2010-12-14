@@ -361,7 +361,7 @@ public class MapperDatabase {
 			statement.setString(4, apcgId);
 			statement.setInt(5, nocTopologyId);
 			statement.setString(6, mappingXml);
-			statement.setString(7, "strftime('%s','" + startTimeAsString + "'");
+			statement.setString(7, startTimeAsString);
 			statement.setDouble(8, realTime);
 			statement.setDouble(9, userTime);
 			statement.setDouble(10, sysTime);
