@@ -7,7 +7,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -39,6 +38,7 @@ import ro.ulbsibiu.acaps.mapper.bb.MappingNode.RoutingEffort;
 import ro.ulbsibiu.acaps.mapper.sa.Core;
 import ro.ulbsibiu.acaps.mapper.util.ApcgFilenameFilter;
 import ro.ulbsibiu.acaps.mapper.util.HeapUsageMonitor;
+import ro.ulbsibiu.acaps.mapper.util.VisualHeapUsageMonitor;
 import ro.ulbsibiu.acaps.mapper.util.MathUtils;
 import ro.ulbsibiu.acaps.mapper.util.MemoryUtils;
 import ro.ulbsibiu.acaps.mapper.util.TimeUtils;
@@ -1225,8 +1225,8 @@ public class BranchAndBoundMapper implements Mapper {
 
 		}
 		Date startDate = new Date();
-		HeapUsageMonitor monitor = new HeapUsageMonitor(1024, 768);
-		monitor.start();
+		HeapUsageMonitor monitor = new HeapUsageMonitor();
+		monitor.startMonitor();
 		long userStart = TimeUtils.getUserTime();
 		long sysStart = TimeUtils.getSystemTime();
 		long realStart = System.nanoTime();
@@ -1238,8 +1238,7 @@ public class BranchAndBoundMapper implements Mapper {
 		long userEnd = TimeUtils.getUserTime();
 		long sysEnd = TimeUtils.getSystemTime();
 		long realEnd = System.nanoTime();
-		byte[] averageHeapMemoryChart = monitor.saveImageAsByteArray();
-		monitor.stop();
+		monitor.stopMonitor();
 		logger.info("Mapping process finished successfully.");
 		logger.info("Time: " + (realEnd - realStart) / 1e9 + " seconds");
 		logger.info("Memory: " + monitor.getAverageUsedHeap()
@@ -1279,7 +1278,7 @@ public class BranchAndBoundMapper implements Mapper {
 				"Branch and Bound", benchmarkId, apcgId, nocTopologyId,
 				stringWriter.toString(), startDate,
 				(realEnd - realStart) / 1e9, (userEnd - userStart) / 1e9,
-				(sysEnd - sysStart) / 1e9, monitor.getAverageUsedHeap(), averageHeapMemoryChart);
+				(sysEnd - sysStart) / 1e9, monitor.getAverageUsedHeap(), null);
 
 		return stringWriter.toString();
 	}
