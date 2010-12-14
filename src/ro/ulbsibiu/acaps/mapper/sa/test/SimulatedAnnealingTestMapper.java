@@ -7,6 +7,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -36,6 +37,7 @@ import ro.ulbsibiu.acaps.mapper.MapperDatabase;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
 import ro.ulbsibiu.acaps.mapper.sa.Core;
 import ro.ulbsibiu.acaps.mapper.util.ApcgFilenameFilter;
+import ro.ulbsibiu.acaps.mapper.util.HeapUsageMonitor;
 import ro.ulbsibiu.acaps.mapper.util.MathUtils;
 import ro.ulbsibiu.acaps.mapper.util.MemoryUtils;
 import ro.ulbsibiu.acaps.mapper.util.TimeUtils;
@@ -225,6 +227,14 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	
 	/** the topology size */
 	private String topologySize;
+	
+	private String[] bestSolution;
+	
+	private double bestCost = Double.MAX_VALUE;
+	
+	private double bestSolutionTemp;
+	
+	private int bestSolutionIteration;
 	
 	private static enum TopologyParameter {
 		/** on what row of a 2D mesh the node is located */
@@ -672,23 +682,22 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	}
 
 	private void mapCoresToNocNodesRandomly() {
-		Random rand = new Random();
-		for (int i = 0; i < coresNumber; i++) {
-			int k = Math.abs(rand.nextInt()) % nodesNumber;
-			while (Integer.valueOf(nodes[k].getCore()) != -1) {
-				k = Math.abs(rand.nextInt()) % nodesNumber;
-			}
-			cores[i].setNodeId(k);
-			nodes[k].setCore(Integer.toString(i));
-		}
+//		Random rand = new Random();
+//		for (int i = 0; i < coresNumber; i++) {
+//			int k = Math.abs(rand.nextInt()) % nodesNumber;
+//			while (Integer.valueOf(nodes[k].getCore()) != -1) {
+//				k = Math.abs(rand.nextInt()) % nodesNumber;
+//			}
+//			cores[i].setNodeId(k);
+//			nodes[k].setCore(Integer.toString(i));
+//		}
 
-		// // this maps the cores like NoCMap does
-		// int[] coreMap = new int[] { 11, 13, 10, 8, 12, 0, 9, 1, 2, 4, 14, 15,
-		// 5, 3, 7, 6 };
-		// for (int i = 0; i < coresNumber; i++) {
-		// cores[i].setNodeId(coreMap[i]);
-		// gNode[coreMap[i]].setProcId(i);
-		// }
+		 // this maps the cores like NoCMap does
+		 int[] coreMap = new int[] { 8,12,6,0,2,5,13,1,3 };
+		 for (int i = 0; i < coresNumber; i++) {
+		 cores[i].setNodeId(coreMap[i]);
+		 nodes[coreMap[i]].setCore(Integer.toString(i));
+		 }
 	}
 
 	/**
@@ -803,113 +812,94 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		int acceptCount = 0;
 		double totalDeltaCost = 0;
 
-		attempts = nodesNumber * (nodesNumber - 1) / 2 - (nodesNumber - coresNumber - 1) * (nodesNumber - coresNumber) / 2;
-		
 		int unit = attempts / 10;
 
 		// clear the zeroCostAcceptance
 		zeroCostAcceptance = 0;
 
+		// this is the main loop doing moves. We do 'attempts' moves in all,
+		// then quit at this temperature
+
 		if (logger.isTraceEnabled()) {
 			logger.trace("attempts = " + attempts);
 		}
-		
 //		List<String[]> uniqueMappings = new ArrayList<String[]>(); 
 //		List<Integer> uniqueMappingsFrequencies = new ArrayList<Integer>();
-		
-		int neighbors = 0;
-		float bestCost = Float.MAX_VALUE;
-		String[] bestNeighbor = new String[nodes.length];
-		boolean foundBestNeighbor = false;
-		for (int i = 0; i < nodes.length; i++) {
-			if (!"-1".equals(nodes[i].getCore())) {
-				int currentCore = Integer.valueOf(nodes[i].getCore());
-				for (int j = 0; j < nodes.length; j++) {
-					if (Integer.valueOf(nodes[j].getCore()) > currentCore || "-1".equals(nodes[j].getCore())) {
-						swapProcesses(i, j);
-						
-//						// computes the unique mappings (start)
-//						boolean isNewMapping = true;
-//						for (int k = 0; k < uniqueMappings.size(); k++) {
-//							boolean found = true;
-//							logger.assertLog(this.nodes.length == uniqueMappings.get(k).length, null);
-//							for (int l = 0; l < uniqueMappings.get(k).length; l++) {
-//								if (!uniqueMappings.get(k)[l].equals(this.nodes[l].getCore())) {
-//									found = false;
-//									break;
-//								}
-//							}
-//							if (found) {
-//								isNewMapping = false;
-//								uniqueMappingsFrequencies.set(k, uniqueMappingsFrequencies.get(k) + 1);
-//							}
-//						}
-//						if (isNewMapping) {
-//							String[] map = new String[this.nodes.length];
-//							for (int k = 0; k < this.nodes.length; k++) {
-//								map[k] = this.nodes[k].getCore();
-//							}
-//							uniqueMappings.add(map);
-//							uniqueMappingsFrequencies.add(1);
-//						}
-//						// computes the unique mappings (end)
-						
-						neighbors++;
-						float newCost = calculateTotalCost();
-						double deltaCost = newCost - currentCost;
-						if (logger.isTraceEnabled()) {
-							logger.trace("deltaCost " + deltaCost + " newCost " + newCost
-									+ " currentCost " + currentCost);
-						}
-				        double deltac = deltaCost / currentCost;
-						// Note that we use machine epsilon to perform the following
-						// comparison between the float numbers
-				        if (MathUtils.approximatelyEqual((float)deltac, 0)) {
-				            deltac = 0;
-				        } else {
-				            deltac = deltac * 100;
-				        }
-						if (accept(deltac, t)) {
-							if (logger.isTraceEnabled()) {
-								logger.trace("Accepting...");
-							}
-							acceptCount++;
-							totalDeltaCost += deltaCost;
-							if (MathUtils.definitelyLessThan(newCost, bestCost)) {
-								bestCost = newCost;
-								for (int k = 0; k < nodes.length; k++) {
-									bestNeighbor[k] = nodes[k].getCore();
-								}
-								foundBestNeighbor = true;
-							}
-						}
-						if (neighbors % unit == 0) {
-							// This is just to print out the process of the algorithm
-							System.out.print("#");
-						}
-						if (logger.isTraceEnabled()) {
-							logger.trace("Rolling back nodes " + j + " and " + i);
-						}
-						swapProcesses(j, i); // roll back
-					}
+		for (int m = 1; m < attempts; m++) {
+			int[] swappedNodes = makeRandomSwap();
+			
+//			// computes the unique mappings (start)
+//			boolean isNewMapping = true;
+//			for (int i = 0; i < uniqueMappings.size(); i++) {
+//				boolean found = true;
+//				logger.assertLog(this.nodes.length == uniqueMappings.get(i).length, null);
+//				for (int j = 0; j < uniqueMappings.get(i).length; j++) {
+//					if (!uniqueMappings.get(i)[j].equals(this.nodes[j].getCore())) {
+//						found = false;
+//						break;
+//					}
+//				}
+//				if (found) {
+//					isNewMapping = false;
+//					uniqueMappingsFrequencies.set(i, uniqueMappingsFrequencies.get(i) + 1);
+//				}
+//			}
+//			if (isNewMapping) {
+//				String[] map = new String[this.nodes.length];
+//				for (int i = 0; i < this.nodes.length; i++) {
+//					map[i] = this.nodes[i].getCore();
+//				}
+//				uniqueMappings.add(map);
+//				uniqueMappingsFrequencies.add(1);
+//			}
+//			// computes the unique mappings (end)
+			
+			int node1 = swappedNodes[0];
+			int node2 = swappedNodes[1];
+			double newCost = calculateTotalCost();
+			
+			if (newCost < bestCost) {
+				bestSolutionTemp = t;
+				bestSolutionIteration = m;
+				bestCost = newCost;
+				bestSolution = new String[nodes.length];
+				for (int i = 0; i < nodes.length; i++) {
+					bestSolution[i] = nodes[i].getCore();
 				}
+			}
+			
+			double deltaCost = newCost - currentCost;
+			if (logger.isTraceEnabled()) {
+				logger.trace("deltaCost " + deltaCost + " newCost " + newCost
+						+ " currentCost " + currentCost);
+			}
+	        double deltac = deltaCost / currentCost;
+			// Note that we use machine epsilon to perform the following
+			// comparison between the float numbers
+	        if (MathUtils.approximatelyEqual((float)deltac, 0)) {
+	            deltac = 0;
+	        } else {
+	            deltac = deltac * 100;
+	        }
+			if (accept(deltac, t)) {
+				if (logger.isTraceEnabled()) {
+					logger.trace("Accepting...");
+				}
+				acceptCount++;
+				totalDeltaCost += deltaCost;
+				currentCost = newCost;
+			} else {
+				if (logger.isTraceEnabled()) {
+					logger.trace("Rolling back nodes " + node1 + " and " + node2);
+				}
+				swapProcesses(node1, node2); // roll back
+			}
+			if (m % unit == 0) {
+				// This is just to print out the process of the algorithm
+				System.out.print("#");
 			}
 		}
 		System.out.println();
-		
-		logger.assertLog(attempts == neighbors, "The number of visited neighbors is " + neighbors + " instead of " + attempts);
-		if (!foundBestNeighbor) {
-			logger.info("No neighbor is better than the current solution. The algorithm will stop.");
-			needStop = true;
-		} else {
-			currentCost = bestCost;
-			for (int k = 0; k < bestNeighbor.length; k++) {
-				logger.assertLog(bestNeighbor[k] != null, "Found null instead of core number on node " + k + " of the best neighbor");
-				nodes[k].setCore(bestNeighbor[k]);
-			}
-			logger.debug("The best neighbor found has cost " + bestCost + ". Its mapping is");
-			printCurrentMapping();
-		}
 		
 //		// prints the unique mappings
 //		System.out.println("Found " + uniqueMappings.size() + " unique mappings (from a total of " + attempts + " mappings)");
@@ -938,7 +928,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		}
 
 		return totalDeltaCost;
-	}	
+	}
 	
 	private void anneal() {
 		double cost3, cost2;
@@ -968,7 +958,8 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		cost2 = 999999999;
 		currentCost = cost2;
 
-		attempts = nodesNumber * nodesNumber * 100;
+//		attempts = (nodesNumber * (nodesNumber - 1)) / 2 - ((nodesNumber - coresNumber - 1) * (nodesNumber - coresNumber)) / 2;
+		attempts = coresNumber * (nodesNumber - 1);
 		// attempts = nodesNumber * 10;
 
 		initRand(1234567);
@@ -1737,6 +1728,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		}
 
 		mapCoresToNocNodesRandomly();
+		printCurrentMapping();
 
 		if (logger.isDebugEnabled()) {
 			printCurrentMapping();
@@ -1751,21 +1743,30 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 
 		}
 		Date startDate = new Date();
-		long memoryStart = MemoryUtils.getUsedHeapMemory();
+		HeapUsageMonitor monitor = new HeapUsageMonitor(1024, 768);
+		monitor.start();
 		long userStart = TimeUtils.getUserTime();
 		long sysStart = TimeUtils.getSystemTime();
 		long realStart = System.nanoTime();
+		
 		if (coresNumber > 1) {
 			anneal();
 		}
+		
 		long userEnd = TimeUtils.getUserTime();
 		long sysEnd = TimeUtils.getSystemTime();
 		long realEnd = System.nanoTime();
-		long memoryEnd = MemoryUtils.getUsedHeapMemory();
+		byte[] averageHeapMemoryChart = monitor.saveImageAsByteArray();
+		monitor.stop();
 		logger.info("Mapping process finished successfully.");
 		logger.info("Time: " + (realEnd - realStart) / 1e9 + " seconds");
-		logger.info("Memory: " + (memoryEnd - memoryStart)
+		logger.info("Memory: " + monitor.getAverageUsedHeap()
 				/ (1024 * 1024 * 1.0) + " MB");
+		
+		System.out.println("Best mapping found at temperature " + bestSolutionTemp + " iteration " + bestSolutionIteration + " cost " + bestCost);
+		for (int i = 0; i < bestSolution.length; i++) {
+			System.out.println(bestSolution[i]);
+		}
 		
 		saveRoutingTables();
 		
@@ -1801,7 +1802,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 				"Simulated Annealing (test)", benchmarkId, apcgId, nocTopologyId,
 				stringWriter.toString(), startDate,
 				(realEnd - realStart) / 1e9, (userEnd - userStart) / 1e9,
-				(sysEnd - sysStart) / 1e9, memoryStart, memoryEnd);
+				(sysEnd - sysStart) / 1e9, monitor.getAverageUsedHeap(), averageHeapMemoryChart);
 
 		return stringWriter.toString();
 	}

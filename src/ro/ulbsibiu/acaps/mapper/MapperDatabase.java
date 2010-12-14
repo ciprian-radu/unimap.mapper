@@ -1,7 +1,9 @@
 package ro.ulbsibiu.acaps.mapper;
 
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -329,40 +331,45 @@ public class MapperDatabase {
 	public void saveMapping(String mapperName, String mapperDescription,
 			int benchmarkId, String apcgId, int nocTopologyId,
 			String mappingXml, Date startTime, double realTime,
-			double userTime, double sysTime, double memoryStart, double memoryEnd) {
+			double userTime, double sysTime, double averageHeapMemory,
+			byte[] averageHeapMemoryChart) {
 		try {
 			SimpleDateFormat sdf = new SimpleDateFormat();
 			sdf.applyPattern("yyyy-MM-dd HH:mm:ss");
 			String startTimeAsString = sdf.format(startTime);
 
-			Statement statement = getConnection().createStatement();
-			statement
-					.executeUpdate("INSERT INTO MAPPER (NAME, DESCRIPTION, BENCHMARK, APCG_ID, NOC_TOPOLOGY, MAPPING_XML, START_DATETIME, REAL_TIME, USER_TIME, SYS_TIME, MEMORY_START, MEMORY_END, RUN) VALUES ('"
-							+ mapperName
-							+ "', '"
-							+ mapperDescription
-							+ "', "
-							+ benchmarkId
-							+ ", '"
-							+ apcgId
-							+ "', "
-							+ nocTopologyId
-							+ ", '"
-							+ mappingXml
-							+ "', strftime('%s','"
-							+ startTimeAsString
-							+ "'), "
-							+ realTime
-							+ ", "
-							+ userTime
-							+ ", "
-							+ sysTime
-							+ ", "
-							+ memoryStart
-							+ ", "
-							+ memoryEnd
-							+ ", "
-							+ run + ")");
+			PreparedStatement statement = getConnection()
+					.prepareStatement(
+							"INSERT INTO MAPPER (" +
+							"NAME, " +
+							"DESCRIPTION, " +
+							"BENCHMARK, " +
+							"APCG_ID, " +
+							"NOC_TOPOLOGY, " +
+							"MAPPING_XML, " +
+							"START_DATETIME, " +
+							"REAL_TIME, " +
+							"USER_TIME, " +
+							"SYS_TIME, " +
+							"AVG_HEAP_MEMORY, " +
+							"AVG_HEAP_MEMORY_CHART, " +
+							"RUN" +
+							") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+			statement.setString(1, mapperName);
+			statement.setString(2, mapperDescription);
+			statement.setInt(3, benchmarkId);
+			statement.setString(4, apcgId);
+			statement.setInt(5, nocTopologyId);
+			statement.setString(6, mappingXml);
+			statement.setString(7, "strftime('%s','" + startTimeAsString + "'");
+			statement.setDouble(8, realTime);
+			statement.setDouble(9, userTime);
+			statement.setDouble(10, sysTime);
+			statement.setDouble(11, averageHeapMemory);
+			statement.setBytes(12, averageHeapMemoryChart);
+			statement.setInt(13, run);
+			
+			statement.execute();
 		} catch (SQLException e) {
 			logger.error(e);
 		}
