@@ -7,7 +7,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -38,9 +37,7 @@ import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
 import ro.ulbsibiu.acaps.mapper.sa.Core;
 import ro.ulbsibiu.acaps.mapper.util.ApcgFilenameFilter;
 import ro.ulbsibiu.acaps.mapper.util.HeapUsageMonitor;
-import ro.ulbsibiu.acaps.mapper.util.VisualHeapUsageMonitor;
 import ro.ulbsibiu.acaps.mapper.util.MathUtils;
-import ro.ulbsibiu.acaps.mapper.util.MemoryUtils;
 import ro.ulbsibiu.acaps.mapper.util.TimeUtils;
 import ro.ulbsibiu.acaps.noc.xml.link.LinkType;
 import ro.ulbsibiu.acaps.noc.xml.node.NodeType;
@@ -77,18 +74,6 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	private static final int EAST = 2;
 
 	private static final int WEST = 3;
-
-	/** tolerance for the cost function of the algorithm */
-	private static final int TOLERANCE = 1;
-
-	/** how many temperature variations the algorithm should try */
-	private static final int TEMPS = 5;
-
-	/**
-	 * the minimum acceptance ratio (number of viable IP core mappings vs. the
-	 * total number of tried mappings)
-	 */
-	private static final double MINACCEPT = 0.001;
 
 	/**
 	 * how costly is each unit of link overload (a link is overloaded when it
@@ -176,25 +161,21 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	 * how many mapping attempts the algorithm tries per iteration. A mapping
 	 * attempt means a random swap of processes (tasks) between to network nodes
 	 */
-	private int attempts;
+	private int numberOfIterationsPerTemperature;
+	
+	private double temperature;
 
-	/** how many zero cost mappings where accepted */
-	private int zeroCostAcceptance;
+	/** how many consecutive moves were rejected at a certain temperature level */
+	private int numberOfConsecutiveRejectedMoves;
 
-	/**
-	 * specifies if the algorithm must be stopped "manually". This is typically
-	 * done when the zero cost acceptance is 10
-	 */
-	private boolean needStop;
-
+	/** the cost of the initial mapping */
+	private double initialCost;
+	
 	/** the cost of the current mapping */
 	private double currentCost;
 
 	/** the acceptance ratio */
 	private double acceptRatio;
-
-	/** how many zero cost mappings are currently accepted */
-	private int zeroTempCnt = 0;
 
 	/**
 	 * per link bandwidth usage (used only when the algorithm doesn't build the
@@ -231,11 +212,13 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	
 	private String[] bestSolution;
 	
-	private double bestCost = Double.MAX_VALUE;
+	private double bestCost = Float.MAX_VALUE;
 	
-	private double bestSolutionTemp;
+	private double bestSolutionTemperature;
 	
 	private int bestSolutionIteration;
+	
+	private int mappingIteration;
 	
 	private static enum TopologyParameter {
 		/** on what row of a 2D mesh the node is located */
@@ -683,22 +666,22 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	}
 
 	private void mapCoresToNocNodesRandomly() {
-//		Random rand = new Random();
-//		for (int i = 0; i < coresNumber; i++) {
-//			int k = Math.abs(rand.nextInt()) % nodesNumber;
-//			while (Integer.valueOf(nodes[k].getCore()) != -1) {
-//				k = Math.abs(rand.nextInt()) % nodesNumber;
-//			}
-//			cores[i].setNodeId(k);
-//			nodes[k].setCore(Integer.toString(i));
-//		}
+		Random rand = new Random();
+		for (int i = 0; i < coresNumber; i++) {
+			int k = Math.abs(rand.nextInt()) % nodesNumber;
+			while (Integer.valueOf(nodes[k].getCore()) != -1) {
+				k = Math.abs(rand.nextInt()) % nodesNumber;
+			}
+			cores[i].setNodeId(k);
+			nodes[k].setCore(Integer.toString(i));
+		}
 
 		 // this maps the cores like NoCMap does
-		 int[] coreMap = new int[] { 8,12,6,0,2,5,13,1,3 };
-		 for (int i = 0; i < coresNumber; i++) {
-		 cores[i].setNodeId(coreMap[i]);
-		 nodes[coreMap[i]].setCore(Integer.toString(i));
-		 }
+//		int[] coreMap = new int[] { 8, 12, 6, 0, 2, 5, 13, 1, 3 };
+//		for (int i = 0; i < coresNumber; i++) {
+//			cores[i].setNodeId(coreMap[i]);
+//			nodes[coreMap[i]].setCore(Integer.toString(i));
+//		}
 	}
 
 	/**
@@ -766,30 +749,28 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	}
 
 	/**
-	 * the usual metropolis accept criterion
+	 * the acceptance function
 	 * 
 	 * @param deltac
-	 *            the cost (energy) variation
-	 * @param temperature
-	 *            the temperature
+	 *            the <b>normalized</b> cost (energy) variation
 	 * 
 	 * @return <tt>true</tt> for accept, <tt>false</tt>, otherwise
 	 */
-	private boolean accept(double deltac, double temperature) {
+	private boolean accept(double deltac) {
 		double pa = -1; // probability of acceptance
 		boolean accept = false;
 		double r = -1;
-		// annealing accept criterion
-		if (MathUtils.approximatelyEqual((float) deltac, 0)) {
-			// accept it, but record the number of zero cost acceptance
-			zeroCostAcceptance++;
-		}
 
 		if (MathUtils.definitelyLessThan((float) deltac, 0)
 				|| MathUtils.approximatelyEqual((float) deltac, 0)) {
 			accept = true;
 		} else {
-			pa = Math.exp((double) (-deltac) / temperature);
+//			// normalized exponential form
+//			pa = Math.exp((double) (-deltac) / temperature);
+			
+			// inverse normalized exponential form
+			pa = 1 / (1 + Math.exp((double) (deltac) / temperature));
+			
 			r = uniformRandomVariable();
 			if (MathUtils.definitelyLessThan((float) r, (float)pa)
 					|| MathUtils.approximatelyEqual((float) r, (float)pa)) {
@@ -809,24 +790,22 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	 * this does the actual evolution of the placement by annealing at a fixed
 	 * temperature <tt>t</tt>.
 	 */
-	private double annealAtTemperature(double t) {
+	private double annealAtTemperature() {
 		int acceptCount = 0;
 		double totalDeltaCost = 0;
-
-		int unit = attempts / 10;
-
-		// clear the zeroCostAcceptance
-		zeroCostAcceptance = 0;
+		numberOfConsecutiveRejectedMoves = 0;
+		
+		int unit = numberOfIterationsPerTemperature / 10;
 
 		// this is the main loop doing moves. We do 'attempts' moves in all,
 		// then quit at this temperature
 
 		if (logger.isTraceEnabled()) {
-			logger.trace("attempts = " + attempts);
+			logger.trace("attempts = " + numberOfIterationsPerTemperature);
 		}
 //		List<String[]> uniqueMappings = new ArrayList<String[]>(); 
 //		List<Integer> uniqueMappingsFrequencies = new ArrayList<Integer>();
-		for (int m = 1; m < attempts; m++) {
+		for (int m = 1; m <= numberOfIterationsPerTemperature; m++) {
 			int[] swappedNodes = makeRandomSwap();
 			
 //			// computes the unique mappings (start)
@@ -857,34 +836,39 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 			
 			int node1 = swappedNodes[0];
 			int node2 = swappedNodes[1];
+
 			double newCost = calculateTotalCost();
-			
-			if (newCost < bestCost) {
-				bestSolutionTemp = t;
-				bestSolutionIteration = m;
-				bestCost = newCost;
-				bestSolution = new String[nodes.length];
-				for (int i = 0; i < nodes.length; i++) {
-					bestSolution[i] = nodes[i].getCore();
-				}
-			}
-			
+
 			double deltaCost = newCost - currentCost;
 			if (logger.isTraceEnabled()) {
 				logger.trace("deltaCost " + deltaCost + " newCost " + newCost
 						+ " currentCost " + currentCost);
 			}
-	        double deltac = deltaCost / currentCost;
+			// we normalize deltac
+	        double deltac = deltaCost / initialCost;
 			// Note that we use machine epsilon to perform the following
 			// comparison between the float numbers
 	        if (MathUtils.approximatelyEqual((float)deltac, 0)) {
 	            deltac = 0;
-	        } else {
-	            deltac = deltac * 100;
 	        }
-			if (accept(deltac, t)) {
+			if (MathUtils.definitelyLessThan((float)deltac, 0) || accept(deltac)) {
 				if (logger.isTraceEnabled()) {
 					logger.trace("Accepting...");
+				}
+				if (MathUtils.definitelyLessThan((float)newCost, (float)bestCost)) {
+					if (logger.isDebugEnabled()) {
+						logger.debug("new cost < best cost (" + newCost + " < " + bestCost + ")");
+					}
+					bestSolutionTemperature = temperature;
+					bestSolutionIteration = mappingIteration;
+					bestCost = newCost;
+					bestSolution = new String[nodes.length];
+					for (int i = 0; i < nodes.length; i++) {
+						bestSolution[i] = nodes[i].getCore();
+					}
+					numberOfConsecutiveRejectedMoves = 0;
+				} else {
+					numberOfConsecutiveRejectedMoves++;
 				}
 				acceptCount++;
 				totalDeltaCost += deltaCost;
@@ -894,6 +878,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 					logger.trace("Rolling back nodes " + node1 + " and " + node2);
 				}
 				swapProcesses(node1, node2); // roll back
+				numberOfConsecutiveRejectedMoves++;
 			}
 			if (m % unit == 0) {
 				// This is just to print out the process of the algorithm
@@ -914,28 +899,47 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 ////			}
 ////		}
 		
-		acceptRatio = ((double) acceptCount) / attempts;
-
-		if (zeroCostAcceptance == acceptCount) {
-			zeroTempCnt++;
-		}
-		else {
-			zeroTempCnt = 0;
-		}
-
-		if (zeroTempCnt == 10) {
-			logger.info("The last 10 accepted mappings have zero cost. The algorithm will stop.");
-			needStop = true;
-		}
+		acceptRatio = ((double) acceptCount) / numberOfIterationsPerTemperature;
 
 		return totalDeltaCost;
 	}
 	
+	public void setNumberOfIterationsPerTemperature() {
+		numberOfIterationsPerTemperature = (nodesNumber * (nodesNumber - 1)) / 2 - ((nodesNumber - coresNumber - 1) * (nodesNumber - coresNumber)) / 2;
+//		numberOfIterationsPerTemperature = coresNumber * (nodesNumber - 1);
+	}
+	
+	public void setInitialTemperature() {
+//		temperature = 100;
+		temperature = 1;
+	}
+	
+	public double getFinalTemperature() {
+		return 1e-3;
+	}
+	
+	public void decreaseTemperature() {
+		// geometric temperature schedule (with ratio q = 0.9)
+		temperature = 0.9 * temperature;
+	}
+	
+	public boolean terminate() {
+		if (logger.isDebugEnabled()) {
+			logger.debug("current temperature < final temperature (" + getFinalTemperature() + ") "
+					+ (MathUtils.definitelyLessThan((float) temperature, (float) getFinalTemperature())));
+			logger.debug("numberOfConsecutiveRejectedMoves >= numberOfIterationsPerTemperature "
+					+ (numberOfConsecutiveRejectedMoves >= numberOfIterationsPerTemperature)
+					+ " ("
+					+ numberOfConsecutiveRejectedMoves
+					+ " < "
+					+ numberOfIterationsPerTemperature + ")");
+		}
+		return MathUtils.definitelyLessThan((float)temperature, (float)getFinalTemperature()) 
+			&& numberOfConsecutiveRejectedMoves >= numberOfIterationsPerTemperature;
+	}
+
 	private void anneal() {
-		double cost3, cost2;
-		boolean done;
-		double tol3, tol2, temp;
-		double deltaCost;
+		double totalDeltaCost;
 
 		if (!buildRoutingTable) {
 			linkBandwidthUsage = new int[linksNumber];
@@ -954,90 +958,40 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		}
 
 		// set up the global control parameters for this annealing run
-		int tempCount = 0;
-		cost3 = 999999999;
-		cost2 = 999999999;
-		currentCost = cost2;
+		mappingIteration = 0;
+		initialCost = calculateTotalCost();
+		currentCost = initialCost;
 
-//		attempts = (nodesNumber * (nodesNumber - 1)) / 2 - ((nodesNumber - coresNumber - 1) * (nodesNumber - coresNumber)) / 2;
-		attempts = coresNumber * (nodesNumber - 1);
-		// attempts = nodesNumber * 10;
+		setNumberOfIterationsPerTemperature();
 
 		initRand(1234567);
 
-		// Determin initial temperature by accepting all moves and
-		// calculate variance.
-		/*
-		 * compute initial temperature anneal_at_temp(10000.0, costcurrent,
-		 * &acceptratio, 1); temp = 20.0 * VAR; init_anneal();
-		 */
-
-		temp = 100;
+		setInitialTemperature();
 
 		/* here is the temperature cooling loop of the annealer */
-		done = false;
-		do {
-			needStop = false;
+		while(!terminate()) {
+			System.out.println("Round " + mappingIteration + ":");
+			System.out.println("Current Annealing temperature " + temperature);
 
-			System.out.println("Round " + tempCount + ":");
-			System.out.println("Current Annealing temperature " + temp);
-
-			deltaCost = annealAtTemperature(temp);
+			totalDeltaCost = annealAtTemperature();
 			
 //			System.exit(-1);
 
-			System.out.println("total delta cost " + deltaCost);
+			System.out.println("total delta cost " + totalDeltaCost);
 			System.out.println("Current cost " + currentCost);
 			System.out.println("Accept ratio " + acceptRatio);
 			
 //			printCurrentMapping();
 
-			// OK, if we got here the cost function is working fine. We can
-			// now look at whether we are frozen, or whether we should cool some
-			// more. We basically just look at the last 2 temperatures, and
-			// see if the cost is not changing much (that's the TOLERANCE test)
-			// and if the we have done enough temperatures (that's the TEMPS
-			// test), and if the accept ratio fraction is small enough (that is
-			// the MINACCEPT test). If all are satisfied, we quit.
-
-			tol3 = ((double) cost3 - (double) cost2) / (double) cost3;
-			if (tol3 < 0) {
-				tol3 = -tol3;
-			}
-			tol2 = ((double) cost2 - (double) currentCost) / (double) cost2;
-			if (tol2 < 0) {
-				tol2 = -tol2;
-			}
-
-			logger.debug("tol3 < TOLERANCE ? "
-					+ MathUtils.definitelyLessThan((float) tol3, TOLERANCE)
-					+ " (tol3 " + tol3 + " TOLERANCE " + TOLERANCE +")");
-			logger.debug("tol2 < TOLERANCE ? "
-					+ MathUtils.definitelyLessThan((float) tol2, TOLERANCE)
-					+ " (tol2 " + tol2 + " TOLERANCE " + TOLERANCE + ")");
-			logger.debug("tempCount > TEMP ? " + (tempCount > TEMPS)
-					+ " (tempCount " + tempCount + " TEMPS " + TEMPS + ")");
-			logger.debug("acceptRatio < MINACCEPT ? "
-					+ MathUtils.definitelyLessThan((float) acceptRatio,
-							(float) MINACCEPT) + " (acceptRatio " + acceptRatio
-					+ " MINACCEPT " + MINACCEPT + ")");
-			logger.debug("needStop "+ needStop);
-			
-			if (MathUtils.definitelyLessThan((float) tol3, TOLERANCE)
-					&& MathUtils.definitelyLessThan((float) tol2, TOLERANCE)
-					&& tempCount > TEMPS
-					&& (MathUtils.definitelyLessThan((float) acceptRatio,
-							(float) MINACCEPT) || needStop)) {
-				done = true;
-			} else {
-				// save the relevant info to test for frozen after the NEXT
-				// temperature.
-				cost3 = cost2;
-				cost2 = currentCost;
-				temp = 0.9 * temp;
-				tempCount++;
-			}
-		} while (!done);
+			// save the relevant info to test for frozen after the NEXT
+			// temperature.
+			mappingIteration++;
+			decreaseTemperature();
+		}
+		// return the best mapping found during the entire annealing process!!! (not the last mapping found)
+		for (int i = 0; i < nodes.length; i++) {
+			nodes[i].setCore(bestSolution[i]);
+		}
 		if (buildRoutingTable) {
 			programRouters();
 		}
@@ -1763,10 +1717,8 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		logger.info("Memory: " + monitor.getAverageUsedHeap()
 				/ (1024 * 1024 * 1.0) + " MB");
 		
-		System.out.println("Best mapping found at temperature " + bestSolutionTemp + " iteration " + bestSolutionIteration + " cost " + bestCost);
-		for (int i = 0; i < bestSolution.length; i++) {
-			System.out.println(bestSolution[i]);
-		}
+		logger.info("Best mapping found at round " + bestSolutionIteration + 
+				", temperature " + bestSolutionTemperature + ", with cost " + bestCost);
 		
 		saveRoutingTables();
 		
