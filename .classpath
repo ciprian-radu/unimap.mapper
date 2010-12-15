@@ -16,18 +16,14 @@
 			<attribute name="javadoc_location" value="http://logging.apache.org/log4j/1.2/apidocs"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="/home/cipi/netbeans-6.9.1/profiler/modules/org-netbeans-lib-profiler-ui.jar"/>
 	<classpathentry kind="lib" path="lib/sqlite-jdbc-3.7.2.jar"/>
+	<classpathentry kind="lib" path="lib/com-sun-tools-visualvm-charts.jar"/>
+	<classpathentry kind="lib" path="lib/org-netbeans-lib-profiler-charts.jar"/>
+	<classpathentry kind="lib" path="lib/org-netbeans-lib-profiler-ui.jar"/>
+	<classpathentry kind="lib" path="lib/org-openide-util-lookup.jar"/>
+	<classpathentry kind="lib" path="lib/org-openide-util.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/CTG-XML"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/NoC-XML"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="/usr/lib/jvm/java-6-sun-1.6.0.22/lib/visualvm/visualvm/modules/com-sun-tools-visualvm-charts.jar">
-		<attributes>
-			<attribute name="javadoc_location" value="https://visualvm.dev.java.net/nonav/apidocs/13"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="/home/cipi/netbeans-6.9.1/profiler/modules/org-netbeans-lib-profiler-charts.jar"/>
-	<classpathentry kind="lib" path="/home/cipi/netbeans-6.9.1/platform/lib/org-openide-util.jar"/>
-	<classpathentry kind="lib" path="/home/cipi/netbeans-6.9.1/platform/lib/org-openide-util-lookup.jar"/>
 	<classpathentry kind="output" path="classes"/>
 </classpath>
