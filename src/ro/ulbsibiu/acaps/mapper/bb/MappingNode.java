@@ -11,7 +11,6 @@ import ro.ulbsibiu.acaps.mapper.util.MathUtils;
 
 import static ro.ulbsibiu.acaps.mapper.bb.BranchAndBoundMapper.TopologyParameter.ROW;
 import static ro.ulbsibiu.acaps.mapper.bb.BranchAndBoundMapper.TopologyParameter.COLUMN;
-import static ro.ulbsibiu.acaps.mapper.bb.BranchAndBoundMapper.getNodeTopologyParameter;
 
 /**
  * Represents a node from the search tree of the Branch-and-Bound algorithm.
@@ -963,10 +962,10 @@ class MappingNode {
 	private final int calculateAdaptivity(int srcTile, int dstTile,
 			int bandwidth) {
 		int adaptivity;
-		int rowSrc = Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[srcTile], ROW));
-		int colSrc = Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[srcTile], COLUMN));
-		int rowDst = Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[dstTile], ROW));
-		int colDst = Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[dstTile], COLUMN));
+		int rowSrc = Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[srcTile], ROW));
+		int colSrc = Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[srcTile], COLUMN));
+		int rowDst = Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[dstTile], ROW));
+		int colDst = Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[dstTile], COLUMN));
 		
 		int row = rowSrc;
 		int col = colSrc;
@@ -1093,10 +1092,10 @@ class MappingNode {
 	 */
 	private boolean routeTrafficEasy(int srcTile, int dstTile, int bandwidth,
 			boolean commit, boolean updateRoutingTable) {
-		int rowSrc = Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[srcTile], ROW));
-		int colSrc = Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[srcTile], COLUMN));
-		int rowDst = Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[dstTile], ROW));
-		int colDst = Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[dstTile], COLUMN));
+		int rowSrc = Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[srcTile], ROW));
+		int colSrc = Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[srcTile], COLUMN));
+		int rowDst = Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[dstTile], ROW));
+		int colDst = Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[dstTile], COLUMN));
 
 		int row = rowSrc;
 		int col = colSrc;
@@ -1235,10 +1234,10 @@ class MappingNode {
 	 */
 	private boolean routeTrafficHard(int srcTile, int dstTile, int bandwidth,
 			boolean commit, boolean updateRoutingTable) {
-		int rowSrc = Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[srcTile], ROW));
-		int colSrc = Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[srcTile], COLUMN));
-		int rowDst = Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[dstTile], ROW));
-		int colDst = Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[dstTile], COLUMN));
+		int rowSrc = Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[srcTile], ROW));
+		int colSrc = Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[srcTile], COLUMN));
+		int rowDst = Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[dstTile], ROW));
+		int colDst = Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[dstTile], COLUMN));
 
 		int row = rowSrc;
 		int col = colSrc;
@@ -1601,15 +1600,15 @@ class MappingNode {
 		}
 		int linkId;
 		for (linkId = 0; linkId < bbMapper.linksNumber; linkId++) {
-			if (Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getFirstNode())], ROW)) == origRow
-					&& Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getFirstNode())], COLUMN)) == origColumn
-					&& Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getSecondNode())], ROW)) == row
-					&& Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getSecondNode())], COLUMN)) == column)
+			if (Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getFirstNode())], ROW)) == origRow
+					&& Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getFirstNode())], COLUMN)) == origColumn
+					&& Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getSecondNode())], ROW)) == row
+					&& Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getSecondNode())], COLUMN)) == column)
 				break;
-			if (Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getSecondNode())], ROW)) == origRow
-					&& Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getSecondNode())], COLUMN)) == origColumn
-					&& Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getFirstNode())], ROW)) == row
-					&& Integer.valueOf(getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getFirstNode())], COLUMN)) == column)
+			if (Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getSecondNode())], ROW)) == origRow
+					&& Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getSecondNode())], COLUMN)) == origColumn
+					&& Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getFirstNode())], ROW)) == row
+					&& Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[Integer.valueOf(bbMapper.links[linkId].getFirstNode())], COLUMN)) == column)
 				break;
 		}
 		if (linkId == bbMapper.linksNumber) {

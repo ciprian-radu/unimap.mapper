@@ -231,22 +231,82 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	
 	private static final String LINK_OUT = "out";
 	
-	private static String getNodeTopologyParameter(NodeType node,
+	private Integer[] nodeRows;
+	
+	private Integer[] nodeColumns;
+	
+	private String getNodeTopologyParameter(NodeType node,
 			TopologyParameter parameter) {
 		String value = null;
-		List<TopologyParameterType> topologyParameters = node
-				.getTopologyParameter();
-		for (int i = 0; i < topologyParameters.size(); i++) {
-			if (parameter.toString().equalsIgnoreCase(
-					topologyParameters.get(i).getType())) {
-				value = topologyParameters.get(i).getValue();
-				break;
+		if (TopologyParameter.ROW.equals(parameter)
+				&& nodeRows[Integer.valueOf(node.getId())] != null) {
+			value = Integer.toString(nodeRows[Integer.valueOf(node.getId())]);
+		} else {
+			if (TopologyParameter.COLUMN.equals(parameter)
+					&& nodeColumns[Integer.valueOf(node.getId())] != null) {
+				value = Integer.toString(nodeColumns[Integer.valueOf(node
+						.getId())]);
+			} else {
+				List<TopologyParameterType> topologyParameters = node
+						.getTopologyParameter();
+				for (int i = 0; i < topologyParameters.size(); i++) {
+					if (parameter.toString().equalsIgnoreCase(
+							topologyParameters.get(i).getType())) {
+						value = topologyParameters.get(i).getValue();
+						break;
+					}
+				}
+				logger.assertLog(value != null,
+						"Couldn't find the topology parameter '" + parameter
+								+ "' in the node " + node.getId());
+
+				if (TopologyParameter.ROW.equals(parameter)) {
+					nodeRows[Integer.valueOf(node.getId())] = Integer
+							.valueOf(value);
+				}
+				if (TopologyParameter.COLUMN.equals(parameter)) {
+					nodeColumns[Integer.valueOf(node.getId())] = Integer
+							.valueOf(value);
+				}
 			}
 		}
-		logger.assertLog(value != null,
-				"Couldn't find the topology parameter '" + parameter
-						+ "' in the node " + node.getId());
+
 		return value;
+	}
+	
+	private int getNodeWithTopologyParameters(List<TopologyParameterType> topologyParameters) {
+		int node = -1;
+		
+		boolean found = false;
+		for (int i = 0; i < nodes.length; i++) {
+			List<TopologyParameterType> nodeTopologyParameters = nodes[i].getTopologyParameter();
+			if (nodeTopologyParameters.size() >= topologyParameters.size()) {
+				int j = 0;
+				for (j = 0; j < topologyParameters.size(); j++) {
+					boolean foundTopologyParameter = false;
+					for (int k = 0; k < nodeTopologyParameters.size(); k++) {
+						if (topologyParameters.get(j).getType().equalsIgnoreCase(nodeTopologyParameters.get(k).getType()) 
+								&& topologyParameters.get(j).getValue().equalsIgnoreCase(nodeTopologyParameters.get(k).getValue())) {
+							foundTopologyParameter = true;
+							break;
+						}
+					}
+					if (!foundTopologyParameter) {
+						break;
+					}
+				}
+				if (j == topologyParameters.size()) {
+					found = true;
+				}
+				if (found) {
+					node = i;
+					break;
+				}
+			}
+		}
+		
+		logger.assertLog(node > -1, "Couldn't find the node with the specified topology parameters!");
+		return node;
 	}
 	
 	/** routingTables[nodeId][sourceNode][destinationNode] = link ID */
@@ -562,6 +622,8 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		logger.debug("Found " + nodeXmls.length + " nodes");
 		this.nodesNumber = nodeXmls.length;
 		nodes = new NodeType[nodesNumber];
+		nodeRows = new Integer[nodesNumber];
+		nodeColumns = new Integer[nodesNumber];
 		this.edgeSize = (int) Math.sqrt(nodesNumber);
 		for (int i = 0; i < nodeXmls.length; i++) {
 			JAXBContext jaxbContext = JAXBContext
@@ -806,7 +868,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 //		List<String[]> uniqueMappings = new ArrayList<String[]>(); 
 //		List<Integer> uniqueMappingsFrequencies = new ArrayList<Integer>();
 		for (int m = 1; m <= numberOfIterationsPerTemperature; m++) {
-			int[] swappedNodes = makeRandomSwap();
+			int[] movedNodes = move();
 			
 //			// computes the unique mappings (start)
 //			boolean isNewMapping = true;
@@ -834,8 +896,8 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 //			}
 //			// computes the unique mappings (end)
 			
-			int node1 = swappedNodes[0];
-			int node2 = swappedNodes[1];
+			int node1 = movedNodes[0];
+			int node2 = movedNodes[1];
 
 			double newCost = calculateTotalCost();
 
@@ -888,7 +950,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		System.out.println();
 		
 //		// prints the unique mappings
-//		System.out.println("Found " + uniqueMappings.size() + " unique mappings (from a total of " + attempts + " mappings)");
+//		System.out.println("Found " + uniqueMappings.size() + " unique mappings (from a total of " + numberOfIterationsPerTemperature + " mappings)");
 ////		System.out.println("with the following frequencies:");
 ////		for (int i = 0; i < uniqueMappings.size(); i++) {
 ////			if (uniqueMappingsFrequencies.get(i) > 1) {
@@ -907,6 +969,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	public void setNumberOfIterationsPerTemperature() {
 		numberOfIterationsPerTemperature = (nodesNumber * (nodesNumber - 1)) / 2 - ((nodesNumber - coresNumber - 1) * (nodesNumber - coresNumber)) / 2;
 //		numberOfIterationsPerTemperature = coresNumber * (nodesNumber - 1);
+//		numberOfIterationsPerTemperature = nodesNumber - 2; // diameter of the 2D mesh 
 	}
 	
 	public void setInitialTemperature() {
@@ -998,6 +1061,17 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	}
 
 	/**
+	 * Changes the current mapping by moving a core from one node to another.
+	 * This implies that two nodes are changed.
+	 * 
+	 * @return the IDs of the two changed nodes
+	 */
+	private int[] move() {
+//		return makeRandomSwap();
+		return makeTopologicalMove();
+	}
+	
+	/**
 	 * Randomly picks two nodes and swaps them
 	 * 
 	 * @return an array with exactly 2 integers
@@ -1006,7 +1080,9 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		int node1 = (int) uniformIntegerRandomVariable(0, nodesNumber - 1);
 		int node2 = -1;
 
+		int cnt = 0;
 		while (true) {
+			cnt++;
 			// select two nodes to swap
 			node2 = (int) uniformIntegerRandomVariable(0, nodesNumber - 1);
 			if (node1 != node2
@@ -1015,9 +1091,179 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 				break;
 			}
 		}
+		if (cnt > 1 && logger.isTraceEnabled()) {
+			logger.trace("The nodes to swap were randomly found after " + cnt + " trials");
+		}
 
 		// Swap the processes attached to these two nodes
 		swapProcesses(node1, node2);
+		return new int[] { node1, node2 };
+	}
+	
+	/**
+	 * Determines the neighboring nodes of the given node. Note that this method
+	 * is topology dependent.
+	 * 
+	 * @param node
+	 *            the node
+	 * @return the neighbors of node
+	 */
+	private Integer[] getNodeNeighbors(int node) {
+		List<Integer> neighbors = new ArrayList<Integer>();
+		
+		int row = Integer.valueOf(getNodeTopologyParameter(nodes[node], TopologyParameter.ROW));
+		int column = Integer.valueOf(getNodeTopologyParameter(nodes[node], TopologyParameter.COLUMN));
+		
+		boolean northFound = (row <= 0); // no need to search for north neighbor if the node is on row 0
+		boolean eastFound = (column >= edgeSize - 1); // no need to search for east neighbor if the node is on the rightmost column
+		boolean southFound = (row >= edgeSize - 1); // no need to search for south neighbor if the node is on the bottom row
+		boolean westFound = (column <= 0); // no need to search for north neighbor if the node is on column 0
+		
+		for (int i = 0; i < nodes.length; i++) {
+			int iRow = Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.ROW));
+			int iColumn = Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.COLUMN));
+			
+			if (!northFound) {
+				// has NORTH neighbor
+				if (row -1 == iRow && column == iColumn) {
+					neighbors.add(i);
+					northFound = true;
+				}
+			}
+			if (!eastFound) {
+				// has EAST neighbor
+				if (row == iRow && column + 1 == iColumn) {
+					neighbors.add(i);
+					eastFound = true;
+				}
+			}
+			if (!southFound) {
+				// has SOUTH neighbor
+				if (row + 1 == iRow && column == iColumn) {
+					neighbors.add(i);
+					southFound = true;
+				}
+			}
+			if (!westFound) {
+				// has WEST neighbor
+				if (row == iRow && column - 1 == iColumn) {
+					neighbors.add(i);
+					westFound = true;
+				}
+			}
+			
+			if (northFound && eastFound && southFound && westFound) {
+				break;
+			}
+		}
+		
+		return neighbors.toArray(new Integer[neighbors.size()]);
+	}
+
+	/**
+	 * Randomly selects a node (n1) that has a core (c1) mapped to it. This node
+	 * is swapped randomly with another node (n2), unless c1 receives data from
+	 * just a core (c2). In this case, c1 will be placed in one of the neighbors
+	 * of n2 that doesn't have a core mapped to it. If there isn't an empty
+	 * neighbor, we search for a neighbor with a core which doesn't communicate
+	 * with c2. If we still don't find a neighbor, we fall back to random
+	 * swapping. Note that is multiple neighbors are found, the chosen one is
+	 * determined randomly.
+	 * 
+	 * @return the two swapped nodes
+	 */
+	private int[] makeTopologicalMove() {
+		int node1;
+		int node2;
+		
+		do {
+			node1 = (int) uniformIntegerRandomVariable(0, nodesNumber - 1);
+		} while ("-1".equals(nodes[node1].getCore()));
+		
+		int core1 = Integer.valueOf(nodes[node1].getCore());
+		// check if core1 receives data only from one core
+		int[] fromCommunication = cores[core1].getFromCommunication();
+		int fromCoresCount = 0;
+		int core2 = -1;
+		for (int i = 0; i < fromCommunication.length; i++) {
+			if (fromCommunication[i] > 0) {
+				fromCoresCount++;
+				core2 = i;
+			}
+		}
+		if (fromCoresCount == 1) {
+			if (logger.isDebugEnabled()) {
+				logger.debug("Core " + core1 + " receives data only from core "
+						+ core2 + ". Trying to topologically place core " + core1);
+			}
+			// search the node that has core2
+			int core2Node = -1;
+			for (int i = 0; i < nodes.length; i++) {
+				if (nodes[i].getCore().equals(Integer.toString(core2))) {
+					core2Node = i;
+					break;
+				}
+			}
+			logger.assertLog(core2Node >= 0, "Couldn't find the node to which core " + core2 + " is placed!");
+			// determine the neighboring nodes of node core2Node
+			Integer[] core2NodeNeighbors = getNodeNeighbors(core2Node);
+			// determine the neighboring nodes of node core2Node which are unoccupied
+			List<Integer> unoccupiedNodes = new ArrayList<Integer>(core2NodeNeighbors.length);
+			for (int j = 0; j < core2NodeNeighbors.length; j++) {
+				if (logger.isDebugEnabled()) {
+					logger.debug("Node " + core2Node + " has node " + core2NodeNeighbors[j] + " as neighbor");
+				}
+				if ("-1".equals(nodes[core2NodeNeighbors[j]].getCore())) {
+					if (logger.isDebugEnabled()) {
+						logger.debug("Node " + core2NodeNeighbors[j] + " is unoccupied");
+					}
+					unoccupiedNodes.add(core2NodeNeighbors[j]);
+				}
+			}
+			if (unoccupiedNodes.size() > 0) {
+				int r = (int) uniformIntegerRandomVariable(0, unoccupiedNodes.size() - 1);
+				node2 = unoccupiedNodes.get(r);
+			} else {
+				if (logger.isDebugEnabled()) {
+					logger.debug("All neighbors of node " + core2Node + " are occupied. " +
+							"Searching for neighboring nodes of node " + core2Node + 
+							" which have cores that do not communicate with core " + core1);
+				}
+				// determine the neighboring nodes of node core2Node which have cores that do not communicate with core2
+				List<Integer> notCommunicatingNodes = new ArrayList<Integer>(core2NodeNeighbors.length);
+				for (int j = 0; j < core2NodeNeighbors.length; j++) {
+					if (cores[Integer.valueOf(nodes[core2NodeNeighbors[j]].getCore())].getToCommunication()[core2] == 0
+							&& cores[Integer.valueOf(nodes[core2NodeNeighbors[j]].getCore())].getFromCommunication()[core2] == 0) {
+						if (logger.isDebugEnabled()) {
+							logger.debug("Node " + core2NodeNeighbors[j] + " does not communicate with " + core2);
+						}
+						notCommunicatingNodes.add(core2NodeNeighbors[j]);
+					}
+				}
+				if (notCommunicatingNodes.size() > 0) {
+					int r = (int) uniformIntegerRandomVariable(0, notCommunicatingNodes.size() - 1);
+					node2 = notCommunicatingNodes.get(r);
+				} else {
+					if (logger.isDebugEnabled()) {
+						logger.debug("No suitable neighbore node found. Falling back to random swap...");
+					}
+					do {
+						node2 = (int) uniformIntegerRandomVariable(0, nodesNumber - 1);
+					} while (node2 == node1);
+				}
+			}
+		} else {
+			do {
+				node2 = (int) uniformIntegerRandomVariable(0, nodesNumber - 1);
+			} while (node2 == node1);
+		}
+		logger.assertLog(node1 != -1 && node2 != -1,
+				"At least one node is not defined (i.e. = -1); node1 = " + node1 + ", node2 = " + node2);
+		if (logger.isDebugEnabled()) {
+			logger.debug("Swapping nodes " + node1 + " and " + node2);
+		}
+		swapProcesses(node1, node2);
+		
 		return new int[] { node1, node2 };
 	}
 
