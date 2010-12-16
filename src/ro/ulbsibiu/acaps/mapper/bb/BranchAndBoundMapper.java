@@ -38,9 +38,7 @@ import ro.ulbsibiu.acaps.mapper.bb.MappingNode.RoutingEffort;
 import ro.ulbsibiu.acaps.mapper.sa.Core;
 import ro.ulbsibiu.acaps.mapper.util.ApcgFilenameFilter;
 import ro.ulbsibiu.acaps.mapper.util.HeapUsageMonitor;
-import ro.ulbsibiu.acaps.mapper.util.VisualHeapUsageMonitor;
 import ro.ulbsibiu.acaps.mapper.util.MathUtils;
-import ro.ulbsibiu.acaps.mapper.util.MemoryUtils;
 import ro.ulbsibiu.acaps.mapper.util.TimeUtils;
 import ro.ulbsibiu.acaps.noc.xml.link.LinkType;
 import ro.ulbsibiu.acaps.noc.xml.node.NodeType;
@@ -238,21 +236,46 @@ public class BranchAndBoundMapper implements Mapper {
 	
 	private static final String LINK_OUT = "out";
 	
-	static String getNodeTopologyParameter(NodeType node,
+	private Integer[] nodeRows;
+	
+	private Integer[] nodeColumns;
+	
+	String getNodeTopologyParameter(NodeType node,
 			TopologyParameter parameter) {
 		String value = null;
-		List<TopologyParameterType> topologyParameters = node
-				.getTopologyParameter();
-		for (int i = 0; i < topologyParameters.size(); i++) {
-			if (parameter.toString().equalsIgnoreCase(
-					topologyParameters.get(i).getType())) {
-				value = topologyParameters.get(i).getValue();
-				break;
+		if (TopologyParameter.ROW.equals(parameter)
+				&& nodeRows[Integer.valueOf(node.getId())] != null) {
+			value = Integer.toString(nodeRows[Integer.valueOf(node.getId())]);
+		} else {
+			if (TopologyParameter.COLUMN.equals(parameter)
+					&& nodeColumns[Integer.valueOf(node.getId())] != null) {
+				value = Integer.toString(nodeColumns[Integer.valueOf(node
+						.getId())]);
+			} else {
+				List<TopologyParameterType> topologyParameters = node
+						.getTopologyParameter();
+				for (int i = 0; i < topologyParameters.size(); i++) {
+					if (parameter.toString().equalsIgnoreCase(
+							topologyParameters.get(i).getType())) {
+						value = topologyParameters.get(i).getValue();
+						break;
+					}
+				}
+				logger.assertLog(value != null,
+						"Couldn't find the topology parameter '" + parameter
+								+ "' in the node " + node.getId());
+
+				if (TopologyParameter.ROW.equals(parameter)) {
+					nodeRows[Integer.valueOf(node.getId())] = Integer
+							.valueOf(value);
+				}
+				if (TopologyParameter.COLUMN.equals(parameter)) {
+					nodeColumns[Integer.valueOf(node.getId())] = Integer
+							.valueOf(value);
+				}
 			}
 		}
-		logger.assertLog(value != null,
-				"Couldn't find the topology parameter '" + parameter
-						+ "' in the node " + node.getId());
+
 		return value;
 	}
 
@@ -590,6 +613,8 @@ public class BranchAndBoundMapper implements Mapper {
 		logger.debug("Found " + nodeXmls.length + " nodes");
 		this.nodesNumber = nodeXmls.length;
 		nodes = new NodeType[nodesNumber];
+		nodeRows = new Integer[nodesNumber];
+		nodeColumns = new Integer[nodesNumber];
 		this.edgeSize = (int) Math.sqrt(nodesNumber);
 		for (int i = 0; i < nodeXmls.length; i++) {
 			JAXBContext jaxbContext = JAXBContext
