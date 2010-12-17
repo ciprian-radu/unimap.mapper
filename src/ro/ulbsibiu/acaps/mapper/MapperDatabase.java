@@ -1,6 +1,8 @@
 package ro.ulbsibiu.acaps.mapper;
 
-import java.io.InputStream;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -9,6 +11,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Properties;
 
 import org.apache.log4j.Logger;
 
@@ -20,10 +23,7 @@ import org.apache.log4j.Logger;
  */
 public class MapperDatabase {
 
-	private static final String JDBC_DRIVER = "org.sqlite.JDBC";
-
-	/** default database URL */
-	public static final String URL = "jdbc:sqlite:data.db";
+	private static final String JDBC_DRIVER = "com.mysql.jdbc.Driver";
 
 	/**
 	 * Logger for this class
@@ -34,11 +34,11 @@ public class MapperDatabase {
 
 	private Connection connection = null;
 
-	private String url = URL;
+	private String url = null;
 
-	private String usedId;
+	private String usedId = null;
 
-	private String password;
+	private String password = null;
 
 	/**
 	 * a unique ID, valid only until the database connection is closed.
@@ -47,7 +47,7 @@ public class MapperDatabase {
 	private int run;
 
 	private MapperDatabase() {
-		;
+		setDefaultDatabaseCredentials();
 	}
 
 	public static final synchronized MapperDatabase getInstance() {
@@ -57,6 +57,20 @@ public class MapperDatabase {
 		return instance;
 	}
 
+	private void setDefaultDatabaseCredentials() {
+		Properties properties = new Properties();
+		try {
+			properties.load(new FileInputStream("mysql.properties"));
+			this.url = properties.getProperty("database.url");
+			this.usedId = properties.getProperty("database.user");;
+			this.password = properties.getProperty("database.password");
+		} catch (FileNotFoundException e) {
+			logger.error("Couldn't set the default database credentials", e);
+		} catch (IOException e) {
+			logger.error("Couldn't set the default database credentials", e);
+		}
+	}
+	
 	/**
 	 * Creates a database connection
 	 * 
@@ -82,17 +96,17 @@ public class MapperDatabase {
 
 				connection = DriverManager.getConnection(url, userId, password);
 				Statement statement = connection.createStatement();
-				statement.execute("PRAGMA foreign_keys = ON;");
 				statement
-						.executeUpdate("INSERT INTO RUN SELECT MAX(ID) + 1 FROM RUN");
-				ResultSet resultSet = statement
-						.executeQuery("SELECT MAX(ID) FROM RUN");
+						.executeUpdate("INSERT INTO RUN SELECT MAX(ID) + 1 FROM RUN", Statement.RETURN_GENERATED_KEYS);
+				ResultSet resultSet = statement.getGeneratedKeys();
 				while (resultSet.next()) {
 					run = resultSet.getInt(1);
 					logger.debug("Run ID is " + run);
 				}
-			} catch (Exception e) {
+			} catch (SQLException e) {
 				logger.error("Driver installation failed!", e);
+			} catch (ClassNotFoundException e) {
+				logger.error("JDBC driver class not found!", e);
 			}
 		} else {
 			logger.info("Using already existing database connection. "
@@ -109,10 +123,8 @@ public class MapperDatabase {
 				logger.debug("Closing database connection...");
 				connection.close();
 				connection = null;
-				this.url = URL;
-				this.usedId = null;
-				this.password = null;
 				logger.info("Database connection closed by user");
+				setDefaultDatabaseCredentials();
 			} catch (SQLException e) {
 				logger.error(e);
 			}
@@ -150,9 +162,8 @@ public class MapperDatabase {
 				Statement statement = getConnection().createStatement();
 				statement.execute("PRAGMA foreign_keys = ON;");
 				statement
-						.executeUpdate("INSERT INTO RUN SELECT MAX(ID) + 1 FROM RUN");
-				ResultSet resultSet = statement
-						.executeQuery("SELECT MAX(ID) FROM RUN");
+						.executeUpdate("INSERT INTO RUN SELECT MAX(ID) + 1 FROM RUN", Statement.RETURN_GENERATED_KEYS);
+				ResultSet resultSet = statement.getGeneratedKeys();
 				while (resultSet.next()) {
 					run = resultSet.getInt(1);
 					logger.debug("Run ID is " + run);
@@ -190,13 +201,9 @@ public class MapperDatabase {
 			}
 			if (id == null) {
 				logger.warn("No ID found. Inserting this benchmark CTG into the database");
-				statement
-						.executeUpdate("INSERT INTO BENCHMARK (NAME, CTG_ID) VALUES ('"
-								+ benchmarkName + "', '" + ctgId + "')");
-				resultSet = statement
-						.executeQuery("SELECT ID FROM BENCHMARK WHERE NAME = '"
-								+ benchmarkName + "' AND CTG_ID = '" + ctgId
-								+ "'");
+				statement.executeUpdate("INSERT INTO BENCHMARK (NAME, CTG_ID) VALUES ('"
+								+ benchmarkName + "', '" + ctgId + "')", Statement.RETURN_GENERATED_KEYS);
+				resultSet = statement.getGeneratedKeys();
 				while (resultSet.next()) {
 					if (id != null) {
 						throw new SQLException("Multiple IDs returned");

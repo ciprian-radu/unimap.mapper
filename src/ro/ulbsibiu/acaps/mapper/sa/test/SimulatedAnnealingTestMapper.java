@@ -274,41 +274,6 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		return value;
 	}
 	
-	private int getNodeWithTopologyParameters(List<TopologyParameterType> topologyParameters) {
-		int node = -1;
-		
-		boolean found = false;
-		for (int i = 0; i < nodes.length; i++) {
-			List<TopologyParameterType> nodeTopologyParameters = nodes[i].getTopologyParameter();
-			if (nodeTopologyParameters.size() >= topologyParameters.size()) {
-				int j = 0;
-				for (j = 0; j < topologyParameters.size(); j++) {
-					boolean foundTopologyParameter = false;
-					for (int k = 0; k < nodeTopologyParameters.size(); k++) {
-						if (topologyParameters.get(j).getType().equalsIgnoreCase(nodeTopologyParameters.get(k).getType()) 
-								&& topologyParameters.get(j).getValue().equalsIgnoreCase(nodeTopologyParameters.get(k).getValue())) {
-							foundTopologyParameter = true;
-							break;
-						}
-					}
-					if (!foundTopologyParameter) {
-						break;
-					}
-				}
-				if (j == topologyParameters.size()) {
-					found = true;
-				}
-				if (found) {
-					node = i;
-					break;
-				}
-			}
-		}
-		
-		logger.assertLog(node > -1, "Couldn't find the node with the specified topology parameters!");
-		return node;
-	}
-	
 	/** routingTables[nodeId][sourceNode][destinationNode] = link ID */
 	private int[][][] routingTables;
 	

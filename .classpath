@@ -16,12 +16,12 @@
 			<attribute name="javadoc_location" value="http://logging.apache.org/log4j/1.2/apidocs"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="lib/sqlite-jdbc-3.7.2.jar"/>
 	<classpathentry kind="lib" path="lib/com-sun-tools-visualvm-charts.jar"/>
 	<classpathentry kind="lib" path="lib/org-netbeans-lib-profiler-charts.jar"/>
 	<classpathentry kind="lib" path="lib/org-netbeans-lib-profiler-ui.jar"/>
 	<classpathentry kind="lib" path="lib/org-openide-util-lookup.jar"/>
 	<classpathentry kind="lib" path="lib/org-openide-util.jar"/>
+	<classpathentry kind="lib" path="lib/mysql-connector-java-5.1.14-bin.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/CTG-XML"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/NoC-XML"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
