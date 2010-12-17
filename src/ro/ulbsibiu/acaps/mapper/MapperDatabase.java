@@ -87,6 +87,8 @@ public class MapperDatabase {
 			this.url = url;
 			this.usedId = userId;
 			this.password = password;
+			Statement statement = null;
+			ResultSet resultSet = null;
 			try {
 				logger.info("Creating database connection");
 				String className = JDBC_DRIVER;
@@ -95,10 +97,10 @@ public class MapperDatabase {
 				logger.debug("Database installation successful");
 
 				connection = DriverManager.getConnection(url, userId, password);
-				Statement statement = connection.createStatement();
+				statement = connection.createStatement();
 				statement
 						.executeUpdate("INSERT INTO RUN SELECT MAX(ID) + 1 FROM RUN", Statement.RETURN_GENERATED_KEYS);
-				ResultSet resultSet = statement.getGeneratedKeys();
+				resultSet = statement.getGeneratedKeys();
 				while (resultSet.next()) {
 					run = resultSet.getInt(1);
 					logger.debug("Run ID is " + run);
@@ -107,6 +109,17 @@ public class MapperDatabase {
 				logger.error("Driver installation failed!", e);
 			} catch (ClassNotFoundException e) {
 				logger.error("JDBC driver class not found!", e);
+			} finally {
+				try {
+					if (resultSet != null) {
+						resultSet.close();
+					}
+					if (statement != null) {
+						statement.close();
+					}
+				} catch (SQLException e) {
+					logger.error(e);
+				}
 			}
 		} else {
 			logger.info("Using already existing database connection. "
@@ -158,17 +171,36 @@ public class MapperDatabase {
 		if (connection == null) {
 			getConnection();
 		} else {
+			Statement statement = null;
+			ResultSet resultSet = null;
 			try {
-				Statement statement = getConnection().createStatement();
+				statement = getConnection().createStatement();
 				statement
 						.executeUpdate("INSERT INTO RUN SELECT MAX(ID) + 1 FROM RUN", Statement.RETURN_GENERATED_KEYS);
-				ResultSet resultSet = statement.getGeneratedKeys();
+				resultSet = statement.getGeneratedKeys();
 				while (resultSet.next()) {
 					run = resultSet.getInt(1);
 					logger.debug("Run ID is " + run);
 				}
+				if (resultSet != null) {
+					resultSet.close();
+				}
+				if (statement != null) {
+					statement.close();
+				}
 			} catch (SQLException e) {
 				logger.error(e);
+			} finally {
+				try {
+					if (resultSet != null) {
+						resultSet.close();
+					}
+					if (statement != null) {
+						statement.close();
+					}
+				} catch (SQLException e) {
+					logger.error(e);
+				}
 			}
 		}
 	}
@@ -186,10 +218,11 @@ public class MapperDatabase {
 	public int getBenchmarkId(String benchmarkName, String ctgId) {
 		Integer id = null;
 
-		Statement statement;
+		Statement statement = null;
+		ResultSet resultSet = null;
 		try {
 			statement = getConnection().createStatement();
-			ResultSet resultSet = statement
+			resultSet = statement
 					.executeQuery("SELECT ID FROM BENCHMARK WHERE NAME = '"
 							+ benchmarkName + "' AND CTG_ID = '" + ctgId + "'");
 			while (resultSet.next()) {
@@ -211,8 +244,25 @@ public class MapperDatabase {
 				}
 				logger.assertLog(id != null, "No ID found");
 			}
+			if (resultSet != null) {
+				resultSet.close();
+			}
+			if (statement != null) {
+				statement.close();
+			}
 		} catch (SQLException e) {
 			logger.error(e);
+		} finally {
+			try {
+				if (resultSet != null) {
+					resultSet.close();
+				}
+				if (statement != null) {
+					statement.close();
+				}
+			} catch (SQLException e) {
+				logger.error(e);
+			}
 		}
 
 		return id;
@@ -233,8 +283,9 @@ public class MapperDatabase {
 				"The number of parameters, " + parameters.length
 						+ ", doesn't match the number of values: "
 						+ values.length);
+		Statement statement = null;
 		try {
-			Statement statement = getConnection().createStatement();
+			statement = getConnection().createStatement();
 			for (int i = 0; i < parameters.length; i++) {
 				statement
 						.addBatch("INSERT INTO PARAMETER (ID, NAME, VALUE) VALUES ("
@@ -245,8 +296,19 @@ public class MapperDatabase {
 								+ values[i] + "')");
 			}
 			statement.executeBatch();
+			if (statement != null) {
+				statement.close();
+			}
 		} catch (SQLException e) {
 			logger.error(e);
+		} finally {
+			try {
+				if (statement != null) {
+					statement.close();
+				}
+			} catch (SQLException e) {
+				logger.error(e);
+			}
 		}
 	}
 
@@ -263,10 +325,11 @@ public class MapperDatabase {
 	public int getNocTopologyId(String topologyName, String topologySize) {
 		Integer id = null;
 
-		Statement statement;
+		Statement statement = null;
+		ResultSet resultSet = null;
 		try {
 			statement = getConnection().createStatement();
-			ResultSet resultSet = statement
+			resultSet = statement
 					.executeQuery("SELECT ID FROM NOC_TOPOLOGY WHERE NAME = '"
 							+ topologyName + "' AND SIZE = '" + topologySize
 							+ "'");
@@ -296,6 +359,17 @@ public class MapperDatabase {
 			}
 		} catch (SQLException e) {
 			logger.error(e);
+		} finally {
+			try {
+				if (resultSet != null) {
+					resultSet.close();
+				}
+				if (statement != null) {
+					statement.close();
+				}
+			} catch (SQLException e) {
+				logger.error(e);
+			}
 		}
 
 		return id;
@@ -316,8 +390,9 @@ public class MapperDatabase {
 				"The number of outputs, " + outputs.length
 						+ ", doesn't match the number of values: "
 						+ values.length);
+		Statement statement = null;
 		try {
-			Statement statement = getConnection().createStatement();
+			statement = getConnection().createStatement();
 			for (int i = 0; i < outputs.length; i++) {
 				statement
 						.addBatch("INSERT INTO OUTPUT (ID, NAME, VALUE) VALUES ("
@@ -331,6 +406,14 @@ public class MapperDatabase {
 			statement.executeBatch();
 		} catch (SQLException e) {
 			logger.error(e);
+		} finally {
+			try {
+				if (statement != null) {
+					statement.close();
+				}
+			} catch (SQLException e) {
+				logger.error(e);
+			}
 		}
 	}
 
@@ -339,12 +422,13 @@ public class MapperDatabase {
 			String mappingXml, Date startTime, double realTime,
 			double userTime, double sysTime, double averageHeapMemory,
 			byte[] averageHeapMemoryChart) {
+		PreparedStatement statement = null;
 		try {
 			SimpleDateFormat sdf = new SimpleDateFormat();
 			sdf.applyPattern("yyyy-MM-dd HH:mm:ss");
 			String startTimeAsString = sdf.format(startTime);
 
-			PreparedStatement statement = getConnection()
+			statement = getConnection()
 					.prepareStatement(
 							"INSERT INTO MAPPER (" +
 							"NAME, " +
@@ -378,6 +462,14 @@ public class MapperDatabase {
 			statement.execute();
 		} catch (SQLException e) {
 			logger.error(e);
+		} finally {
+			try {
+				if (statement != null) {
+					statement.close();
+				}
+			} catch (SQLException e) {
+				logger.error(e);
+			}
 		}
 	}
 
