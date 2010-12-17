@@ -160,7 +160,6 @@ public class MapperDatabase {
 		} else {
 			try {
 				Statement statement = getConnection().createStatement();
-				statement.execute("PRAGMA foreign_keys = ON;");
 				statement
 						.executeUpdate("INSERT INTO RUN SELECT MAX(ID) + 1 FROM RUN", Statement.RETURN_GENERATED_KEYS);
 				ResultSet resultSet = statement.getGeneratedKeys();
