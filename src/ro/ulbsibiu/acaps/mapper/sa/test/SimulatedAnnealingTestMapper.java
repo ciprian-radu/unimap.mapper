@@ -2284,6 +2284,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 					}
 				}
 			}
+			MapperDatabase.getInstance().closeConnection();			
 			logger.info("Done.");
 		}
 	}
