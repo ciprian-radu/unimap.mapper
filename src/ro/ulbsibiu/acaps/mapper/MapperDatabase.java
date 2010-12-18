@@ -17,6 +17,10 @@ import org.apache.log4j.Logger;
 
 /**
  * Singleton that allows connectivity with the MAPPER SQLite database.
+ * <p>
+ * <b>Note: </b>Any failed database operation leads to stopping the program that
+ * uses this class.
+ * </p>
  * 
  * @author cipi
  * 
@@ -107,8 +111,10 @@ public class MapperDatabase {
 				}
 			} catch (SQLException e) {
 				logger.error("Driver installation failed!", e);
+				System.exit(0);
 			} catch (ClassNotFoundException e) {
 				logger.error("JDBC driver class not found!", e);
+				System.exit(0);
 			} finally {
 				try {
 					if (resultSet != null) {
@@ -119,6 +125,7 @@ public class MapperDatabase {
 					}
 				} catch (SQLException e) {
 					logger.error(e);
+					System.exit(0);
 				}
 			}
 		} else {
@@ -140,6 +147,7 @@ public class MapperDatabase {
 				setDefaultDatabaseCredentials();
 			} catch (SQLException e) {
 				logger.error(e);
+				System.exit(0);
 			}
 		}
 	}
@@ -190,6 +198,7 @@ public class MapperDatabase {
 				}
 			} catch (SQLException e) {
 				logger.error(e);
+				System.exit(0);
 			} finally {
 				try {
 					if (resultSet != null) {
@@ -200,6 +209,7 @@ public class MapperDatabase {
 					}
 				} catch (SQLException e) {
 					logger.error(e);
+					System.exit(0);
 				}
 			}
 		}
@@ -252,6 +262,7 @@ public class MapperDatabase {
 			}
 		} catch (SQLException e) {
 			logger.error(e);
+			System.exit(0);
 		} finally {
 			try {
 				if (resultSet != null) {
@@ -262,6 +273,7 @@ public class MapperDatabase {
 				}
 			} catch (SQLException e) {
 				logger.error(e);
+				System.exit(0);
 			}
 		}
 
@@ -301,6 +313,7 @@ public class MapperDatabase {
 			}
 		} catch (SQLException e) {
 			logger.error(e);
+			System.exit(0);
 		} finally {
 			try {
 				if (statement != null) {
@@ -308,6 +321,7 @@ public class MapperDatabase {
 				}
 			} catch (SQLException e) {
 				logger.error(e);
+				System.exit(0);
 			}
 		}
 	}
@@ -359,6 +373,7 @@ public class MapperDatabase {
 			}
 		} catch (SQLException e) {
 			logger.error(e);
+			System.exit(0);
 		} finally {
 			try {
 				if (resultSet != null) {
@@ -369,6 +384,7 @@ public class MapperDatabase {
 				}
 			} catch (SQLException e) {
 				logger.error(e);
+				System.exit(0);
 			}
 		}
 
@@ -406,6 +422,7 @@ public class MapperDatabase {
 			statement.executeBatch();
 		} catch (SQLException e) {
 			logger.error(e);
+			System.exit(0);
 		} finally {
 			try {
 				if (statement != null) {
@@ -413,6 +430,7 @@ public class MapperDatabase {
 				}
 			} catch (SQLException e) {
 				logger.error(e);
+				System.exit(0);
 			}
 		}
 	}
@@ -462,6 +480,7 @@ public class MapperDatabase {
 			statement.execute();
 		} catch (SQLException e) {
 			logger.error(e);
+			System.exit(0);
 		} finally {
 			try {
 				if (statement != null) {
@@ -469,6 +488,7 @@ public class MapperDatabase {
 				}
 			} catch (SQLException e) {
 				logger.error(e);
+				System.exit(0);
 			}
 		}
 	}
