@@ -13,6 +13,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Properties;
 
+import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.log4j.Logger;
 
 /**
@@ -36,11 +37,11 @@ public class MapperDatabase {
 
 	private static MapperDatabase instance = null;
 
-	private Connection connection = null;
-
+	private BasicDataSource basicDataSource;
+	
 	private String url = null;
 
-	private String usedId = null;
+	private String userId = null;
 
 	private String password = null;
 
@@ -66,7 +67,7 @@ public class MapperDatabase {
 		try {
 			properties.load(new FileInputStream("mysql.properties"));
 			this.url = properties.getProperty("database.url");
-			this.usedId = properties.getProperty("database.user");;
+			this.userId = properties.getProperty("database.user");;
 			this.password = properties.getProperty("database.password");
 		} catch (FileNotFoundException e) {
 			logger.error("Couldn't set the default database credentials", e);
@@ -84,67 +85,49 @@ public class MapperDatabase {
 	 *            the user ID
 	 * @param password
 	 *            the password
-	 * @return
 	 */
-	public Connection connect(String url, String userId, String password) {
-		if (connection == null) {
-			this.url = url;
-			this.usedId = userId;
-			this.password = password;
-			Statement statement = null;
-			ResultSet resultSet = null;
-			try {
-				logger.info("Creating database connection");
-				String className = JDBC_DRIVER;
-				Class<?> driverObject = Class.forName(className);
-				logger.debug("Database driver : " + driverObject);
-				logger.debug("Database installation successful");
+	public synchronized void connect(String url, String userId, String password) {
+		this.url = url;
+		this.userId = userId;
+		this.password = password;
+		Statement statement = null;
+		ResultSet resultSet = null;
+		Connection connection = null;
+		try {
+			logger.info("Creating database connection");
 
-				connection = DriverManager.getConnection(url, userId, password);
-				statement = connection.createStatement();
-				statement
-						.executeUpdate("INSERT INTO RUN SELECT MAX(ID) + 1 FROM RUN", Statement.RETURN_GENERATED_KEYS);
-				resultSet = statement.getGeneratedKeys();
-				while (resultSet.next()) {
-					run = resultSet.getInt(1);
-					logger.debug("Run ID is " + run);
-				}
-			} catch (SQLException e) {
-				logger.error("Driver installation failed!", e);
-				System.exit(0);
-			} catch (ClassNotFoundException e) {
-				logger.error("JDBC driver class not found!", e);
-				System.exit(0);
-			} finally {
-				try {
-					if (resultSet != null) {
-						resultSet.close();
-					}
-					if (statement != null) {
-						statement.close();
-					}
-				} catch (SQLException e) {
-					logger.error(e);
-					System.exit(0);
-				}
+			if (basicDataSource == null) {
+				basicDataSource = new BasicDataSource();
 			}
-		} else {
-			logger.info("Using already existing database connection. "
-					+ "If you want to connect to a different URL or with different credentials, close the exiting connection!");
-		}
-		return connection;
-	}
-
-	public void closeConnection() {
-		if (connection == null) {
-			logger.warn("No connection to close; nothing to do");
-		} else {
+			basicDataSource.setDriverClassName(JDBC_DRIVER);
+			basicDataSource.setUsername(this.userId);
+			basicDataSource.setPassword(this.password);
+			basicDataSource.setUrl(this.url); 
+			
+			connection = basicDataSource.getConnection();
+			logger.debug("Database installation successful");
+			statement = connection.createStatement();
+			statement
+					.executeUpdate("INSERT INTO RUN SELECT MAX(ID) + 1 FROM RUN", Statement.RETURN_GENERATED_KEYS);
+			resultSet = statement.getGeneratedKeys();
+			while (resultSet.next()) {
+				run = resultSet.getInt(1);
+				logger.debug("Run ID is " + run);
+			}
+		} catch (SQLException e) {
+			logger.error("Driver installation failed!", e);
+			System.exit(0);
+		} finally {
 			try {
-				logger.debug("Closing database connection...");
-				connection.close();
-				connection = null;
-				logger.info("Database connection closed by user");
-				setDefaultDatabaseCredentials();
+				if (resultSet != null) {
+					resultSet.close();
+				}
+				if (statement != null) {
+					statement.close();
+				}
+				if (connection != null) {
+					connection.close();
+				}
 			} catch (SQLException e) {
 				logger.error(e);
 				System.exit(0);
@@ -154,13 +137,13 @@ public class MapperDatabase {
 
 	/**
 	 * @return the database connection
+	 * @throws SQLException 
 	 */
-	public Connection getConnection() {
-		if (connection == null) {
-			logger.warn("There is no database connection created. Connecting to the database using defaults");
-			connect(url, usedId, password);
+	public synchronized Connection getConnection() throws SQLException {
+		if (basicDataSource == null) {
+			connect(url, userId, password);
 		}
-		return connection;
+		return basicDataSource.getConnection();
 	}
 
 	/**
@@ -176,41 +159,45 @@ public class MapperDatabase {
 	 * is not already open.</b>
 	 */
 	public void incrementRun() {
-		if (connection == null) {
-			getConnection();
-		} else {
-			Statement statement = null;
-			ResultSet resultSet = null;
+		Connection connection = null;
+		Statement statement = null;
+		ResultSet resultSet = null;
+		try {
+			connection = getConnection();
+			statement = connection.createStatement();
+			statement
+					.executeUpdate("INSERT INTO RUN SELECT MAX(ID) + 1 FROM RUN", Statement.RETURN_GENERATED_KEYS);
+			resultSet = statement.getGeneratedKeys();
+			while (resultSet.next()) {
+				run = resultSet.getInt(1);
+				logger.debug("Run ID is " + run);
+			}
+			if (resultSet != null) {
+				resultSet.close();
+			}
+			if (statement != null) {
+				statement.close();
+			}
+			if (connection != null) {
+				connection.close();
+			}
+		} catch (SQLException e) {
+			logger.error(e);
+			System.exit(0);
+		} finally {
 			try {
-				statement = getConnection().createStatement();
-				statement
-						.executeUpdate("INSERT INTO RUN SELECT MAX(ID) + 1 FROM RUN", Statement.RETURN_GENERATED_KEYS);
-				resultSet = statement.getGeneratedKeys();
-				while (resultSet.next()) {
-					run = resultSet.getInt(1);
-					logger.debug("Run ID is " + run);
-				}
 				if (resultSet != null) {
 					resultSet.close();
 				}
 				if (statement != null) {
 					statement.close();
 				}
+				if (connection != null) {
+					connection.close();
+				}
 			} catch (SQLException e) {
 				logger.error(e);
 				System.exit(0);
-			} finally {
-				try {
-					if (resultSet != null) {
-						resultSet.close();
-					}
-					if (statement != null) {
-						statement.close();
-					}
-				} catch (SQLException e) {
-					logger.error(e);
-					System.exit(0);
-				}
 			}
 		}
 	}
@@ -228,10 +215,12 @@ public class MapperDatabase {
 	public int getBenchmarkId(String benchmarkName, String ctgId) {
 		Integer id = null;
 
+		Connection connection = null;
 		Statement statement = null;
 		ResultSet resultSet = null;
 		try {
-			statement = getConnection().createStatement();
+			connection = getConnection();
+			statement = connection.createStatement();
 			resultSet = statement
 					.executeQuery("SELECT ID FROM BENCHMARK WHERE NAME = '"
 							+ benchmarkName + "' AND CTG_ID = '" + ctgId + "'");
@@ -260,6 +249,9 @@ public class MapperDatabase {
 			if (statement != null) {
 				statement.close();
 			}
+			if (connection != null) {
+				connection.close();
+			}
 		} catch (SQLException e) {
 			logger.error(e);
 			System.exit(0);
@@ -270,6 +262,9 @@ public class MapperDatabase {
 				}
 				if (statement != null) {
 					statement.close();
+				}
+				if (connection != null) {
+					connection.close();
 				}
 			} catch (SQLException e) {
 				logger.error(e);
@@ -295,9 +290,11 @@ public class MapperDatabase {
 				"The number of parameters, " + parameters.length
 						+ ", doesn't match the number of values: "
 						+ values.length);
+		Connection connection = null;
 		Statement statement = null;
 		try {
-			statement = getConnection().createStatement();
+			connection = getConnection();
+			statement = connection.createStatement();
 			for (int i = 0; i < parameters.length; i++) {
 				statement
 						.addBatch("INSERT INTO PARAMETER (ID, NAME, VALUE) VALUES ("
@@ -319,6 +316,9 @@ public class MapperDatabase {
 				if (statement != null) {
 					statement.close();
 				}
+				if (connection != null) {
+					connection.close();
+				}
 			} catch (SQLException e) {
 				logger.error(e);
 				System.exit(0);
@@ -339,10 +339,12 @@ public class MapperDatabase {
 	public int getNocTopologyId(String topologyName, String topologySize) {
 		Integer id = null;
 
+		Connection connection = null;
 		Statement statement = null;
 		ResultSet resultSet = null;
 		try {
-			statement = getConnection().createStatement();
+			connection = getConnection();
+			statement = connection.createStatement();
 			resultSet = statement
 					.executeQuery("SELECT ID FROM NOC_TOPOLOGY WHERE NAME = '"
 							+ topologyName + "' AND SIZE = '" + topologySize
@@ -382,6 +384,9 @@ public class MapperDatabase {
 				if (statement != null) {
 					statement.close();
 				}
+				if (connection != null) {
+					connection.close();
+				}
 			} catch (SQLException e) {
 				logger.error(e);
 				System.exit(0);
@@ -406,9 +411,11 @@ public class MapperDatabase {
 				"The number of outputs, " + outputs.length
 						+ ", doesn't match the number of values: "
 						+ values.length);
+		Connection connection = null;
 		Statement statement = null;
 		try {
-			statement = getConnection().createStatement();
+			connection = getConnection();
+			statement = connection.createStatement();
 			for (int i = 0; i < outputs.length; i++) {
 				statement
 						.addBatch("INSERT INTO OUTPUT (ID, NAME, VALUE) VALUES ("
@@ -428,6 +435,9 @@ public class MapperDatabase {
 				if (statement != null) {
 					statement.close();
 				}
+				if (connection != null) {
+					connection.close();
+				}
 			} catch (SQLException e) {
 				logger.error(e);
 				System.exit(0);
@@ -440,13 +450,15 @@ public class MapperDatabase {
 			String mappingXml, Date startTime, double realTime,
 			double userTime, double sysTime, double averageHeapMemory,
 			byte[] averageHeapMemoryChart) {
+		Connection connection = null;
 		PreparedStatement statement = null;
 		try {
 			SimpleDateFormat sdf = new SimpleDateFormat();
 			sdf.applyPattern("yyyy-MM-dd HH:mm:ss");
 			String startTimeAsString = sdf.format(startTime);
 
-			statement = getConnection()
+			connection = getConnection();
+			statement = connection
 					.prepareStatement(
 							"INSERT INTO MAPPER (" +
 							"NAME, " +
@@ -485,6 +497,9 @@ public class MapperDatabase {
 			try {
 				if (statement != null) {
 					statement.close();
+				}
+				if (connection != null) {
+					connection.close();
 				}
 			} catch (SQLException e) {
 				logger.error(e);
