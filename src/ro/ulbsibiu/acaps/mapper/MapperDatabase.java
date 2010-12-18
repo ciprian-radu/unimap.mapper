@@ -145,6 +145,21 @@ public class MapperDatabase {
 		}
 		return basicDataSource.getConnection();
 	}
+	
+	/**
+	 * Closes the database pool connections
+	 */
+	public synchronized void close() {
+		if (basicDataSource != null) {
+			try {
+				basicDataSource.close();
+				logger.debug("Closed database pool connections");
+			} catch (SQLException e) {
+				logger.error(e);
+				System.exit(0);
+			}
+		}
+	}
 
 	/**
 	 * @return a unique ID, valid only until the database connection is closed.
