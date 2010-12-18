@@ -1877,7 +1877,6 @@ public class BranchAndBoundMapper implements Mapper {
 					}
 				}
 			}
-			MapperDatabase.getInstance().closeConnection();
 			logger.info("Done.");
 		}
 	}

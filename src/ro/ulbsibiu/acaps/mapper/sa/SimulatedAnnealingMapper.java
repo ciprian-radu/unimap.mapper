@@ -2119,7 +2119,6 @@ public class SimulatedAnnealingMapper implements Mapper {
 					}
 				}
 			}
-			MapperDatabase.getInstance().closeConnection();
 			logger.info("Done.");
 		}
 	}
