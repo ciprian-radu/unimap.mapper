@@ -1,4 +1,4 @@
-package ro.ulbsibiu.acaps.mapper.sa.test;
+package ro.ulbsibiu.acaps.mapper.es;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -14,7 +14,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
-import java.util.Random;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
@@ -47,28 +46,26 @@ import ro.ulbsibiu.acaps.noc.xml.node.RoutingTableEntryType;
 import ro.ulbsibiu.acaps.noc.xml.node.TopologyParameterType;
 
 /**
- * This is a test version of Simulated Annealing algorithm for Network-on-Chip
- * (NoC) application mapping. The implementation is based on the one from <a
- * href="http://www.ece.cmu.edu/~sld/wiki/doku.php?id=shared:nocmap">NoCMap</a>
+ * This {@link Mapper} is inspired from the {@link SimulatedAnnealingMapper}.
+ * The difference is that it searches for the best mapping by generating all the
+ * possible mappings.
  * 
  * <p>
  * Note that currently, this algorithm works only with N x N 2D mesh NoCs
  * </p>
  * 
- * @see SimulatedAnnealingMapper
- * 
  * @author cipi
  * 
  */
-public class SimulatedAnnealingTestMapper implements Mapper {
+public class ExhaustiveSearchMapper implements Mapper {
 	
 	/**
 	 * Logger for this class
 	 */
 	private static final Logger logger = Logger
-			.getLogger(SimulatedAnnealingTestMapper.class);
+			.getLogger(ExhaustiveSearchMapper.class);
 	
-	private static final String MAPPER_ID = "sa_test";
+	private static final String MAPPER_ID = "es";
 
 	private static final int NORTH = 0;
 
@@ -157,29 +154,6 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	 */
 	private List<Integer>[][] linkUsageList = null;
 
-	/** the seed for the random number generator */
-	private int seed;
-
-	/**
-	 * how many mapping attempts the algorithm tries per iteration. A mapping
-	 * attempt means a random swap of processes (tasks) between to network nodes
-	 */
-	private int numberOfIterationsPerTemperature;
-	
-	private double temperature;
-
-	/** how many consecutive moves were rejected at a certain temperature level */
-	private int numberOfConsecutiveRejectedMoves;
-
-	/** the cost of the initial mapping */
-	private double initialCost;
-	
-	/** the cost of the current mapping */
-	private double currentCost;
-
-	/** the acceptance ratio */
-	private double acceptRatio;
-
 	/**
 	 * per link bandwidth usage (used only when the algorithm doesn't build the
 	 * routing table)
@@ -193,7 +167,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	private int[][][] synLinkBandwithUsage = null;
 
 	/** holds the generated routing table */
-	private int[][][][] saRoutingTable = null;
+	private int[][][][] generatedRoutingTable = null;
 
 	/** the benchmark's name */
 	private String benchmarkName;
@@ -213,15 +187,9 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	/** the topology size */
 	private String topologySize;
 	
-	private String[] bestSolution;
+	private float bestCost = Float.MAX_VALUE;
 	
-	private double bestCost = Float.MAX_VALUE;
-	
-	private double bestSolutionTemperature;
-	
-	private int bestSolutionIteration;
-	
-	private int mappingIteration;
+	private String[] bestMapping = null;
 	
 	private static enum TopologyParameter {
 		/** on what row of a 2D mesh the node is located */
@@ -385,7 +353,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	 * @param linkBandwidth
 	 *            the bandwidth of each network link
 	 */
-	public SimulatedAnnealingTestMapper(String benchmarkName, String ctgId,
+	public ExhaustiveSearchMapper(String benchmarkName, String ctgId,
 			String apcgId, String topologyName, String topologySize,
 			File topologyDir, int coresNumber, double linkBandwidth,
 			float switchEBit, float linkEBit) throws JAXBException {
@@ -433,7 +401,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	 *            the energy consumed for sending one data bit
 	 * @throws JAXBException
 	 */
-	public SimulatedAnnealingTestMapper(String benchmarkName, String ctgId, String apcgId,
+	public ExhaustiveSearchMapper(String benchmarkName, String ctgId, String apcgId,
 			String topologyName, String topologySize, File topologyDir, int coresNumber,
 			double linkBandwidth, boolean buildRoutingTable,
 			LegalTurnSet legalTurnSet, float bufReadEBit, float bufWriteEBit,
@@ -695,25 +663,6 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		}
 	}
 
-	private void mapCoresToNocNodesRandomly() {
-		Random rand = new Random();
-		for (int i = 0; i < coresNumber; i++) {
-			int k = Math.abs(rand.nextInt()) % nodesNumber;
-			while (Integer.valueOf(nodes[k].getCore()) != -1) {
-				k = Math.abs(rand.nextInt()) % nodesNumber;
-			}
-			cores[i].setNodeId(k);
-			nodes[k].setCore(Integer.toString(i));
-		}
-
-		 // this maps the cores like NoCMap does
-//		int[] coreMap = new int[] { 8, 12, 6, 0, 2, 5, 13, 1, 3 };
-//		for (int i = 0; i < coresNumber; i++) {
-//			cores[i].setNodeId(coreMap[i]);
-//			nodes[coreMap[i]].setCore(Integer.toString(i));
-//		}
-	}
-
 	/**
 	 * Prints the current mapping
 	 */
@@ -725,301 +674,178 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		}
 	}
 
-	// ways to gen Random Vars with specific distributions
-	/**
-	 * Simple random number generator based on the linear-congruential method
-	 * using parameters from example D, p 40, Knuth Vol 2.
-	 * 
-	 * @return a real number uniformly distributed on [0,1]. This version has
-	 *         the advantage that it should behave the same on different
-	 *         machines, since the generator and starting point are explicitly
-	 *         specified.
-	 */
-	private double uniformRandomVariable() {
-		// one small problem: the sequence we use can produce integers larger
-		// than the word size used, i.e. they can wrap around negative. We wimp
-		// out on this matter and just make them positive again.
-
-		final int A = 147453245;
-		final int C = 226908347;
-		final int M = 1073741824;
-
-		seed = ((A * seed) + C) % M;
-		if (seed < 0) {
-			seed = -seed;
+	// TODO translate the following comment into English
+	// (it describes how combinatorial arrangements of n elements taken as k can
+	// be generated iteratively, in lexicographical order)
+	//
+	// generarea aranjamentelor in ordine
+	// lexicografica printr-un procedeu iterativ. Se pleaca de la multimea
+	// (vectorul) a=(1, 2, ...,
+	// m).Fie un aranjament oarecare a=(a1, a2, ..., am). Pentru a se genera
+	// succesorul
+	// acestuia in ordine lexicografica se procedeaza astfel:
+	// Se determina indicele i pentru care ai poate fi marit (cel mai mare
+	// indice). Un element ai
+	// nu poate fi marit daca valorile care sunt mai mari decit el respectiv
+	// ai+1, ai+2, ..., n nu
+	// sunt disponibile, adica apar pe alte pozitii in aranjament. Pentru a se
+	// determina usor
+	// elementele disponibile se introduce un vector DISP cu n elemente, astfel
+	// incit DISP(i)
+	// este 1 daca elemntul i apare in aranjamentul curent si 0 in caz contrar.
+	// Se observa ca in momentul determinarii indicelui este necesar ca
+	// elementul curent care
+	// se doreste a fi marit trebuie sa se faca disponibil. Dupa ce acest
+	// element a fost gasit,
+	// acesta si elementele urmatoare se inlocuiesc cu cele mai mici numere
+	// disponibile. In
+	// cazul in care s-a ajuns la vectorul (n-m+1, ..., n-1, n) procesul de
+	// generare al
+	// aranjamentelor se opreste.
+	// De exemplu, pentru n=5 si m=3 si a=(2 4 1) avem DISP=(0,0,1,0,1), iar
+	// succesorii sai
+	// sunt in ordine (2 4 1), (2 4 3), (2 4 5), (3 1 2), (3 1 4), s.a.m.d.
+	
+	private void init(int n, int[] a, boolean[] available) {
+		for (int i = 0; i < a.length; i++) {
+			a[i] = i;
+			available[i] = false;
 		}
-		double u = (((double) seed) / ((double) M));
-		if (logger.isTraceEnabled()) {
-			logger.trace(u);
+		for (int i = a.length; i < n; i++) {
+			available[i] = true;
 		}
-		return u;
 	}
-
-	/**
-	 * @return a random INTEGER in [imin, imax]
-	 */
-	private long uniformIntegerRandomVariable(long imin, long imax) {
-		double u;
-		int m;
-
-		u = uniformRandomVariable();
-		m = (int) imin + ((int) Math.floor((double) (imax + 1 - imin) * u));
-		if (logger.isTraceEnabled()) {
-			logger.trace("Generated integer random number from interval [" + imin
-					+ ", " + imax + "] = " + m);
-		}
-		return m;
-	}
-
-	/**
-	 * Initialize the random number stream
-	 **/
-	private void initRand(int seed) {
-		this.seed = seed;
-	}
-
-	/**
-	 * the acceptance function
-	 * 
-	 * @param deltac
-	 *            the <b>normalized</b> cost (energy) variation
-	 * 
-	 * @return <tt>true</tt> for accept, <tt>false</tt>, otherwise
-	 */
-	private boolean accept(double deltac) {
-		double pa = -1; // probability of acceptance
-		boolean accept = false;
-		double r = -1;
-
-		if (MathUtils.definitelyLessThan((float) deltac, 0)
-				|| MathUtils.approximatelyEqual((float) deltac, 0)) {
-			accept = true;
-		} else {
-//			// normalized exponential form
-//			pa = Math.exp((double) (-deltac) / temperature);
-			
-			// inverse normalized exponential form
-			pa = 1 / (1 + Math.exp((double) (deltac) / temperature));
-			
-			r = uniformRandomVariable();
-			if (MathUtils.definitelyLessThan((float) r, (float)pa)
-					|| MathUtils.approximatelyEqual((float) r, (float)pa)) {
-				accept = true;
-			} else {
-				accept = false;
-			}
-		}
-		if (logger.isTraceEnabled()) {
-			logger.trace("deltac " + deltac + " temp " + temperature + " r " + r
-					+ " pa " + pa + " accept " + accept);
-		}
-		return accept;
-	}
-
-	/**
-	 * this does the actual evolution of the placement by annealing at a fixed
-	 * temperature <tt>t</tt>.
-	 */
-	private double annealAtTemperature() {
-		int acceptCount = 0;
-		double totalDeltaCost = 0;
-		numberOfConsecutiveRejectedMoves = 0;
-		
-		int unit = numberOfIterationsPerTemperature / 10;
-
-		// this is the main loop doing moves. We do 'attempts' moves in all,
-		// then quit at this temperature
-
-		if (logger.isTraceEnabled()) {
-			logger.trace("attempts = " + numberOfIterationsPerTemperature);
-		}
-//		List<String[]> uniqueMappings = new ArrayList<String[]>(); 
-//		List<Integer> uniqueMappingsFrequencies = new ArrayList<Integer>();
-		for (int m = 1; m <= numberOfIterationsPerTemperature; m++) {
-			int[] movedNodes = move();
-			
-//			// computes the unique mappings (start)
-//			boolean isNewMapping = true;
-//			for (int i = 0; i < uniqueMappings.size(); i++) {
-//				boolean found = true;
-//				logger.assertLog(this.nodes.length == uniqueMappings.get(i).length, null);
-//				for (int j = 0; j < uniqueMappings.get(i).length; j++) {
-//					if (!uniqueMappings.get(i)[j].equals(this.nodes[j].getCore())) {
-//						found = false;
-//						break;
-//					}
-//				}
-//				if (found) {
-//					isNewMapping = false;
-//					uniqueMappingsFrequencies.set(i, uniqueMappingsFrequencies.get(i) + 1);
-//				}
-//			}
-//			if (isNewMapping) {
-//				String[] map = new String[this.nodes.length];
-//				for (int i = 0; i < this.nodes.length; i++) {
-//					map[i] = this.nodes[i].getCore();
-//				}
-//				uniqueMappings.add(map);
-//				uniqueMappingsFrequencies.add(1);
-//			}
-//			// computes the unique mappings (end)
-			
-			int node1 = movedNodes[0];
-			int node2 = movedNodes[1];
-
-			double newCost = calculateTotalCost();
-
-			double deltaCost = newCost - currentCost;
-			if (logger.isTraceEnabled()) {
-				logger.trace("deltaCost " + deltaCost + " newCost " + newCost
-						+ " currentCost " + currentCost);
-			}
-			// we normalize deltac
-	        double deltac = deltaCost / initialCost;
-			// Note that we use machine epsilon to perform the following
-			// comparison between the float numbers
-	        if (MathUtils.approximatelyEqual((float)deltac, 0)) {
-	            deltac = 0;
-	        }
-			if (MathUtils.definitelyLessThan((float)deltac, 0) || accept(deltac)) {
-				if (logger.isTraceEnabled()) {
-					logger.trace("Accepting...");
-				}
-				if (MathUtils.definitelyLessThan((float)newCost, (float)bestCost)) {
-					if (logger.isDebugEnabled()) {
-						logger.debug("new cost < best cost (" + newCost + " < " + bestCost + ")");
+	
+	private boolean generate(int n, int[] a, boolean[] available) {
+		int i = a.length - 1;
+		boolean found = false;
+		while (i >= 0 && !found) {
+			available[a[i]] = true;
+			int j = a[i] + 1;
+			while (j < n && !found) {
+				if (available[j]) {
+					a[i] = j;
+					available[j] = false;
+					int k = 0;
+					for (int l = i + 1; l < a.length; l++) {
+						while(!available[k]) {
+							k++;
+						}
+						a[l] = k;
+						available[k] = false;
 					}
-					bestSolutionTemperature = temperature;
-					bestSolutionIteration = mappingIteration;
-					bestCost = newCost;
-					bestSolution = new String[nodes.length];
-					for (int i = 0; i < nodes.length; i++) {
-						bestSolution[i] = nodes[i].getCore();
-					}
-					numberOfConsecutiveRejectedMoves = 0;
+					found = true;
 				} else {
-					numberOfConsecutiveRejectedMoves++;
+					j++;
 				}
-				acceptCount++;
-				totalDeltaCost += deltaCost;
-				currentCost = newCost;
-			} else {
-				if (logger.isTraceEnabled()) {
-					logger.trace("Rolling back nodes " + node1 + " and " + node2);
-				}
-				swapProcesses(node1, node2); // roll back
-				numberOfConsecutiveRejectedMoves++;
 			}
-			if (m % unit == 0) {
-				// This is just to print out the process of the algorithm
-				System.out.print("#");
-			}
+			i--;
 		}
-		System.out.println();
-		
-//		// prints the unique mappings
-//		System.out.println("Found " + uniqueMappings.size() + " unique mappings (from a total of " + numberOfIterationsPerTemperature + " mappings)");
-////		System.out.println("with the following frequencies:");
-////		for (int i = 0; i < uniqueMappings.size(); i++) {
-////			if (uniqueMappingsFrequencies.get(i) > 1) {
-////				for (int j = 0; j < uniqueMappings.get(i).length; j++) {
-////					System.out.print(uniqueMappings.get(i)[j] + " ");
-////				}
-////				System.out.println("frequency: " + uniqueMappingsFrequencies.get(i));
-////			}
-////		}
-		
-		acceptRatio = ((double) acceptCount) / numberOfIterationsPerTemperature;
-
-		return totalDeltaCost;
+		return found;
 	}
 	
-	public void setNumberOfIterationsPerTemperature() {
-		numberOfIterationsPerTemperature = (nodesNumber * (nodesNumber - 1)) / 2 - ((nodesNumber - coresNumber - 1) * (nodesNumber - coresNumber)) / 2;
-//		numberOfIterationsPerTemperature = coresNumber * (nodesNumber - 1);
-//		numberOfIterationsPerTemperature = nodesNumber - 2; // diameter of the 2D mesh 
-	}
-	
-	public void setInitialTemperature() {
-//		temperature = 100;
-		temperature = 1;
-	}
-	
-	public double getFinalTemperature() {
-		return 1e-3;
-	}
-	
-	public void decreaseTemperature() {
-		// geometric temperature schedule (with ratio q = 0.9)
-		temperature = 0.9 * temperature;
-	}
-	
-	public boolean terminate() {
-		if (logger.isDebugEnabled()) {
-			logger.debug("current temperature < final temperature (" + getFinalTemperature() + ") "
-					+ (MathUtils.definitelyLessThan((float) temperature, (float) getFinalTemperature())));
-			logger.debug("numberOfConsecutiveRejectedMoves >= numberOfIterationsPerTemperature "
-					+ (numberOfConsecutiveRejectedMoves >= numberOfIterationsPerTemperature)
-					+ " ("
-					+ numberOfConsecutiveRejectedMoves
-					+ " < "
-					+ numberOfIterationsPerTemperature + ")");
+	/**
+	 * Computes n! / (n - k)!, where n is the number of NoC nodes and k is the
+	 * number of cores. This number is the total number of possible mappings.
+	 * 
+	 * @param i
+	 *            the nodes number
+	 * @return #nodes! / (#nodes - #cores)!
+	 */
+	private long countPossibleMappings(int i) {
+		long p = 1;
+		if (i > nodesNumber - coresNumber) {
+			p = i * countPossibleMappings(i - 1);
 		}
-		return MathUtils.definitelyLessThan((float)temperature, (float)getFinalTemperature()) 
-			&& numberOfConsecutiveRejectedMoves >= numberOfIterationsPerTemperature;
+		return p;
 	}
-
-	private void anneal() {
-		double totalDeltaCost;
-
+	
+	/**
+	 * Generates all possible mappings
+	 * 
+	 * @param possibleMappings the number of possible mappings
+	 * 
+	 * @see #countPossibleMappings(int)
+	 */
+	private void searchExhaustively(long possibleMappings) {
 		if (!buildRoutingTable) {
 			linkBandwidthUsage = new int[linksNumber];
 		} else {
 			synLinkBandwithUsage = new int[edgeSize][edgeSize][4];
-			saRoutingTable = new int[edgeSize][edgeSize][nodesNumber][nodesNumber];
-			for (int i = 0; i < saRoutingTable.length; i++) {
-				for (int j = 0; j < saRoutingTable[i].length; j++) {
-					for (int k = 0; k < saRoutingTable[i][j].length; k++) {
-						for (int l = 0; l < saRoutingTable[i][j][k].length; l++) {
-							saRoutingTable[i][j][k][l] = -2;
+			generatedRoutingTable = new int[edgeSize][edgeSize][nodesNumber][nodesNumber];
+			for (int i = 0; i < generatedRoutingTable.length; i++) {
+				for (int j = 0; j < generatedRoutingTable[i].length; j++) {
+					for (int k = 0; k < generatedRoutingTable[i][j].length; k++) {
+						for (int l = 0; l < generatedRoutingTable[i][j][k].length; l++) {
+							generatedRoutingTable[i][j][k][l] = -2;
 						}
 					}
 				}
 			}
 		}
 
-		// set up the global control parameters for this annealing run
-		mappingIteration = 0;
-		initialCost = calculateTotalCost();
-		currentCost = initialCost;
-
-		setNumberOfIterationsPerTemperature();
-
-		initRand(1234567);
-
-		setInitialTemperature();
-
-		/* here is the temperature cooling loop of the annealer */
-		while(!terminate()) {
-			System.out.println("Round " + mappingIteration + ":");
-			System.out.println("Current Annealing temperature " + temperature);
-
-			totalDeltaCost = annealAtTemperature();
-			
-//			System.exit(-1);
-
-			System.out.println("total delta cost " + totalDeltaCost);
-			System.out.println("Current cost " + currentCost);
-			System.out.println("Accept ratio " + acceptRatio);
-			
-//			printCurrentMapping();
-
-			// save the relevant info to test for frozen after the NEXT
-			// temperature.
-			mappingIteration++;
-			decreaseTemperature();
-		}
-		// return the best mapping found during the entire annealing process!!! (not the last mapping found)
+		boolean initialized = false;
+		int[] a = new int[coresNumber];
+		boolean[] available = new boolean[nodesNumber];
+		boolean found = false;
+		long counter = 0;
+		final int STEP = 10;
+		int stepCounter = 0;
+		
+		do {
+			if (!initialized) {
+				init(nodesNumber, a, available);
+				found = true;
+				initialized = true;
+			} else {
+				found = generate(nodesNumber, a, available);
+			}
+			if (found) {
+				counter++;
+				if (logger.isDebugEnabled()) {
+					logger.debug("Generated mapping number " + counter + " (of "
+							+ possibleMappings + " possible mappings). "
+							+ (counter * 100.0 / possibleMappings)
+							+ "% of the entire search space currently explored.");
+				} else {
+					if (MathUtils.definitelyGreaterThan((float)(counter * 100.0 / possibleMappings), stepCounter)) {
+						logger.info("Generated mapping number " + counter + " (of "
+								+ possibleMappings + " possible mappings). "
+								+ (counter * 100.0 / possibleMappings)
+								+ "% of the entire search space currently explored.");
+						stepCounter += STEP;
+						logger.info("Next message will be show after a " + stepCounter + "% search progress");
+					}
+				}
+				if (logger.isDebugEnabled()) {
+					StringBuffer sb = new StringBuffer();
+					for (int j = 0; j < a.length; j++) {
+						sb.append(a[j] + " ");
+					}
+					logger.debug(sb);
+				}
+				
+				for (int i = 0; i < nodes.length; i++) {
+					nodes[i].setCore("-1");
+				}
+				for (int i = 0; i < cores.length; i++) {
+					cores[i].setNodeId(-1);
+				}
+				for (int i = 0; i < a.length; i++) {
+					nodes[a[i]].setCore(Integer.toString(i));
+					cores[i].setNodeId(a[i]);
+				}
+				float cost = calculateTotalCost();
+				if (MathUtils.definitelyLessThan(cost, bestCost)) {
+					bestCost = cost;
+					bestMapping = new String[nodes.length];
+					for (int i = 0; i < nodes.length; i++) {
+						bestMapping[i] =  nodes[i].getCore();
+					}
+				}
+			}
+		} while (found);
+		
 		for (int i = 0; i < nodes.length; i++) {
 			nodes[i].setCore("-1");
 		}
@@ -1027,221 +853,15 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 			cores[i].setNodeId(-1);
 		}
 		for (int i = 0; i < nodes.length; i++) {
-			nodes[i].setCore(bestSolution[i]);
-			if (!"-1".equals(bestSolution[i])) {
-				cores[Integer.valueOf(bestSolution[i])].setNodeId(i);
+			nodes[i].setCore(bestMapping[i]);
+			if (!"-1".equals(bestMapping[i])) {
+				cores[Integer.valueOf(bestMapping[i])].setNodeId(i);
 			}
 		}
+		
 		if (buildRoutingTable) {
 			programRouters();
 		}
-	}
-
-	/**
-	 * Changes the current mapping by moving a core from one node to another.
-	 * This implies that two nodes are changed.
-	 * 
-	 * @return the IDs of the two changed nodes
-	 */
-	private int[] move() {
-//		return makeRandomSwap();
-		return makeTopologicalMove();
-	}
-	
-	/**
-	 * Randomly picks two nodes and swaps them
-	 * 
-	 * @return an array with exactly 2 integers
-	 */
-	private int[] makeRandomSwap() {
-		int node1 = (int) uniformIntegerRandomVariable(0, nodesNumber - 1);
-		int node2 = -1;
-
-		int cnt = 0;
-		while (true) {
-			cnt++;
-			// select two nodes to swap
-			node2 = (int) uniformIntegerRandomVariable(0, nodesNumber - 1);
-			if (node1 != node2
-					&& (!"-1".equals(nodes[node1].getCore()) || !"-1"
-							.equals(nodes[node2].getCore()))) {
-				break;
-			}
-		}
-		if (cnt > 1 && logger.isTraceEnabled()) {
-			logger.trace("The nodes to swap were randomly found after " + cnt + " trials");
-		}
-
-		// Swap the processes attached to these two nodes
-		swapProcesses(node1, node2);
-		return new int[] { node1, node2 };
-	}
-	
-	/**
-	 * Determines the neighboring nodes of the given node. Note that this method
-	 * is topology dependent.
-	 * 
-	 * @param node
-	 *            the node
-	 * @return the neighbors of node
-	 */
-	private Integer[] getNodeNeighbors(int node) {
-		List<Integer> neighbors = new ArrayList<Integer>();
-		
-		int row = Integer.valueOf(getNodeTopologyParameter(nodes[node], TopologyParameter.ROW));
-		int column = Integer.valueOf(getNodeTopologyParameter(nodes[node], TopologyParameter.COLUMN));
-		
-		boolean northFound = (row <= 0); // no need to search for north neighbor if the node is on row 0
-		boolean eastFound = (column >= edgeSize - 1); // no need to search for east neighbor if the node is on the rightmost column
-		boolean southFound = (row >= edgeSize - 1); // no need to search for south neighbor if the node is on the bottom row
-		boolean westFound = (column <= 0); // no need to search for north neighbor if the node is on column 0
-		
-		for (int i = 0; i < nodes.length; i++) {
-			int iRow = Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.ROW));
-			int iColumn = Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.COLUMN));
-			
-			if (!northFound) {
-				// has NORTH neighbor
-				if (row -1 == iRow && column == iColumn) {
-					neighbors.add(i);
-					northFound = true;
-				}
-			}
-			if (!eastFound) {
-				// has EAST neighbor
-				if (row == iRow && column + 1 == iColumn) {
-					neighbors.add(i);
-					eastFound = true;
-				}
-			}
-			if (!southFound) {
-				// has SOUTH neighbor
-				if (row + 1 == iRow && column == iColumn) {
-					neighbors.add(i);
-					southFound = true;
-				}
-			}
-			if (!westFound) {
-				// has WEST neighbor
-				if (row == iRow && column - 1 == iColumn) {
-					neighbors.add(i);
-					westFound = true;
-				}
-			}
-			
-			if (northFound && eastFound && southFound && westFound) {
-				break;
-			}
-		}
-		
-		return neighbors.toArray(new Integer[neighbors.size()]);
-	}
-
-	/**
-	 * Randomly selects a node (n1) that has a core (c1) mapped to it. This node
-	 * is swapped randomly with another node (n2), unless c1 receives data from
-	 * just a core (c2). In this case, c1 will be placed in one of the neighbors
-	 * of n2 that doesn't have a core mapped to it. If there isn't an empty
-	 * neighbor, we search for a neighbor with a core which doesn't communicate
-	 * with c2. If we still don't find a neighbor, we fall back to random
-	 * swapping. Note that is multiple neighbors are found, the chosen one is
-	 * determined randomly.
-	 * 
-	 * @return the two swapped nodes
-	 */
-	private int[] makeTopologicalMove() {
-		int node1;
-		int node2;
-		
-		do {
-			node1 = (int) uniformIntegerRandomVariable(0, nodesNumber - 1);
-		} while ("-1".equals(nodes[node1].getCore()));
-		
-		int core1 = Integer.valueOf(nodes[node1].getCore());
-		// check if core1 receives data only from one core
-		int[] fromCommunication = cores[core1].getFromCommunication();
-		int fromCoresCount = 0;
-		int core2 = -1;
-		for (int i = 0; i < fromCommunication.length; i++) {
-			if (fromCommunication[i] > 0) {
-				fromCoresCount++;
-				core2 = i;
-			}
-		}
-		if (fromCoresCount == 1) {
-			if (logger.isDebugEnabled()) {
-				logger.debug("Core " + core1 + " receives data only from core "
-						+ core2 + ". Trying to topologically place core " + core1);
-			}
-			// search the node that has core2
-			int core2Node = -1;
-			for (int i = 0; i < nodes.length; i++) {
-				if (nodes[i].getCore().equals(Integer.toString(core2))) {
-					core2Node = i;
-					break;
-				}
-			}
-			logger.assertLog(core2Node >= 0, "Couldn't find the node to which core " + core2 + " is placed!");
-			// determine the neighboring nodes of node core2Node
-			Integer[] core2NodeNeighbors = getNodeNeighbors(core2Node);
-			// determine the neighboring nodes of node core2Node which are unoccupied
-			List<Integer> unoccupiedNodes = new ArrayList<Integer>(core2NodeNeighbors.length);
-			for (int j = 0; j < core2NodeNeighbors.length; j++) {
-				if (logger.isDebugEnabled()) {
-					logger.debug("Node " + core2Node + " has node " + core2NodeNeighbors[j] + " as neighbor");
-				}
-				if ("-1".equals(nodes[core2NodeNeighbors[j]].getCore())) {
-					if (logger.isDebugEnabled()) {
-						logger.debug("Node " + core2NodeNeighbors[j] + " is unoccupied");
-					}
-					unoccupiedNodes.add(core2NodeNeighbors[j]);
-				}
-			}
-			if (unoccupiedNodes.size() > 0) {
-				int r = (int) uniformIntegerRandomVariable(0, unoccupiedNodes.size() - 1);
-				node2 = unoccupiedNodes.get(r);
-			} else {
-				if (logger.isDebugEnabled()) {
-					logger.debug("All neighbors of node " + core2Node + " are occupied. " +
-							"Searching for neighboring nodes of node " + core2Node + 
-							" which have cores that do not communicate with core " + core1);
-				}
-				// determine the neighboring nodes of node core2Node which have cores that do not communicate with core2
-				List<Integer> notCommunicatingNodes = new ArrayList<Integer>(core2NodeNeighbors.length);
-				for (int j = 0; j < core2NodeNeighbors.length; j++) {
-					if (cores[Integer.valueOf(nodes[core2NodeNeighbors[j]].getCore())].getToCommunication()[core2] == 0
-							&& cores[Integer.valueOf(nodes[core2NodeNeighbors[j]].getCore())].getFromCommunication()[core2] == 0) {
-						if (logger.isDebugEnabled()) {
-							logger.debug("Node " + core2NodeNeighbors[j] + " does not communicate with " + core2);
-						}
-						notCommunicatingNodes.add(core2NodeNeighbors[j]);
-					}
-				}
-				if (notCommunicatingNodes.size() > 0) {
-					int r = (int) uniformIntegerRandomVariable(0, notCommunicatingNodes.size() - 1);
-					node2 = notCommunicatingNodes.get(r);
-				} else {
-					if (logger.isDebugEnabled()) {
-						logger.debug("No suitable neighbore node found. Falling back to random swap...");
-					}
-					do {
-						node2 = (int) uniformIntegerRandomVariable(0, nodesNumber - 1);
-					} while (node2 == node1);
-				}
-			}
-		} else {
-			do {
-				node2 = (int) uniformIntegerRandomVariable(0, nodesNumber - 1);
-			} while (node2 == node1);
-		}
-		logger.assertLog(node1 != -1 && node2 != -1,
-				"At least one node is not defined (i.e. = -1); node1 = " + node1 + ", node2 = " + node2);
-		if (logger.isDebugEnabled()) {
-			logger.debug("Swapping nodes " + node1 + " and " + node2);
-		}
-		swapProcesses(node1, node2);
-		
-		return new int[] { node1, node2 };
 	}
 
 	/**
@@ -1511,7 +1131,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 			synLinkBandwithUsage[row][col][direction] += bandwidth;
 
 			if (commit) {
-				saRoutingTable[row][col][srcNode][dstNode] = direction;
+				generatedRoutingTable[row][col][srcNode][dstNode] = direction;
 			}
 			switch (direction) {
 			case SOUTH:
@@ -1553,7 +1173,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 				for (int srcNode = 0; srcNode < nodesNumber; srcNode++) {
 					for (int dstNode = 0; dstNode < nodesNumber; dstNode++) {
 						int linkId = locateLink(row, col,
-								saRoutingTable[row][col][srcNode][dstNode]);
+								generatedRoutingTable[row][col][srcNode][dstNode]);
 						if (linkId != -1) {
 							routingTables[Integer.valueOf(nodes[nodeId].getId())][srcNode][dstNode] = linkId;
 						}
@@ -1905,11 +1525,13 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 			throw new TooFewNocNodesException(coresNumber, nodesNumber);
 		}
 
-		mapCoresToNocNodesRandomly();
-		printCurrentMapping();
+		long possibleMappings = countPossibleMappings(nodesNumber);
+		logger.info("This search space contains " + nodesNumber + "! / " + "("
+				+ nodesNumber + " - " + coresNumber + ")! = "
+				+ possibleMappings + " possible mappings!");
 
 		if (coresNumber == 1) {
-			logger.info("Simulated Annealing Test will not start for mapping a single core. This core simply mapped randomly.");
+			logger.info("Exhaustive Search will not start for mapping a single core. This core simply mapped randomly.");
 		} else {
 			logger.info("Start mapping...");
 
@@ -1924,7 +1546,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		long realStart = System.nanoTime();
 		
 		if (coresNumber > 1) {
-			anneal();
+			searchExhaustively(possibleMappings);
 		}
 		
 		long userEnd = TimeUtils.getUserTime();
@@ -1935,9 +1557,6 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		logger.info("Time: " + (realEnd - realStart) / 1e9 + " seconds");
 		logger.info("Memory: " + monitor.getAverageUsedHeap()
 				/ (1024 * 1024 * 1.0) + " MB");
-		
-		logger.info("Best mapping found at round " + bestSolutionIteration + 
-				", temperature " + bestSolutionTemperature + ", with cost " + bestCost);
 		
 		saveRoutingTables();
 		
@@ -2051,10 +1670,10 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		float bufWriteEBit = 2.831f;
 		
 		if (args == null || args.length < 1) {
-			System.err.println("usage:   java SimulatedAnnealingTestMapper.class [E3S benchmarks] {false|true}");
+			System.err.println("usage:   java ExhaustiveSearchMapper.class [E3S benchmarks] {false|true}");
 			System.err.println("	     Note that false or true specifies if the algorithm should generate routes (routing may be true or false; any other value means false)");
-			System.err.println("example 1 (specify the tgff file): java SimulatedAnnealingTestMapper.class ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff ../CTG-XML/xml/e3s/telecom-mocsyn.tgff false");
-			System.err.println("example 2 (map the entire E3S benchmark suite): java SimulatedAnnealingTestMapper.class false");
+			System.err.println("example 1 (specify the tgff file): java ExhaustiveSearchMapper.class ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff ../CTG-XML/xml/e3s/telecom-mocsyn.tgff false");
+			System.err.println("example 2 (map the entire E3S benchmark suite): java ExhaustiveSearchMapper.class false");
 		} else {
 			File[] tgffFiles = null;
 			String specifiedCtgId = null;
@@ -2190,7 +1809,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 						logger.info("Using a Simulated annealing mapper for "
 								+ path + "ctg-" + ctgId + " (APCG " + apcgId + ")");
 						
-						SimulatedAnnealingTestMapper saMapper;
+						ExhaustiveSearchMapper esMapper;
 						int cores = 0;
 						for (int k = 0; k < apcgTypes.size(); k++) {
 							cores += apcgTypes.get(k).getCore().size();
@@ -2229,7 +1848,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 							MapperDatabase.getInstance().setParameters(parameters, values);
 							
 							// SA with routing
-							saMapper = new SimulatedAnnealingTestMapper(
+							esMapper = new ExhaustiveSearchMapper(
 									tgffFiles[i].getName(), ctgId, apcgId,
 									topologyName, meshSize, new File(
 											topologyDir), cores, linkBandwidth,
@@ -2240,7 +1859,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 							MapperDatabase.getInstance().setParameters(parameters, values);
 							
 							// SA without routing
-							saMapper = new SimulatedAnnealingTestMapper(
+							esMapper = new ExhaustiveSearchMapper(
 									tgffFiles[i].getName(), ctgId, apcgId,
 									topologyName, meshSize, new File(
 											topologyDir), cores, linkBandwidth,
@@ -2254,14 +1873,14 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 						
 						for (int k = 0; k < apcgTypes.size(); k++) {
 							// read the input data using the Unified Framework's XML interface
-							saMapper.parseApcg(apcgTypes.get(k), ctgTypes.get(k), applicationBandwithRequirement);
+							esMapper.parseApcg(apcgTypes.get(k), ctgTypes.get(k), applicationBandwithRequirement);
 						}
 						
 			//			// This is just for checking that bbMapper.parseTrafficConfig(...)
 			//			// and parseApcg(...) have the same effect
 			//			bbMapper.printCores();
 			
-						String mappingXml = saMapper.map();
+						String mappingXml = esMapper.map();
 						File dir = new File(path + "ctg-" + ctgId);
 						dir.mkdirs();
 						String routing = "";
@@ -2270,7 +1889,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 						}
 						String mappingXmlFilePath = path + "ctg-" + ctgId
 								+ File.separator + "mapping-" + apcgId + "_"
-								+ saMapper.getMapperId() + routing + ".xml";
+								+ esMapper.getMapperId() + routing + ".xml";
 						PrintWriter pw = new PrintWriter(mappingXmlFilePath);
 						logger.info("Saving the mapping XML file"
 								+ mappingXmlFilePath);
@@ -2279,9 +1898,9 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 						pw.close();
 			
 						logger.info("The generated mapping is:");
-						saMapper.printCurrentMapping();
+						esMapper.printCurrentMapping();
 						
-						saMapper.analyzeIt();
+						esMapper.analyzeIt();
 						
 						// increment the mapper database run ID after each
 						// mapped CTG, except the last one (no need to do this
