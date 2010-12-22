@@ -1739,7 +1739,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 		}
 
 		if (coresNumber == 1) {
-			logger.info("Branch and Bound will not start for mapping a single core. This core simply mapped randomly.");
+			logger.info("Simulated Annealing will not start for mapping a single core. This core simply mapped randomly.");
 		} else {
 			logger.info("Start mapping...");
 
@@ -2023,7 +2023,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 							cores += apcgTypes.get(k).getCore().size();
 						}
 						int hSize = (int) Math.ceil(Math.sqrt(cores));
-						hSize = Math.max(4, hSize); // using at least a 4x4 2D mesh
+						hSize = Math.max(2, hSize); // using at least a 2x2 2D mesh
 						String meshSize = hSize + "x" + hSize;
 						logger.info("The algorithm has " + cores + " cores to map => working with a 2D mesh of size " + meshSize);
 						// working with a 2D mesh topology
