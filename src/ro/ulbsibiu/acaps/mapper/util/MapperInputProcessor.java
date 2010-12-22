@@ -151,11 +151,8 @@ public abstract class MapperInputProcessor {
 			}
 
 			for (int i = 0; i < tgffFiles.length; i++) {
-				String path = ".." + File.separator + "CTG-XML" + File.separator
-						+ "xml" + File.separator + "e3s" + File.separator
-						+ tgffFiles[i].getName() + File.separator;
-				
-				File e3sBenchmark = new File(path);
+				String path = tgffFiles[i].getPath() + File.separator;
+				File e3sBenchmark = tgffFiles[i];
 				String[] ctgs = null;
 				if (specifiedCtgId != null) {
 					ctgs = new String[] {"ctg-" + specifiedCtgId};
