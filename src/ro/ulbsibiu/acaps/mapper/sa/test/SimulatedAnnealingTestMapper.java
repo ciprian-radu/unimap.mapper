@@ -38,6 +38,7 @@ import ro.ulbsibiu.acaps.mapper.sa.Core;
 import ro.ulbsibiu.acaps.mapper.sa.SimulatedAnnealingMapper;
 import ro.ulbsibiu.acaps.mapper.util.ApcgFilenameFilter;
 import ro.ulbsibiu.acaps.mapper.util.HeapUsageMonitor;
+import ro.ulbsibiu.acaps.mapper.util.MapperInputProcessor;
 import ro.ulbsibiu.acaps.mapper.util.MathUtils;
 import ro.ulbsibiu.acaps.mapper.util.TimeUtils;
 import ro.ulbsibiu.acaps.noc.xml.link.LinkType;
@@ -2043,257 +2044,115 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 
 	public static void main(String[] args) throws TooFewNocNodesException,
 			IOException, JAXBException {
-		int applicationBandwithRequirement = 3; // a multiple of the communication volume
-		double linkBandwidth = 256E9;
-		float switchEBit = 0.284f;
-		float linkEBit = 0.449f;
-		float bufReadEBit = 1.056f;
-		float bufWriteEBit = 2.831f;
+		final int applicationBandwithRequirement = 3; // a multiple of the communication volume
+		final double linkBandwidth = 256E9;
+		final float switchEBit = 0.284f;
+		final float linkEBit = 0.449f;
+		final float bufReadEBit = 1.056f;
+		final float bufWriteEBit = 2.831f;
 		
-		if (args == null || args.length < 1) {
-			System.err.println("usage:   java SimulatedAnnealingTestMapper.class [E3S benchmarks] {false|true}");
-			System.err.println("	     Note that false or true specifies if the algorithm should generate routes (routing may be true or false; any other value means false)");
-			System.err.println("example 1 (specify the tgff file): java SimulatedAnnealingTestMapper.class ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff ../CTG-XML/xml/e3s/telecom-mocsyn.tgff false");
-			System.err.println("example 2 (map the entire E3S benchmark suite): java SimulatedAnnealingTestMapper.class false");
-		} else {
-			File[] tgffFiles = null;
-			String specifiedCtgId = null;
-			String specifiedApcgId = null;
-			if (args.length == 1) {
-				File e3sDir = new File(".." + File.separator + "CTG-XML"
-						+ File.separator + "xml" + File.separator + "e3s");
-				logger.assertLog(e3sDir.isDirectory(),
-						"Could not find the E3S benchmarks directory!");
-				tgffFiles = e3sDir.listFiles(new FilenameFilter() {
-	
-					@Override
-					public boolean accept(File dir, String name) {
-						return name.endsWith(".tgff");
-					}
-				});
-			} else {
-				List<File> tgffFileList = new ArrayList<File>(args.length - 1);
-				int i;
-				for (i = 0; i < args.length - 1; i++) {
-					if (args[i].startsWith("--ctg") || args[i].startsWith("--apcg")) {
-						break;
-					}
-					tgffFileList.add(new File(args[i]));
-				}
-				tgffFiles = tgffFileList.toArray(new File[tgffFileList.size()]);
-				if (args[i].startsWith("--ctg")) {
-					logger.assertLog(args.length > i + 1,
-							"Expecting CTG ID after --ctg option");
-					specifiedCtgId = args[i + 1];
-				} else {
-					if (args[i].startsWith("--apcg")) {
-						logger.assertLog(args.length > i + 1,
-								"Expecting APCG ID after --ctg option");
-						specifiedApcgId = args[i + 1];
-					}
-				}
-				i += 2;
-				if (args.length > i + 1) {
-					if (args[i].startsWith("--ctg")) {
-						logger.assertLog(args.length > i + 1,
-								"Expecting CTG ID after --ctg option");
-						specifiedCtgId = args[i + 1];
-					} else {
-						if (args[i].startsWith("--apcg")) {
-							logger.assertLog(args.length > i + 1,
-									"Expecting APCG ID after --ctg option");
-							specifiedApcgId = args[i + 1];
-						}
-					}
-				}
-				if (specifiedCtgId != null) {
-					logger.info("Mapping only CTGs with ID " + specifiedCtgId);
-				}
-				if (specifiedApcgId != null) {
-					logger.info("Mapping only APCGs with ID " + specifiedApcgId);
-				}
-			}
-
-			for (int i = 0; i < tgffFiles.length; i++) {
-				String path = ".." + File.separator + "CTG-XML" + File.separator
-						+ "xml" + File.separator + "e3s" + File.separator
-						+ tgffFiles[i].getName() + File.separator;
+		MapperInputProcessor mapperInputProcessor = new MapperInputProcessor() {
+			
+			@Override
+			public void useMapper(String benchmarkFilePath, String benchmarkName,
+					String ctgId, String apcgId, List<CtgType> ctgTypes,
+					List<ApcgType> apcgTypes, boolean doRouting) throws JAXBException,
+					TooFewNocNodesException, FileNotFoundException {
+				logger.info("Using a Simulated annealing mapper for "
+						+ benchmarkFilePath + "ctg-" + ctgId + " (APCG " + apcgId + ")");
 				
-				File e3sBenchmark = new File(path);
-				String[] ctgs = null;
-				if (specifiedCtgId != null) {
-					ctgs = new String[] {"ctg-" + specifiedCtgId};
-				} else {
-					ctgs = e3sBenchmark.list(new FilenameFilter() {
-	
-						@Override
-						public boolean accept(File dir, String name) {
-							return dir.isDirectory() && name.startsWith("ctg-");
-						}
-					});
+				SimulatedAnnealingTestMapper saMapper;
+				int cores = 0;
+				for (int k = 0; k < apcgTypes.size(); k++) {
+					cores += apcgTypes.get(k).getCore().size();
 				}
-				logger.assertLog(ctgs.length > 0, "No CTGs to work with!");
+				int hSize = (int) Math.ceil(Math.sqrt(cores));
+				hSize = Math.max(2, hSize); // using at least a 2x2 2D mesh
+				String meshSize = hSize + "x" + hSize;
+				logger.info("The algorithm has " + cores + " cores to map => working with a 2D mesh of size " + meshSize);
+				// working with a 2D mesh topology
+				String topologyName = "mesh2D";
+				String topologyDir = ".." + File.separator + "NoC-XML"
+						+ File.separator + "src" + File.separator
+						+ "ro" + File.separator + "ulbsibiu"
+						+ File.separator + "acaps" + File.separator
+						+ "noc" + File.separator + "topology"
+						+ File.separator + topologyName + File.separator
+						+ meshSize;
 				
-				for (int j = 0; j < ctgs.length; j++) {
-					String ctgId = ctgs[j].substring("ctg-".length());
-					List<CtgType> ctgTypes = new ArrayList<CtgType>();
-					// if the ctg ID contains + => we need to map multiple CTGs in one mapping XML
-					String[] ctgIds = ctgId.split("\\+");
-					List<File> apcgsList = new ArrayList<File>();
-					for (int k = 0; k < ctgIds.length; k++) {
-						JAXBContext jaxbContext = JAXBContext
-								.newInstance("ro.ulbsibiu.acaps.ctg.xml.ctg");
-						Unmarshaller unmarshaller = jaxbContext
-								.createUnmarshaller();
-						@SuppressWarnings("unchecked")
-						CtgType ctgType = ((JAXBElement<CtgType>) unmarshaller
-								.unmarshal(new File(path + "ctg-" + ctgIds[k]
-										+ File.separator + "ctg-" + ctgIds[k]
-										+ ".xml"))).getValue();
-						ctgTypes.add(ctgType);
-						
-						File ctg = new File(path + "ctg-" + ctgIds[k]);
-						apcgsList.addAll(Arrays.asList(ctg.listFiles(new ApcgFilenameFilter(ctgIds[k], specifiedApcgId))));
-					}
-					File[] apcgFiles = apcgsList.toArray(new File[apcgsList.size()]);
-					for (int l = 0; l < apcgFiles.length / ctgIds.length; l++) {
-						String apcgId = ctgId + "_";
-						if (specifiedApcgId == null) {
-							apcgId += l;
-						} else {
-							apcgId += specifiedApcgId;
-						}
-						List<ApcgType> apcgTypes = new ArrayList<ApcgType>();
-						for (int k = 0; k < apcgFiles.length; k++) {
-							String id;
-							if (specifiedApcgId == null) {
-								id = Integer.toString(l);
-							} else {
-								id = specifiedApcgId;
-							}
-							if (apcgFiles[k].getName().endsWith(id + ".xml")) {
-								JAXBContext jaxbContext = JAXBContext
-										.newInstance("ro.ulbsibiu.acaps.ctg.xml.apcg");
-								Unmarshaller unmarshaller = jaxbContext
-										.createUnmarshaller();
-								@SuppressWarnings("unchecked")
-								ApcgType apcg = ((JAXBElement<ApcgType>) unmarshaller
-										.unmarshal(new File(apcgFiles[k]
-												.getAbsolutePath())))
-										.getValue();
-								apcgTypes.add(apcg);
-							}
-						}
-						logger.assertLog(apcgTypes.size() == ctgTypes.size(), 
-								"An equal number of CTGs and APCGs is expected!");
-						
-						logger.info("Using a Simulated annealing mapper for "
-								+ path + "ctg-" + ctgId + " (APCG " + apcgId + ")");
-						
-						SimulatedAnnealingTestMapper saMapper;
-						int cores = 0;
-						for (int k = 0; k < apcgTypes.size(); k++) {
-							cores += apcgTypes.get(k).getCore().size();
-						}
-						int hSize = (int) Math.ceil(Math.sqrt(cores));
-						hSize = Math.max(2, hSize); // using at least a 2x2 2D mesh
-						String meshSize = hSize + "x" + hSize;
-						logger.info("The algorithm has " + cores + " cores to map => working with a 2D mesh of size " + meshSize);
-						// working with a 2D mesh topology
-						String topologyName = "mesh2D";
-						String topologyDir = ".." + File.separator + "NoC-XML"
-								+ File.separator + "src" + File.separator
-								+ "ro" + File.separator + "ulbsibiu"
-								+ File.separator + "acaps" + File.separator
-								+ "noc" + File.separator + "topology"
-								+ File.separator + topologyName + File.separator
-								+ meshSize;
-						
-						String[] parameters = new String[] {
-								"applicationBandwithRequirement",
-								"linkBandwidth",
-								"switchEBit",
-								"linkEBit",
-								"bufReadEBit",
-								"bufWriteEBit",
-								"routing"};
-						String values[] = new String[] {
-								Integer.toString(applicationBandwithRequirement),
-								Double.toString(linkBandwidth),
-								Float.toString(switchEBit), Float.toString(linkEBit),
-								Float.toString(bufReadEBit),
-								Float.toString(bufWriteEBit),
-								null};
-						if ("true".equals(args[args.length - 1])) {
-							values[values.length - 1] = "true";
-							MapperDatabase.getInstance().setParameters(parameters, values);
-							
-							// SA with routing
-							saMapper = new SimulatedAnnealingTestMapper(
-									tgffFiles[i].getName(), ctgId, apcgId,
-									topologyName, meshSize, new File(
-											topologyDir), cores, linkBandwidth,
-									true, LegalTurnSet.ODD_EVEN, bufReadEBit,
-									bufWriteEBit, switchEBit, linkEBit);
-						} else {
-							values[values.length - 1] = "false";
-							MapperDatabase.getInstance().setParameters(parameters, values);
-							
-							// SA without routing
-							saMapper = new SimulatedAnnealingTestMapper(
-									tgffFiles[i].getName(), ctgId, apcgId,
-									topologyName, meshSize, new File(
-											topologyDir), cores, linkBandwidth,
-									switchEBit, linkEBit);
-						}
-			
-			//			// read the input data from a traffic.config file (NoCmap style)
-			//			saMapper(
-			//					"telecom-mocsyn-16tile-selectedpe.traffic.config",
-			//					linkBandwidth);
-						
-						for (int k = 0; k < apcgTypes.size(); k++) {
-							// read the input data using the Unified Framework's XML interface
-							saMapper.parseApcg(apcgTypes.get(k), ctgTypes.get(k), applicationBandwithRequirement);
-						}
-						
-			//			// This is just for checking that bbMapper.parseTrafficConfig(...)
-			//			// and parseApcg(...) have the same effect
-			//			bbMapper.printCores();
-			
-						String mappingXml = saMapper.map();
-						File dir = new File(path + "ctg-" + ctgId);
-						dir.mkdirs();
-						String routing = "";
-						if ("true".equals(args[args.length - 1])) {
-							routing = "_routing";
-						}
-						String mappingXmlFilePath = path + "ctg-" + ctgId
-								+ File.separator + "mapping-" + apcgId + "_"
-								+ saMapper.getMapperId() + routing + ".xml";
-						PrintWriter pw = new PrintWriter(mappingXmlFilePath);
-						logger.info("Saving the mapping XML file"
-								+ mappingXmlFilePath);
-						logger.info("Saving the mapping XML file");
-						pw.write(mappingXml);
-						pw.close();
-			
-						logger.info("The generated mapping is:");
-						saMapper.printCurrentMapping();
-						
-						saMapper.analyzeIt();
-						
-						// increment the mapper database run ID after each
-						// mapped CTG, except the last one (no need to do this
-						// for the last one)
-						if (i < tgffFiles.length - 1 || j < ctgs.length - 1) {
-							MapperDatabase.getInstance().incrementRun();
-						}
-					}
+				String[] parameters = new String[] {
+						"applicationBandwithRequirement",
+						"linkBandwidth",
+						"switchEBit",
+						"linkEBit",
+						"bufReadEBit",
+						"bufWriteEBit",
+						"routing"};
+				String values[] = new String[] {
+						Integer.toString(applicationBandwithRequirement),
+						Double.toString(linkBandwidth),
+						Float.toString(switchEBit), Float.toString(linkEBit),
+						Float.toString(bufReadEBit),
+						Float.toString(bufWriteEBit),
+						null};
+				if (doRouting) {
+					values[values.length - 1] = "true";
+					MapperDatabase.getInstance().setParameters(parameters, values);
+					
+					// SA with routing
+					saMapper = new SimulatedAnnealingTestMapper(
+							benchmarkName, ctgId, apcgId,
+							topologyName, meshSize, new File(
+									topologyDir), cores, linkBandwidth,
+							true, LegalTurnSet.ODD_EVEN, bufReadEBit,
+							bufWriteEBit, switchEBit, linkEBit);
+				} else {
+					values[values.length - 1] = "false";
+					MapperDatabase.getInstance().setParameters(parameters, values);
+					
+					// SA without routing
+					saMapper = new SimulatedAnnealingTestMapper(
+							benchmarkName, ctgId, apcgId,
+							topologyName, meshSize, new File(
+									topologyDir), cores, linkBandwidth,
+							switchEBit, linkEBit);
 				}
+	
+	//			// read the input data from a traffic.config file (NoCmap style)
+	//			saMapper(
+	//					"telecom-mocsyn-16tile-selectedpe.traffic.config",
+	//					linkBandwidth);
+				
+				for (int k = 0; k < apcgTypes.size(); k++) {
+					// read the input data using the Unified Framework's XML interface
+					saMapper.parseApcg(apcgTypes.get(k), ctgTypes.get(k), applicationBandwithRequirement);
+				}
+				
+	//			// This is just for checking that bbMapper.parseTrafficConfig(...)
+	//			// and parseApcg(...) have the same effect
+	//			bbMapper.printCores();
+	
+				String mappingXml = saMapper.map();
+				File dir = new File(benchmarkFilePath + "ctg-" + ctgId);
+				dir.mkdirs();
+				String routing = "";
+				if (doRouting) {
+					routing = "_routing";
+				}
+				String mappingXmlFilePath = benchmarkFilePath + "ctg-" + ctgId
+						+ File.separator + "mapping-" + apcgId + "_"
+						+ saMapper.getMapperId() + routing + ".xml";
+				PrintWriter pw = new PrintWriter(mappingXmlFilePath);
+				logger.info("Saving the mapping XML file" + mappingXmlFilePath);
+				pw.write(mappingXml);
+				pw.close();
+	
+				logger.info("The generated mapping is:");
+				saMapper.printCurrentMapping();
+				
+				saMapper.analyzeIt();
 			}
-			MapperDatabase.getInstance().close();
-			logger.info("Done.");
-		}
+		};
+		mapperInputProcessor.processInput(args);
 	}
 }
