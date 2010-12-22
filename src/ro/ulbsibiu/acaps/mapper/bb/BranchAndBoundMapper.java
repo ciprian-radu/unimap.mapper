@@ -727,13 +727,13 @@ public class BranchAndBoundMapper implements Mapper {
 			nodes[k].setCore(Integer.toString(i));
 		}
 
-		// // this maps the cores like NoCMap does
-		// int[] coreMap = new int[] { 11, 13, 10, 8, 12, 0, 9, 1, 2, 4, 14, 15,
-		// 5, 3, 7, 6 };
-		// for (int i = 0; i < coresNumber; i++) {
-		// cores[i].setNodeId(coreMap[i]);
-		// nodes[coreMap[i]].setProcId(i);
-		// }
+//		// this maps the cores like NoCMap does
+//		int[] coreMap = new int[] { 11, 13, 10, 8, 12, 0, 9, 1, 2, 4, 14, 15,
+//				5, 3, 7, 6 };
+//		for (int i = 0; i < coresNumber; i++) {
+//			cores[i].setNodeId(coreMap[i]);
+//			nodes[coreMap[i]].setCore(Integer.toString(i));
+//		}
 	}
 
 	/**
