@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -36,7 +35,6 @@ import ro.ulbsibiu.acaps.mapper.MapperDatabase;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
 import ro.ulbsibiu.acaps.mapper.sa.Core;
 import ro.ulbsibiu.acaps.mapper.sa.SimulatedAnnealingMapper;
-import ro.ulbsibiu.acaps.mapper.util.ApcgFilenameFilter;
 import ro.ulbsibiu.acaps.mapper.util.HeapUsageMonitor;
 import ro.ulbsibiu.acaps.mapper.util.MapperInputProcessor;
 import ro.ulbsibiu.acaps.mapper.util.MathUtils;
@@ -707,8 +705,9 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 			nodes[k].setCore(Integer.toString(i));
 		}
 
-		 // this maps the cores like NoCMap does
-//		int[] coreMap = new int[] { 8, 12, 6, 0, 2, 5, 13, 1, 3 };
+//		// this maps the cores like NoCMap does
+//		int[] coreMap = new int[] { 11, 13, 10, 8, 12, 0, 9, 1, 2, 4, 14, 15,
+//				5, 3, 7, 6 };
 //		for (int i = 0; i < coresNumber; i++) {
 //			cores[i].setNodeId(coreMap[i]);
 //			nodes[coreMap[i]].setCore(Integer.toString(i));
