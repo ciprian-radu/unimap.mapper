@@ -167,7 +167,7 @@ public class BranchAndBoundMapper implements Mapper {
 	 * the processes matrix holds the sum of the communication volumes from two
 	 * processes (both ways)
 	 */
-	int[][] procMatrix = null;
+	long[][] procMatrix = null;
 
 	/**
 	 * the NoC architecture's matrix holds the energy required to transfer data
@@ -486,10 +486,10 @@ public class BranchAndBoundMapper implements Mapper {
 		cores = new Core[coresNumber];
 		for (int i = 0; i < cores.length; i++) {
 			cores[i] = new Core(i, null,  -1);
-			cores[i].setFromCommunication(new int[nodesNumber]);
-			cores[i].setToCommunication(new int[nodesNumber]);
-			cores[i].setFromBandwidthRequirement(new int[nodesNumber]);
-			cores[i].setToBandwidthRequirement(new int[nodesNumber]);
+			cores[i].setFromCommunication(new long[nodesNumber]);
+			cores[i].setToCommunication(new long[nodesNumber]);
+			cores[i].setFromBandwidthRequirement(new long[nodesNumber]);
+			cores[i].setToBandwidthRequirement(new long[nodesNumber]);
 		}
 	}
 
@@ -508,6 +508,26 @@ public class BranchAndBoundMapper implements Mapper {
 		}
 		
 		return communications;
+	}
+	
+	private String getCoreUid(ApcgType apcg, String sourceTaskId) {
+		logger.assertLog(apcg != null, null);
+		logger.assertLog(sourceTaskId != null, null);
+		
+		String coreUid = null;
+		
+		List<CoreType> cores = apcg.getCore();
+		done: for (int i = 0; i < cores.size(); i++) {
+			List<TaskType> tasks = cores.get(i).getTask();
+			for (int j = 0; j < tasks.size(); j++) {
+				if (sourceTaskId.equals(tasks.get(j).getId())) {
+					coreUid = cores.get(i).getUid();
+					break done;
+				}
+			}
+		}
+
+		return coreUid;
 	}
 
 	/**
@@ -539,43 +559,55 @@ public class BranchAndBoundMapper implements Mapper {
 			for (int j = 0; j < taskList.size(); j++) {
 				TaskType taskType = taskList.get(j);
 				String taskId = taskType.getId();
-				cores[previousCoreCount + Integer.valueOf(taskId)].setApcgId(apcg.getId());
+				cores[previousCoreCount + Integer.valueOf(coreType.getUid())].setApcgId(apcg.getId());
 				List<CommunicationType> communications = getCommunications(ctg, taskId);
 				for (int k = 0; k < communications.size(); k++) {
 					CommunicationType communicationType = communications.get(k);
 					String sourceId = communicationType.getSource().getId();
-//					if (sourceId.contains("_")) {
-//						sourceId = sourceId.substring(ctg.getId().length() + 1);
-//					}
 					String destinationId = communicationType.getDestination().getId();
-//					if (destinationId.contains("_")) {
-//						destinationId = destinationId.substring(ctg.getId().length() + 1);
-//					}
-					if (taskId.equals(sourceId)) {
-						cores[previousCoreCount + Integer.valueOf(sourceId)].setCoreId(Integer.valueOf(coreType.getUid()));
-					}
-//					cores[previousCoreCount + Integer.valueOf(sourceId)].setApcgId(apcg.getId());
-					if (taskId.equals(destinationId)) {
-						cores[previousCoreCount + Integer.valueOf(destinationId)].setCoreId(Integer.valueOf(coreType.getUid()));
-					}
-//					cores[previousCoreCount + Integer.valueOf(destinationId)].setApcgId(apcg.getId());
 					
-					cores[previousCoreCount + Integer.valueOf(sourceId)]
-							.getToCommunication()[previousCoreCount
-							+ Integer.valueOf(destinationId)] = (int) communicationType
-							.getVolume();
-					cores[previousCoreCount + Integer.valueOf(sourceId)]
-							.getToBandwidthRequirement()[previousCoreCount
-							+ Integer.valueOf(destinationId)] = (int) (applicationBandwithRequirement * communicationType
-							.getVolume());
-					cores[previousCoreCount + Integer.valueOf(destinationId)]
-							.getFromCommunication()[previousCoreCount
-							+ Integer.valueOf(sourceId)] = (int) communicationType
-							.getVolume();
-					cores[previousCoreCount + Integer.valueOf(destinationId)]
-							.getFromBandwidthRequirement()[previousCoreCount
-							+ Integer.valueOf(sourceId)] = (int) (applicationBandwithRequirement * communicationType
-							.getVolume());
+					String sourceCoreId = null;
+					String destinationCoreId = null;
+					
+					if (taskId.equals(sourceId)) {
+						sourceCoreId = getCoreUid(apcg, sourceId);
+						destinationCoreId = getCoreUid(apcg, destinationId);
+						cores[previousCoreCount + Integer.valueOf(sourceCoreId)].setCoreId(Integer.valueOf(coreType.getUid()));
+					}
+					if (taskId.equals(destinationId)) {
+						sourceCoreId = getCoreUid(apcg, sourceId);
+						destinationCoreId = getCoreUid(apcg, destinationId);
+						cores[previousCoreCount + Integer.valueOf(destinationCoreId)].setCoreId(Integer.valueOf(coreType.getUid()));
+					}
+					
+					logger.assertLog(sourceCoreId != null, null);
+					logger.assertLog(destinationCoreId != null, null);
+					
+					if (sourceCoreId.equals(destinationCoreId)) {
+						logger.warn("Ignoring communication between tasks "
+								+ sourceId + " and " + destinationId
+								+ " because they are on the same core ("
+								+ sourceCoreId + ")");
+					} else {
+						cores[previousCoreCount + Integer.valueOf(sourceCoreId)]
+								.getToCommunication()[previousCoreCount
+								+ Integer.valueOf(destinationCoreId)] = (long) communicationType
+								.getVolume();
+						cores[previousCoreCount + Integer.valueOf(sourceCoreId)]
+								.getToBandwidthRequirement()[previousCoreCount
+								+ Integer.valueOf(destinationCoreId)] = (long) (applicationBandwithRequirement * communicationType
+								.getVolume());
+						cores[previousCoreCount
+								+ Integer.valueOf(destinationCoreId)]
+								.getFromCommunication()[previousCoreCount
+								+ Integer.valueOf(sourceCoreId)] = (long) communicationType
+								.getVolume();
+						cores[previousCoreCount
+								+ Integer.valueOf(destinationCoreId)]
+								.getFromBandwidthRequirement()[previousCoreCount
+								+ Integer.valueOf(sourceCoreId)] = (long) (applicationBandwithRequirement * communicationType
+								.getVolume());
+					}
 				}
 			}
 			tasks += taskList.size();
@@ -740,10 +772,13 @@ public class BranchAndBoundMapper implements Mapper {
 	 * Prints the current mapping
 	 */
 	private void printCurrentMapping() {
-		for (int i = 0; i < coresNumber; i++) {
-			System.out.println("Core " + cores[i].getCoreId() + " (APCG "
-					+ cores[i].getApcgId() + ") is mapped to NoC node "
-					+ cores[i].getNodeId());
+		for (int i = 0; i < nodesNumber; i++) {
+			String apcg = "";
+			if (!"-1".equals(nodes[i].getCore())) {
+				apcg = cores[Integer.valueOf(nodes[i].getCore())].getApcgId();
+			}
+			System.out.println("NoC node " + nodes[i].getId() + " has core "
+					+ nodes[i].getCore() + " (APCG " + apcg + ")");
 		}
 	}
 
@@ -780,7 +815,7 @@ public class BranchAndBoundMapper implements Mapper {
 	}
 
 	private void buildProcessMatrix() {
-		procMatrix = new int[coresNumber][coresNumber];
+		procMatrix = new long[coresNumber][coresNumber];
 		for (int i = 0; i < coresNumber; i++) {
 			int row = cores[i].getRank();
 			for (int j = 0; j < coresNumber; j++) {
@@ -870,7 +905,7 @@ public class BranchAndBoundMapper implements Mapper {
 		// }
 		// the remaining PEs are sorted based on their comm volume
 		for (int i = currentRank; i < cores.length; i++) {
-			int max = -1;
+			long max = -1;
 			int maxid = -1;
 			for (int k = 0; k < coresNumber; k++) {
 				if (cores[k].getRank() != -1) {
@@ -1378,25 +1413,25 @@ public class BranchAndBoundMapper implements Mapper {
 					+ cores[i].getNodeId() + ", rank " + cores[i].getRank()
 					+ ")");
 			
-			int[] toCommunication = cores[i].getToCommunication();
+			long[] toCommunication = cores[i].getToCommunication();
 			System.out.println("to communication");
 			for (int j = 0; j < toCommunication.length; j++) {
 				System.out.println(toCommunication[j]);
 			}
 			
-			int[] fromCommunication = cores[i].getFromCommunication();
+			long[] fromCommunication = cores[i].getFromCommunication();
 			System.out.println("from communication");
 			for (int j = 0; j < fromCommunication.length; j++) {
 				System.out.println(fromCommunication[j]);
 			}
 			
-			int[] toBandwidthRequirement = cores[i].getToBandwidthRequirement();
+			long[] toBandwidthRequirement = cores[i].getToBandwidthRequirement();
 			System.out.println("to bandwidth requirement");
 			for (int j = 0; j < toBandwidthRequirement.length; j++) {
 				System.out.println(toBandwidthRequirement[j]);
 			}
 			
-			int[] fromBandwidthRequirement = cores[i].getFromBandwidthRequirement();
+			long[] fromBandwidthRequirement = cores[i].getFromBandwidthRequirement();
 			System.out.println("from bandwidth requirement");
 			for (int j = 0; j < fromBandwidthRequirement.length; j++) {
 				System.out.println(fromBandwidthRequirement[j]);
@@ -1422,7 +1457,7 @@ public class BranchAndBoundMapper implements Mapper {
 	            int srcProc = Integer.valueOf(nodes[src].getCore());
 	            int dstProc = Integer.valueOf(nodes[dst].getCore());
 	            if (srcProc > -1 && dstProc > -1) {
-		            int commLoad = cores[srcProc].getToBandwidthRequirement()[dstProc];
+	            	long commLoad = cores[srcProc].getToBandwidthRequirement()[dstProc];
 		            if (commLoad == 0) {
 		                continue;
 		            }
@@ -1485,7 +1520,7 @@ public class BranchAndBoundMapper implements Mapper {
 				int srcProc = Integer.valueOf(nodes[src].getCore());
 				int dstProc = Integer.valueOf(nodes[dst].getCore());
 				if (srcProc > -1 && dstProc > -1) {
-					int commVol = cores[srcProc].getToCommunication()[dstProc];
+					long commVol = cores[srcProc].getToCommunication()[dstProc];
 					if (commVol > 0) {
 						energy += nodes[src].getCost() * commVol;
 						NodeType currentNode = nodes[src];
@@ -1531,7 +1566,7 @@ public class BranchAndBoundMapper implements Mapper {
 				int srcProc = Integer.valueOf(nodes[src].getCore());
 				int dstProc = Integer.valueOf(nodes[dst].getCore());
 				if (srcProc > -1 && dstProc > -1) {
-					int commVol = cores[srcProc].getToCommunication()[dstProc];
+					long commVol = cores[srcProc].getToCommunication()[dstProc];
 					if (commVol > 0) {
 						NodeType currentNode = nodes[src];
 						while (Integer.valueOf(currentNode.getId()) != dst) {
@@ -1563,7 +1598,7 @@ public class BranchAndBoundMapper implements Mapper {
 				int srcProc = Integer.valueOf(nodes[src].getCore());
 				int dstProc = Integer.valueOf(nodes[dst].getCore());
 				if (srcProc > -1 && dstProc > -1) {
-					int commVol = cores[srcProc].getToCommunication()[dstProc];
+					long commVol = cores[srcProc].getToCommunication()[dstProc];
 					if (commVol > 0) {
 						NodeType currentNode = nodes[src];
 						while (Integer.valueOf(currentNode.getId()) != dst) {
@@ -1715,7 +1750,7 @@ public class BranchAndBoundMapper implements Mapper {
 				
 	//			// This is just for checking that bbMapper.parseTrafficConfig(...)
 	//			// and parseApcg(...) have the same effect
-	//			bbMapper.printCores();
+//				bbMapper.printCores();
 	
 				String mappingXml = bbMapper.map();
 				File dir = new File(benchmarkFilePath + "ctg-" + ctgId);

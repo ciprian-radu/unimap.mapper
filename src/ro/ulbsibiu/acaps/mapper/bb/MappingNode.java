@@ -931,7 +931,7 @@ class MappingNode {
 			int dstProc = Q.get(i).dstProc;
 			int srcTile = mapping[srcProc];
 			int dstTtile = mapping[dstProc];
-			int bandwidth = Q.get(i).bandwidth;
+			long bandwidth = Q.get(i).bandwidth;
 			if (RoutingEffort.EASY.equals(bbMapper.routingEffort)) {
 				if (!routeTrafficEasy(srcTile, dstTtile, bandwidth, commit,
 						updateRoutingTable)) {
@@ -960,7 +960,7 @@ class MappingNode {
 	 * @return the computed adaptivity
 	 */
 	private final int calculateAdaptivity(int srcTile, int dstTile,
-			int bandwidth) {
+			long bandwidth) {
 		int adaptivity;
 		int rowSrc = Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[srcTile], ROW));
 		int colSrc = Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[srcTile], COLUMN));
@@ -1090,7 +1090,7 @@ class MappingNode {
 	 *            whether or not this routing will be applied
 	 * @return whether or not the routing has been successful
 	 */
-	private boolean routeTrafficEasy(int srcTile, int dstTile, int bandwidth,
+	private boolean routeTrafficEasy(int srcTile, int dstTile, long bandwidth,
 			boolean commit, boolean updateRoutingTable) {
 		int rowSrc = Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[srcTile], ROW));
 		int colSrc = Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[srcTile], COLUMN));
@@ -1232,7 +1232,7 @@ class MappingNode {
 	 *            whether or not this routing will be applied
 	 * @return whether or not the routing has been successful
 	 */
-	private boolean routeTrafficHard(int srcTile, int dstTile, int bandwidth,
+	private boolean routeTrafficHard(int srcTile, int dstTile, long bandwidth,
 			boolean commit, boolean updateRoutingTable) {
 		int rowSrc = Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[srcTile], ROW));
 		int colSrc = Integer.valueOf(bbMapper.getNodeTopologyParameter(bbMapper.nodes[srcTile], COLUMN));
@@ -1338,7 +1338,7 @@ class MappingNode {
 	 * @return 1, when everything is OK, {@link Integer#MAX_VALUE} otherwise
 	 */
 	private int pathBandwidthUsage(int srcRow, int srcColumn, int dstRow,
-			int dstColumn, int[][][] bandwidthUsage, int bandwidth) {
+			int dstColumn, int[][][] bandwidthUsage, long bandwidth) {
 		int row = srcRow;
 		int col = srcColumn;
 
