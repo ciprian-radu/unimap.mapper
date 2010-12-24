@@ -19,7 +19,7 @@ class ProcComm {
 	public int dstProc;
 
 	/** the bandwidth requirement for this communication */
-	public int bandwidth;
+	public long bandwidth;
 
 	/** (only useful in routing synthesis) */
 	public int adaptivity;

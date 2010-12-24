@@ -20,22 +20,22 @@ public class Core {
 	private int nodeId = -1;
 
 	/** the volumes of communication which will be sent by this core */
-	private int[] toCommunication = null;
+	private long[] toCommunication = null;
 
 	/** the volumes of communication which will be received by this core */
-	private int[] fromCommunication = null;
+	private long[] fromCommunication = null;
 
 	/** the bandwidth requirement of the out-going traffic */
-	private int[] toBandwidthRequirement = null;
+	private long[] toBandwidthRequirement = null;
 
 	/** the bandwidth requirement of the incoming traffic */
-	private int[] fromBandwidthRequirement = null;
+	private long[] fromBandwidthRequirement = null;
 
 	/** a rank may be used at ordering the cores (by different criteria) */
 	private int rank = -1;
 	
 	/** the total communication volume */
-	private int totalCommVol;
+	private long totalCommVol;
 	
 	/**
 	 * Constructor
@@ -77,35 +77,35 @@ public class Core {
 		this.nodeId = nodeId;
 	}
 
-	public int[] getToCommunication() {
+	public long[] getToCommunication() {
 		return toCommunication;
 	}
 
-	public void setToCommunication(int[] toCommunication) {
+	public void setToCommunication(long[] toCommunication) {
 		this.toCommunication = toCommunication;
 	}
 
-	public int[] getFromCommunication() {
+	public long[] getFromCommunication() {
 		return fromCommunication;
 	}
 
-	public void setFromCommunication(int[] fromCommunication) {
+	public void setFromCommunication(long[] fromCommunication) {
 		this.fromCommunication = fromCommunication;
 	}
 
-	public int[] getToBandwidthRequirement() {
+	public long[] getToBandwidthRequirement() {
 		return toBandwidthRequirement;
 	}
 
-	public void setToBandwidthRequirement(int[] toBandwidthRequirement) {
+	public void setToBandwidthRequirement(long[] toBandwidthRequirement) {
 		this.toBandwidthRequirement = toBandwidthRequirement;
 	}
 
-	public int[] getFromBandwidthRequirement() {
+	public long[] getFromBandwidthRequirement() {
 		return fromBandwidthRequirement;
 	}
 
-	public void setFromBandwidthRequirement(int[] fromBandwidthRequirement) {
+	public void setFromBandwidthRequirement(long[] fromBandwidthRequirement) {
 		this.fromBandwidthRequirement = fromBandwidthRequirement;
 	}
 
@@ -117,11 +117,11 @@ public class Core {
 		this.rank = rank;
 	}
 
-	public int getTotalCommVol() {
+	public long getTotalCommVol() {
 		return totalCommVol;
 	}
 
-	public void setTotalCommVol(int totalCommVol) {
+	public void setTotalCommVol(long totalCommVol) {
 		this.totalCommVol = totalCommVol;
 	}
 
