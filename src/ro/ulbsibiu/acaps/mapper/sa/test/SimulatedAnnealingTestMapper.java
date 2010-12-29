@@ -12,8 +12,12 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
@@ -141,9 +145,18 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 
 	/** the nodes from the Network-on-Chip (NoC) */
 	private NodeType[] nodes;
+	
+	/** the distinct nodes with which each node communicates directly (through a single link) */
+	private Set<Integer>[] nodeNeighbors;
+	
+	/** the maximum neighbors a node can have */
+	private int maxNodeNeighbors = 0;
 
 	/** the processes (tasks, cores) */
 	private Core[] cores;
+	
+	/** the distinct cores with which each core communicates directly */
+	private Set<Integer>[] coreNeighbors;
 
 	/** the communication channels from the NoC */
 	private ro.ulbsibiu.acaps.noc.xml.link.LinkType[] links;
@@ -621,6 +634,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		logger.debug("Found " + nodeXmls.length + " nodes");
 		this.nodesNumber = nodeXmls.length;
 		nodes = new NodeType[nodesNumber];
+		nodeNeighbors = new LinkedHashSet[nodesNumber];
 		nodeRows = new Integer[nodesNumber];
 		nodeColumns = new Integer[nodesNumber];
 		this.edgeSize = (int) Math.sqrt(nodesNumber);
@@ -660,6 +674,26 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 			link.setBandwidth(linkBandwidth);
 			link.setCost((double)linkEBit);
 			links[Integer.valueOf(link.getId())] = link;
+			
+			if (nodeNeighbors[Integer.valueOf(link.getFirstNode())] == null) {
+				nodeNeighbors[Integer.valueOf(link.getFirstNode())] = new LinkedHashSet<Integer>();
+			}
+			if (nodeNeighbors[Integer.valueOf(link.getSecondNode())] == null) {
+				nodeNeighbors[Integer.valueOf(link.getSecondNode())] = new LinkedHashSet<Integer>();
+			}
+			nodeNeighbors[Integer.valueOf(link.getFirstNode())].add(Integer.valueOf(link.getSecondNode()));
+			nodeNeighbors[Integer.valueOf(link.getSecondNode())].add(Integer.valueOf(link.getFirstNode()));
+		}
+		for (int i = 0; i < nodeNeighbors.length; i++) {
+			if (nodeNeighbors[i].size() > maxNodeNeighbors) {
+				maxNodeNeighbors = nodeNeighbors[i].size();
+			}
+		}
+		if (logger.isDebugEnabled()) {
+			for (int i = 0; i < nodeNeighbors.length; i++) {
+				logger.debug("Node " + i + " communicates with " + nodeNeighbors[i].size() + " nodes");
+			}
+			logger.debug("The maximum nodes a node has is " + maxNodeNeighbors);
 		}
 
 		// for each router generate a routing table provided by the XY routing
@@ -1113,74 +1147,18 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	}
 	
 	/**
-	 * Determines the neighboring nodes of the given node. Note that this method
-	 * is topology dependent.
-	 * 
-	 * @param node
-	 *            the node
-	 * @return the neighbors of node
-	 */
-	private Integer[] getNodeNeighbors(int node) {
-		List<Integer> neighbors = new ArrayList<Integer>();
-		
-		int row = Integer.valueOf(getNodeTopologyParameter(nodes[node], TopologyParameter.ROW));
-		int column = Integer.valueOf(getNodeTopologyParameter(nodes[node], TopologyParameter.COLUMN));
-		
-		boolean northFound = (row <= 0); // no need to search for north neighbor if the node is on row 0
-		boolean eastFound = (column >= edgeSize - 1); // no need to search for east neighbor if the node is on the rightmost column
-		boolean southFound = (row >= edgeSize - 1); // no need to search for south neighbor if the node is on the bottom row
-		boolean westFound = (column <= 0); // no need to search for north neighbor if the node is on column 0
-		
-		for (int i = 0; i < nodes.length; i++) {
-			int iRow = Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.ROW));
-			int iColumn = Integer.valueOf(getNodeTopologyParameter(nodes[i], TopologyParameter.COLUMN));
-			
-			if (!northFound) {
-				// has NORTH neighbor
-				if (row -1 == iRow && column == iColumn) {
-					neighbors.add(i);
-					northFound = true;
-				}
-			}
-			if (!eastFound) {
-				// has EAST neighbor
-				if (row == iRow && column + 1 == iColumn) {
-					neighbors.add(i);
-					eastFound = true;
-				}
-			}
-			if (!southFound) {
-				// has SOUTH neighbor
-				if (row + 1 == iRow && column == iColumn) {
-					neighbors.add(i);
-					southFound = true;
-				}
-			}
-			if (!westFound) {
-				// has WEST neighbor
-				if (row == iRow && column - 1 == iColumn) {
-					neighbors.add(i);
-					westFound = true;
-				}
-			}
-			
-			if (northFound && eastFound && southFound && westFound) {
-				break;
-			}
-		}
-		
-		return neighbors.toArray(new Integer[neighbors.size()]);
-	}
-
-	/**
-	 * Randomly selects a node (n1) that has a core (c1) mapped to it. This node
-	 * is swapped randomly with another node (n2), unless c1 receives data from
-	 * just a core (c2). In this case, c1 will be placed in one of the neighbors
-	 * of n2 that doesn't have a core mapped to it. If there isn't an empty
-	 * neighbor, we search for a neighbor with a core which doesn't communicate
-	 * with c2. If we still don't find a neighbor, we fall back to random
-	 * swapping. Note that is multiple neighbors are found, the chosen one is
-	 * determined randomly.
+	 * Randomly selects a node (n1) that has a core (c1) mapped to it. Core c1
+	 * is allowed to be placed only onto the NoC nodes that have enough
+	 * neighbors so that all c1's communications have a corresponding node
+	 * neighbor. If c1 has more communications than the maximum neighbors of a
+	 * node, the node with a maximum neighborhood are used. This node is swapped
+	 * randomly with another node (n2), unless c1 receives data from just a core
+	 * (c2). In this case, c1 will be placed in one of the neighbors of n2 that
+	 * doesn't have a core mapped to it. If there isn't an empty neighbor, we
+	 * search for a neighbor with a core which doesn't communicate with c2. If
+	 * we still don't find a neighbor, we fall back to random swapping. Note
+	 * that is multiple neighbors are found, the chosen one is determined
+	 * randomly.
 	 * 
 	 * @return the two swapped nodes
 	 */
@@ -1193,6 +1171,27 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		} while ("-1".equals(nodes[node1].getCore()));
 		
 		int core1 = Integer.valueOf(nodes[node1].getCore());
+		
+		if (logger.isDebugEnabled()) {
+			logger.debug("Selected node " + node1 + " for moving. It has core " + core1);
+			logger.debug("Node " + node1 + " communicates with nodes " + nodeNeighbors[node1]);
+			logger.debug("Core " + core1 + " communicates with cores " + coreNeighbors[core1]);
+		}
+		
+		// check where core1 could be placed so that its number of
+		// communications with other cores can be satisfied by the number of
+		// node neighbors (one node neighbor for each communication)
+		List<Integer> core1AllowedNodes = new ArrayList<Integer>();
+		for (int i = 0; i < nodeNeighbors.length; i++) {
+			if (nodeNeighbors[i].size() >= coreNeighbors[core1].size()
+					|| nodeNeighbors[i].size() == maxNodeNeighbors) {
+				core1AllowedNodes.add(i);
+				if (logger.isDebugEnabled()) {
+					logger.debug("Core " + core1 + " is allowed to be placed on node " + i);
+				}
+			}
+		}
+		
 		// check if core1 receives data only from one core
 		long[] fromCommunication = cores[core1].getFromCommunication();
 		int fromCoresCount = 0;
@@ -1206,7 +1205,8 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		if (fromCoresCount == 1) {
 			if (logger.isDebugEnabled()) {
 				logger.debug("Core " + core1 + " receives data only from core "
-						+ core2 + ". Trying to topologically place core " + core1);
+						+ core2 + ". Trying to compactly place core " + core1
+						+ " (onto a neighbor node of core " + core2 + ")");
 			}
 			// search the node that has core2
 			int core2Node = -1;
@@ -1217,19 +1217,29 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 				}
 			}
 			logger.assertLog(core2Node >= 0, "Couldn't find the node to which core " + core2 + " is placed!");
-			// determine the neighboring nodes of node core2Node
-			Integer[] core2NodeNeighbors = getNodeNeighbors(core2Node);
-			// determine the neighboring nodes of node core2Node which are unoccupied
-			List<Integer> unoccupiedNodes = new ArrayList<Integer>(core2NodeNeighbors.length);
-			for (int j = 0; j < core2NodeNeighbors.length; j++) {
-				if (logger.isDebugEnabled()) {
-					logger.debug("Node " + core2Node + " has node " + core2NodeNeighbors[j] + " as neighbor");
-				}
-				if ("-1".equals(nodes[core2NodeNeighbors[j]].getCore())) {
+			if (logger.isDebugEnabled()) {
+				logger.debug("Core " + core2 + " is placed onto node " + core2Node);
+			}
+			// determine the neighboring nodes of node core2Node that are among the allowed nodes for core1
+			Set<Integer> core2NodeNeighborsAllowedForCore1 = new LinkedHashSet<Integer>();
+			for (Integer neighbor : nodeNeighbors[core2Node]) {
+				if (core1AllowedNodes.contains(neighbor)) {
+					core2NodeNeighborsAllowedForCore1.add(neighbor);
 					if (logger.isDebugEnabled()) {
-						logger.debug("Node " + core2NodeNeighbors[j] + " is unoccupied");
+						logger.debug("Node " + neighbor + " is a neighbor of node " + core2Node + 
+								" and also one of the nodes allowed for core " + core1);
 					}
-					unoccupiedNodes.add(core2NodeNeighbors[j]);
+				}
+			}
+			// determine the neighboring nodes of node core2Node which are unoccupied
+			List<Integer> unoccupiedNodes = new ArrayList<Integer>(core2NodeNeighborsAllowedForCore1.size());
+			for (int j = 0; j < core2NodeNeighborsAllowedForCore1.size(); j++) {
+				Integer neighbor = core2NodeNeighborsAllowedForCore1.iterator().next();
+				if ("-1".equals(nodes[neighbor].getCore())) {
+					if (logger.isDebugEnabled()) {
+						logger.debug("Node " + neighbor + " is unoccupied");
+					}
+					unoccupiedNodes.add(neighbor);
 				}
 			}
 			if (unoccupiedNodes.size() > 0) {
@@ -1237,36 +1247,45 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 				node2 = unoccupiedNodes.get(r);
 			} else {
 				if (logger.isDebugEnabled()) {
-					logger.debug("All neighbors of node " + core2Node + " are occupied. " +
+					logger.debug("All neighbors of node " + core2Node + 
+							" are occupied or are not among the allowed nodes for core " + core1 + ". " +
 							"Searching for neighboring nodes of node " + core2Node + 
 							" which have cores that do not communicate with core " + core1);
 				}
 				// determine the neighboring nodes of node core2Node which have cores that do not communicate with core2
-				List<Integer> notCommunicatingNodes = new ArrayList<Integer>(core2NodeNeighbors.length);
-				for (int j = 0; j < core2NodeNeighbors.length; j++) {
-					if (cores[Integer.valueOf(nodes[core2NodeNeighbors[j]].getCore())].getToCommunication()[core2] == 0
-							&& cores[Integer.valueOf(nodes[core2NodeNeighbors[j]].getCore())].getFromCommunication()[core2] == 0) {
+				List<Integer> notCommunicatingNodes = new ArrayList<Integer>(core2NodeNeighborsAllowedForCore1.size());
+				for (Iterator<Integer> iterator = core2NodeNeighborsAllowedForCore1.iterator(); iterator.hasNext();) {
+					Integer neighbor = iterator.next();
+					Core core = cores[Integer.valueOf(nodes[neighbor].getCore())];
+					if (core.getToCommunication()[core2] == 0 && core.getFromCommunication()[core2] == 0) {
 						if (logger.isDebugEnabled()) {
-							logger.debug("Node " + core2NodeNeighbors[j] + " does not communicate with " + core2);
+							logger.debug("Node " + neighbor + " has core " + core.getCoreId() + 
+									" (APCG " + core.getApcgId() + ") that does not communicate with core " + core2);
 						}
-						notCommunicatingNodes.add(core2NodeNeighbors[j]);
+						notCommunicatingNodes.add(neighbor);
 					}
+					
 				}
 				if (notCommunicatingNodes.size() > 0) {
 					int r = (int) uniformIntegerRandomVariable(0, notCommunicatingNodes.size() - 1);
 					node2 = notCommunicatingNodes.get(r);
 				} else {
 					if (logger.isDebugEnabled()) {
-						logger.debug("No suitable neighbore node found. Falling back to random swap...");
+						logger.debug("No suitable neighbor node found. Falling back to random swap " +
+								"(restricted to allowed nodes for core " + core1 + " )...");
 					}
 					do {
-						node2 = (int) uniformIntegerRandomVariable(0, nodesNumber - 1);
+						// core1 will be placed onto one of the allowed nodes
+						int i = (int) uniformIntegerRandomVariable(0, core1AllowedNodes.size() - 1);
+						node2 = core1AllowedNodes.get(i);
 					} while (node2 == node1);
 				}
 			}
 		} else {
 			do {
-				node2 = (int) uniformIntegerRandomVariable(0, nodesNumber - 1);
+				// core1 will be placed onto one of the allowed nodes
+				int i = (int) uniformIntegerRandomVariable(0, core1AllowedNodes.size() - 1);
+				node2 = core1AllowedNodes.get(i);
 			} while (node2 == node1);
 		}
 		logger.assertLog(node1 != -1 && node2 != -1,
@@ -1934,12 +1953,37 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		}
 	}
 	
+	private void computeCoreNeighbors() {
+		coreNeighbors = new LinkedHashSet[cores.length];
+		for (int i = 0; i < cores.length; i++) {
+			coreNeighbors[i] = new LinkedHashSet<Integer>();
+			long[] fromCommunication = cores[i].getFromCommunication();
+			for (int j = 0; j < fromCommunication.length; j++) {
+				if (MathUtils.definitelyGreaterThan(fromCommunication[j], 0)) {
+					coreNeighbors[i].add(j);
+				}
+			}
+			long[] toCommunication = cores[i].getToCommunication();
+			for (int j = 0; j < toCommunication.length; j++) {
+				if (MathUtils.definitelyGreaterThan(toCommunication[j], 0)) {
+					coreNeighbors[i].add(j);
+				}
+			}
+			if (logger.isDebugEnabled()) {
+				logger.debug("Core " + cores[i].getCoreId() + "(APCG "
+						+ cores[i].getApcgId() + ") communicates with "
+						+ coreNeighbors[i].size() + " cores");
+			}
+		}
+	}
+	
 	@Override
 	public String map() throws TooFewNocNodesException {
 		if (nodesNumber < coresNumber) {
 			throw new TooFewNocNodesException(coresNumber, nodesNumber);
 		}
 
+		computeCoreNeighbors();
 		mapCoresToNocNodesRandomly();
 		printCurrentMapping();
 
