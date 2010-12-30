@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
@@ -1233,8 +1232,8 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 			}
 			// determine the neighboring nodes of node core2Node which are unoccupied
 			List<Integer> unoccupiedNodes = new ArrayList<Integer>(core2NodeNeighborsAllowedForCore1.size());
-			for (int j = 0; j < core2NodeNeighborsAllowedForCore1.size(); j++) {
-				Integer neighbor = core2NodeNeighborsAllowedForCore1.iterator().next();
+			for (Iterator<Integer> iterator = core2NodeNeighborsAllowedForCore1.iterator(); iterator.hasNext();) {
+				Integer neighbor = iterator.next();
 				if ("-1".equals(nodes[neighbor].getCore())) {
 					if (logger.isDebugEnabled()) {
 						logger.debug("Node " + neighbor + " is unoccupied");
