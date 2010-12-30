@@ -1180,10 +1180,13 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		// check where core1 could be placed so that its number of
 		// communications with other cores can be satisfied by the number of
 		// node neighbors (one node neighbor for each communication)
+		//
+		// obviously, node node1 will not be among core1's allowed nodes
 		List<Integer> core1AllowedNodes = new ArrayList<Integer>();
 		for (int i = 0; i < nodeNeighbors.length; i++) {
-			if (nodeNeighbors[i].size() >= coreNeighbors[core1].size()
-					|| nodeNeighbors[i].size() == maxNodeNeighbors) {
+			if (i != node1
+					&& (nodeNeighbors[i].size() >= coreNeighbors[core1].size()
+							|| nodeNeighbors[i] .size() == maxNodeNeighbors)) {
 				core1AllowedNodes.add(i);
 				if (logger.isDebugEnabled()) {
 					logger.debug("Core " + core1 + " is allowed to be placed on node " + i);
@@ -1194,11 +1197,15 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		// check if core1 receives data only from one core
 		long[] fromCommunication = cores[core1].getFromCommunication();
 		int fromCoresCount = 0;
-		int core2 = -1;
+		int core2 = -1; // core2 has meaning only in the (fromCoresCount == 1) if
 		for (int i = 0; i < fromCommunication.length; i++) {
 			if (fromCommunication[i] > 0) {
 				fromCoresCount++;
 				core2 = i;
+				if (fromCoresCount > 1) {
+					// no need to search further on
+					break;
+				}
 			}
 		}
 		if (fromCoresCount == 1) {
@@ -1207,14 +1214,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 						+ core2 + ". Trying to compactly place core " + core1
 						+ " (onto a neighbor node of core " + core2 + ")");
 			}
-			// search the node that has core2
-			int core2Node = -1;
-			for (int i = 0; i < nodes.length; i++) {
-				if (nodes[i].getCore().equals(Integer.toString(core2))) {
-					core2Node = i;
-					break;
-				}
-			}
+			int core2Node = cores[core2].getNodeId(); // the node that has core2
 			logger.assertLog(core2Node >= 0, "Couldn't find the node to which core " + core2 + " is placed!");
 			if (logger.isDebugEnabled()) {
 				logger.debug("Core " + core2 + " is placed onto node " + core2Node);
@@ -1231,17 +1231,20 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 				}
 			}
 			// determine the neighboring nodes of node core2Node which are unoccupied
-			List<Integer> unoccupiedNodes = new ArrayList<Integer>(core2NodeNeighborsAllowedForCore1.size());
-			for (Iterator<Integer> iterator = core2NodeNeighborsAllowedForCore1.iterator(); iterator.hasNext();) {
-				Integer neighbor = iterator.next();
-				if ("-1".equals(nodes[neighbor].getCore())) {
-					if (logger.isDebugEnabled()) {
-						logger.debug("Node " + neighbor + " is unoccupied");
+			List<Integer> unoccupiedNodes = null;
+			if (cores.length < nodes.length) {
+				unoccupiedNodes = new ArrayList<Integer>(core2NodeNeighborsAllowedForCore1.size());
+				for (Iterator<Integer> iterator = core2NodeNeighborsAllowedForCore1.iterator(); iterator.hasNext();) {
+					Integer neighbor = iterator.next();
+					if ("-1".equals(nodes[neighbor].getCore())) {
+						if (logger.isDebugEnabled()) {
+							logger.debug("Node " + neighbor + " is unoccupied");
+						}
+						unoccupiedNodes.add(neighbor);
 					}
-					unoccupiedNodes.add(neighbor);
 				}
 			}
-			if (unoccupiedNodes.size() > 0) {
+			if (unoccupiedNodes != null && unoccupiedNodes.size() > 0) {
 				int r = (int) uniformIntegerRandomVariable(0, unoccupiedNodes.size() - 1);
 				node2 = unoccupiedNodes.get(r);
 			} else {
@@ -1273,22 +1276,20 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 						logger.debug("No suitable neighbor node found. Falling back to random swap " +
 								"(restricted to allowed nodes for core " + core1 + " )...");
 					}
-					do {
-						// core1 will be placed onto one of the allowed nodes
-						int i = (int) uniformIntegerRandomVariable(0, core1AllowedNodes.size() - 1);
-						node2 = core1AllowedNodes.get(i);
-					} while (node2 == node1);
+					// core1 will be placed onto one of the allowed nodes
+					int i = (int) uniformIntegerRandomVariable(0, core1AllowedNodes.size() - 1);
+					node2 = core1AllowedNodes.get(i);
 				}
 			}
 		} else {
-			do {
-				// core1 will be placed onto one of the allowed nodes
-				int i = (int) uniformIntegerRandomVariable(0, core1AllowedNodes.size() - 1);
-				node2 = core1AllowedNodes.get(i);
-			} while (node2 == node1);
+			// core1 will be placed onto one of the allowed nodes
+			int i = (int) uniformIntegerRandomVariable(0, core1AllowedNodes.size() - 1);
+			node2 = core1AllowedNodes.get(i);
 		}
-		logger.assertLog(node1 != -1 && node2 != -1,
-				"At least one node is not defined (i.e. = -1); node1 = " + node1 + ", node2 = " + node2);
+		logger.assertLog(
+				node1 != -1 && node2 != -1 && node1 != node2,
+				"At least one node is not defined (i.e. = -1) or the two nodes are identical; node1 = "
+						+ node1 + ", node2 = " + node2);
 		if (logger.isDebugEnabled()) {
 			logger.debug("Swapping nodes " + node1 + " and " + node2);
 		}
