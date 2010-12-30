@@ -899,7 +899,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		// then quit at this temperature
 
 		if (logger.isTraceEnabled()) {
-			logger.trace("attempts = " + numberOfIterationsPerTemperature);
+			logger.trace("number of iterations per temperature = " + numberOfIterationsPerTemperature);
 		}
 //		List<String[]> uniqueMappings = new ArrayList<String[]>(); 
 //		List<Integer> uniqueMappingsFrequencies = new ArrayList<Integer>();
@@ -1182,14 +1182,45 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		// node neighbors (one node neighbor for each communication)
 		//
 		// obviously, node node1 will not be among core1's allowed nodes
+		//
+		// also, core1 cannot be placed on a node that has a core with a number
+		// of communications (with other cores) that can not be satisfied by the
+		// number of core1's node neighbors
 		List<Integer> core1AllowedNodes = new ArrayList<Integer>();
 		for (int i = 0; i < nodeNeighbors.length; i++) {
 			if (i != node1
 					&& (nodeNeighbors[i].size() >= coreNeighbors[core1].size()
-							|| nodeNeighbors[i] .size() == maxNodeNeighbors)) {
-				core1AllowedNodes.add(i);
-				if (logger.isDebugEnabled()) {
-					logger.debug("Core " + core1 + " is allowed to be placed on node " + i);
+							|| nodeNeighbors[i].size() == maxNodeNeighbors)) {
+				if ("-1".equals(nodes[i].getCore())) {
+					core1AllowedNodes.add(i);
+					if (logger.isDebugEnabled()) {
+						logger.debug("Core " + core1 + " is allowed to be placed on node " + i);
+					}
+				} else {
+					int currentCore = Integer.valueOf(nodes[i].getCore());
+					int currentCoreNeighbors = coreNeighbors[currentCore]
+							.size();
+					if (nodeNeighbors[node1].size() >= currentCoreNeighbors
+							|| nodeNeighbors[node1].size() == maxNodeNeighbors) {
+						core1AllowedNodes.add(i);
+						if (logger.isDebugEnabled()) {
+							logger.debug("Core " + core1
+									+ " is allowed to be placed on node " + i);
+						}
+					} else {
+						if (logger.isDebugEnabled()) {
+							logger.debug("Core " + core1
+									+ " is not allowed to be placed on node "
+									+ i + " because this node has core "
+									+ currentCore
+									+ ", which communicates with "
+									+ currentCoreNeighbors
+									+ " other cores (and node " + node1
+									+ " is connected with only "
+									+ nodeNeighbors[node1].size()
+									+ " other nodes)");
+						}
+					}
 				}
 			}
 		}
@@ -1247,6 +1278,9 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 			if (unoccupiedNodes != null && unoccupiedNodes.size() > 0) {
 				int r = (int) uniformIntegerRandomVariable(0, unoccupiedNodes.size() - 1);
 				node2 = unoccupiedNodes.get(r);
+				if (logger.isDebugEnabled()) {
+					logger.debug("Core " + core1 + " will be moved from node " + node1 + " to the unoccupied node " + node2);
+				}
 			} else {
 				if (logger.isDebugEnabled()) {
 					logger.debug("All neighbors of node " + core2Node + 
@@ -1271,6 +1305,14 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 				if (notCommunicatingNodes.size() > 0) {
 					int r = (int) uniformIntegerRandomVariable(0, notCommunicatingNodes.size() - 1);
 					node2 = notCommunicatingNodes.get(r);
+					if (logger.isDebugEnabled()) {
+						logger.debug("Core " + core1
+								+ " receives data only from core " + core2
+								+ " and it will be moved from node " + node1
+								+ " to the node " + node2 + ", a neighbor of node "
+								+ core2Node + " that has core "
+								+ nodes[core2Node].getCore());
+					}
 				} else {
 					if (logger.isDebugEnabled()) {
 						logger.debug("No suitable neighbor node found. Falling back to random swap " +
@@ -1279,12 +1321,18 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 					// core1 will be placed onto one of the allowed nodes
 					int i = (int) uniformIntegerRandomVariable(0, core1AllowedNodes.size() - 1);
 					node2 = core1AllowedNodes.get(i);
+					if (logger.isDebugEnabled()) {
+						logger.debug("Core " + core1 + " will be moved from node " + node1 + " to the allowed node " + node2);
+					}
 				}
 			}
 		} else {
 			// core1 will be placed onto one of the allowed nodes
 			int i = (int) uniformIntegerRandomVariable(0, core1AllowedNodes.size() - 1);
 			node2 = core1AllowedNodes.get(i);
+			if (logger.isDebugEnabled()) {
+				logger.debug("Core " + core1 + " will be moved from node " + node1 + " to the allowed node " + node2);
+			}
 		}
 		logger.assertLog(
 				node1 != -1 && node2 != -1 && node1 != node2,
