@@ -156,6 +156,17 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	
 	/** the distinct cores with which each core communicates directly */
 	private Set<Integer>[] coreNeighbors;
+	
+	/**
+	 * the total data communicated by the cores
+	 */
+	private double[] coreToCommunication;
+	
+	/** the total amount of data communicated by all cores*/
+	private long totalToCommunication;
+	
+	/** for every core, the (from and to) communication probability density function */
+	private double[][] coresCommunicationPDF;
 
 	/** the communication channels from the NoC */
 	private ro.ulbsibiu.acaps.noc.xml.link.LinkType[] links;
@@ -777,6 +788,13 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 //			cores[i].setNodeId(coreMap[i]);
 //			nodes[coreMap[i]].setCore(Integer.toString(i));
 //		}
+		
+//		// VOPD mapping that leads to optimal mapping when using random swapping
+//		int[] coreMap = new int[] { 14, 3, 9, 15, 4, 13, 5, 1, 6, 0, 8, 7, 2, 12, 11, 10 };
+//		for (int i = 0; i < coresNumber; i++) {
+//			cores[i].setNodeId(coreMap[i]);
+//			nodes[coreMap[i]].setCore(Integer.toString(i));
+//		}
 	}
 
 	/**
@@ -905,6 +923,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 //		List<Integer> uniqueMappingsFrequencies = new ArrayList<Integer>();
 		for (int m = 1; m <= numberOfIterationsPerTemperature; m++) {
 			int[] movedNodes = move();
+//			printCurrentMapping();
 			
 //			// computes the unique mappings (start)
 //			boolean isNewMapping = true;
@@ -1008,9 +1027,12 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 //		numberOfIterationsPerTemperature = nodesNumber - 2; // diameter of the 2D mesh 
 	}
 	
+	public double getInitialTemperature() {
+		return 1;
+	}
+	
 	public void setInitialTemperature() {
-//		temperature = 100;
-		temperature = 1;
+		temperature = getInitialTemperature();
 	}
 	
 	public double getFinalTemperature() {
@@ -1113,7 +1135,9 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	 */
 	private int[] move() {
 //		return makeRandomSwap();
-		return makeTopologicalMove();
+//		return makeTopologicalMove();
+//		return makeVariableGrainSizeMove();
+		return makeTheMove();
 	}
 	
 	/**
@@ -1165,11 +1189,12 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		int node1;
 		int node2;
 		
-		do {
-			node1 = (int) uniformIntegerRandomVariable(0, nodesNumber - 1);
-		} while ("-1".equals(nodes[node1].getCore()));
-		
-		int core1 = Integer.valueOf(nodes[node1].getCore());
+		int core1 = selectCore();
+		if (core1 == -1) {
+			logger.fatal("Unable to select any core for moving!");
+			System.exit(-1);
+		}
+		node1 = cores[core1].getNodeId();
 		
 		if (logger.isDebugEnabled()) {
 			logger.debug("Selected node " + node1 + " for moving. It has core " + core1);
@@ -1319,17 +1344,177 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 								"(restricted to allowed nodes for core " + core1 + " )...");
 					}
 					// core1 will be placed onto one of the allowed nodes
-					int i = (int) uniformIntegerRandomVariable(0, core1AllowedNodes.size() - 1);
-					node2 = core1AllowedNodes.get(i);
-					if (logger.isDebugEnabled()) {
-						logger.debug("Core " + core1 + " will be moved from node " + node1 + " to the allowed node " + node2);
+					if (core1AllowedNodes.size() == 0) {
+						node2 = node1;
+						logger.warn("No nodes are allowed for core " + core1
+								+ ". We pretend we make a move by swapping node "
+								+ node1 + " with node " + node2);
+					} else {
+						int i = (int) uniformIntegerRandomVariable(0, core1AllowedNodes.size() - 1);
+						node2 = core1AllowedNodes.get(i);
+						if (logger.isDebugEnabled()) {
+							logger.debug("Core " + core1 + " will be moved from node " + node1 + " to the allowed node " + node2);
+						}
 					}
 				}
 			}
 		} else {
 			// core1 will be placed onto one of the allowed nodes
+			if (core1AllowedNodes.size() == 0) {
+				node2 = node1;
+				logger.warn("No nodes are allowed for core " + core1
+						+ ". We pretend we make a move by swapping node "
+						+ node1 + " with node " + node2);
+			} else {
+				int i = (int) uniformIntegerRandomVariable(0, core1AllowedNodes.size() - 1);
+				node2 = core1AllowedNodes.get(i);
+				if (logger.isDebugEnabled()) {
+					logger.debug("Core " + core1 + " will be moved from node " + node1 + " to the allowed node " + node2);
+				}
+			}
+		}
+		logger.assertLog(
+				node1 != -1 && node2 != -1 && node1 != node2,
+				"At least one node is not defined (i.e. = -1) or the two nodes are identical; node1 = "
+						+ node1 + ", node2 = " + node2);
+		if (logger.isDebugEnabled()) {
+			logger.debug("Swapping nodes " + node1 + " and " + node2);
+		}
+		swapProcesses(node1, node2);
+		
+		return new int[] { node1, node2 };
+	}
+	
+	private int selectCore() {
+		int core = -1;
+		double p = uniformRandomVariable();
+		double sum = 0;
+		for (int i = 0; i < cores.length; i++) {
+//			sum += coreToCommunication[i] / totalToCommunication;
+			
+//			sum += (meanPDF + temperature * (coreToCommunication[i] - meanPDF)) / totalToCommunication;
+			
+			// as the temperature decreases, the probabilities equalize more and more
+			sum += ((totalToCommunication * 1.0 / cores.length) + temperature
+					* (coreToCommunication[i] - (totalToCommunication * 1.0 / cores.length)))
+					/ totalToCommunication;
+			if (MathUtils.definitelyLessThan((float)p, (float)sum) 
+					|| MathUtils.approximatelyEqual((float)p, (float)sum)) {
+				core = i;
+				break; // essential!
+			}
+		}
+		return core;
+	}
+
+	private int[] makeVariableGrainSizeMove() {
+		int node1;
+		int node2;
+		
+		int core1 = selectCore();
+		if (core1 == -1) {
+			logger.fatal("Unable to select any core for moving!");
+			System.exit(-1);
+		}
+		node1 = cores[core1].getNodeId();
+		
+		if (logger.isDebugEnabled()) {
+			logger.debug("Selected core " + core1 + " for moving. It is on node " + node1);
+		}
+		
+		int core2 = -1;
+		do {
+			core2 = selectCore();
+		} while (core2 == core1);
+		if (core2 == -1) {
+			logger.fatal("Unable to select any core for moving!");
+			System.exit(-1);
+		}
+		node2 = cores[core2].getNodeId();
+		
+		if (logger.isDebugEnabled()) {
+			logger.debug("Core " + core1 + " will be swapped with core " + core2 + ", which is on node " + node2);
+		}
+		
+		logger.assertLog(
+				node1 != -1 && node2 != -1 && node1 != node2,
+				"At least one node is not defined (i.e. = -1) or the two nodes are identical; node1 = "
+						+ node1 + ", node2 = " + node2);
+		if (logger.isDebugEnabled()) {
+			logger.debug("Swapping nodes " + node1 + " and " + node2);
+		}
+		swapProcesses(node1, node2);
+		
+		return new int[] { node1, node2 };
+	}
+
+	private int[] makeTheMove() {
+		int node1;
+		int node2;
+		
+//		do {
+//			node1 = (int) uniformIntegerRandomVariable(0, nodesNumber - 1);
+//		} while ("-1".equals(nodes[node1].getCore()));
+//
+//		int core1 = Integer.valueOf(nodes[node1].getCore());
+		
+		int core1 = selectCore();
+		if (core1 == -1) {
+			logger.fatal("Unable to select any core for moving!");
+			System.exit(-1);
+		}
+		node1 = cores[core1].getNodeId();
+		
+		if (logger.isDebugEnabled()) {
+			logger.debug("Selected node " + node1 + " for moving. It has core " + core1);
+			logger.debug("Node " + node1 + " communicates with nodes " + nodeNeighbors[node1]);
+			logger.debug("Core " + core1 + " communicates with cores " + coreNeighbors[core1]);
+		}
+		
+		double[] core1CommunicationPDF = coresCommunicationPDF[core1];
+		int core2 = -1;
+		double p = uniformRandomVariable();
+		double sum = 0;
+		for (int i = 0; i < core1CommunicationPDF.length; i++) {
+			sum += core1CommunicationPDF[i];
+			if (MathUtils.definitelyLessThan((float)p, (float)sum) 
+					|| MathUtils.approximatelyEqual((float)p, (float)sum)) {
+				core2 = i;
+				break; // essential!
+			}
+		}
+		if (core2 == -1) {
+			logger.fatal("Unable to determine a core with which core " + core1 + " will swap");
+		}
+		int core2Node = cores[core2].getNodeId();
+		List<Integer> core1AllowedNodes = new ArrayList<Integer>(nodeNeighbors[core2Node]);
+		core1AllowedNodes.remove(new Integer(node1));
+		
+		
+		if (core1AllowedNodes.size() == 0) {
+			node2 = node1;
+			logger.warn("No nodes are allowed for core " + core1
+					+ ". We pretend we make a move by swapping node "
+					+ node1 + " with node " + node2);
+		} else {
 			int i = (int) uniformIntegerRandomVariable(0, core1AllowedNodes.size() - 1);
 			node2 = core1AllowedNodes.get(i);
+			
+//			node2 = -1;
+//			double[] core2CommunicationPDF = coresCommunicationPDF[core2];
+//			double min = Float.MAX_VALUE; // needs to be float, not double
+//			for (int i = 0; i < core1AllowedNodes.size(); i++) {
+//				Integer core1AllowedNode = core1AllowedNodes.get(i);
+//				String core = nodes[core1AllowedNode].getCore();
+//				if (MathUtils.definitelyLessThan(
+//						(float) core2CommunicationPDF[cores[Integer
+//								.valueOf(core)].getCoreId()], (float) min)) {
+//					min = core2CommunicationPDF[cores[Integer.valueOf(core)]
+//							.getCoreId()];
+//					node2 = core1AllowedNode;
+//				}
+//			}
+			
 			if (logger.isDebugEnabled()) {
 				logger.debug("Core " + core1 + " will be moved from node " + node1 + " to the allowed node " + node2);
 			}
@@ -2001,19 +2186,71 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		}
 	}
 	
+	private void computeCoreToCommunicationPDF() {
+		totalToCommunication = 0;
+		coreToCommunication = new double[cores.length];
+		
+		for (int i = 0; i < cores.length; i++) {
+			long[] toCommunication = cores[i].getToCommunication();
+			for (int j = 0; j < toCommunication.length; j++) {
+				if (toCommunication[j] > 0) {
+					coreToCommunication[i] += toCommunication[j];
+				}
+			}
+			totalToCommunication += coreToCommunication[i];
+		}
+		logger.assertLog(totalToCommunication > 0, "No core is communicating any data!");
+		double total = 0;
+		for (int i = 0; i < cores.length; i++) {
+			if (logger.isDebugEnabled()) {
+				logger.debug("Core " + cores[i].getCoreId() + " (APCG "
+						+ cores[i].getApcgId() + ") communicates "
+						+ coreToCommunication[i] + ", which is "
+						+ 100 * (coreToCommunication[i] / totalToCommunication)
+						+ "% of the total communication volume");
+			}
+			total += 100 * (coreToCommunication[i] / totalToCommunication);
+		}
+		if (logger.isDebugEnabled()) {
+			logger.debug("Total probability is " + total + "%");
+		}
+	}
+	
+	private void computeCoresCommunicationPDF() {
+		coresCommunicationPDF = new double[cores.length][cores.length];
+		
+		for (int i = 0; i < cores.length; i++) {
+			long totalCommunication = 0;
+			long[] toCommunication = cores[i].getToCommunication();
+			long[] fromCommunication = cores[i].getFromCommunication();
+			logger.assertLog(toCommunication.length == fromCommunication.length, null);
+			
+			for (int j = 0; j < cores.length; j++) {
+				coresCommunicationPDF[i][j] = toCommunication[j] + fromCommunication[j];
+				totalCommunication += toCommunication[j];
+				totalCommunication += fromCommunication[j];
+			}
+			for (int j = 0; j < cores.length; j++) {
+				if (totalCommunication > 0) {
+					coresCommunicationPDF[i][j] = coresCommunicationPDF[i][j] / totalCommunication;
+				}
+			}
+		}
+	}
+	
 	private void computeCoreNeighbors() {
 		coreNeighbors = new LinkedHashSet[cores.length];
 		for (int i = 0; i < cores.length; i++) {
 			coreNeighbors[i] = new LinkedHashSet<Integer>();
 			long[] fromCommunication = cores[i].getFromCommunication();
 			for (int j = 0; j < fromCommunication.length; j++) {
-				if (MathUtils.definitelyGreaterThan(fromCommunication[j], 0)) {
+				if (fromCommunication[j] > 0) {
 					coreNeighbors[i].add(j);
 				}
 			}
 			long[] toCommunication = cores[i].getToCommunication();
 			for (int j = 0; j < toCommunication.length; j++) {
-				if (MathUtils.definitelyGreaterThan(toCommunication[j], 0)) {
+				if (toCommunication[j] > 0) {
 					coreNeighbors[i].add(j);
 				}
 			}
@@ -2032,6 +2269,8 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		}
 
 		computeCoreNeighbors();
+		computeCoreToCommunicationPDF();
+		computeCoresCommunicationPDF();
 		mapCoresToNocNodesRandomly();
 		printCurrentMapping();
 
