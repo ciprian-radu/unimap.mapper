@@ -143,19 +143,19 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	private int linksNumber;
 
 	/** the nodes from the Network-on-Chip (NoC) */
-	private NodeType[] nodes;
+	protected NodeType[] nodes;
 	
 	/** the distinct nodes with which each node communicates directly (through a single link) */
-	private Set<Integer>[] nodeNeighbors;
+	protected Set<Integer>[] nodeNeighbors;
 	
 	/** the maximum neighbors a node can have */
 	private int maxNodeNeighbors = 0;
 
 	/** the processes (tasks, cores) */
-	private Core[] cores;
+	protected Core[] cores;
 	
 	/** the distinct cores with which each core communicates directly */
-	private Set<Integer>[] coreNeighbors;
+	protected Set<Integer>[] coreNeighbors;
 	
 	/**
 	 * the total data communicated by the cores
@@ -166,7 +166,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	private long totalToCommunication;
 	
 	/** for every core, the (from and to) communication probability density function */
-	private double[][] coresCommunicationPDF;
+	protected double[][] coresCommunicationPDF;
 
 	/** the communication channels from the NoC */
 	private ro.ulbsibiu.acaps.noc.xml.link.LinkType[] links;
@@ -800,7 +800,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	/**
 	 * Prints the current mapping
 	 */
-	private void printCurrentMapping() {
+	protected void printCurrentMapping() {
 		for (int i = 0; i < nodesNumber; i++) {
 			String apcg = "";
 			if (!"-1".equals(nodes[i].getCore())) {
@@ -821,7 +821,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	 *         machines, since the generator and starting point are explicitly
 	 *         specified.
 	 */
-	private double uniformRandomVariable() {
+	protected double uniformRandomVariable() {
 		// one small problem: the sequence we use can produce integers larger
 		// than the word size used, i.e. they can wrap around negative. We wimp
 		// out on this matter and just make them positive again.
@@ -844,7 +844,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	/**
 	 * @return a random INTEGER in [imin, imax]
 	 */
-	private long uniformIntegerRandomVariable(long imin, long imax) {
+	protected long uniformIntegerRandomVariable(long imin, long imax) {
 		double u;
 		int m;
 
@@ -1129,15 +1129,12 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 
 	/**
 	 * Changes the current mapping by moving a core from one node to another.
-	 * This implies that two nodes are changed.
+	 * This implies that two nodes are (randomly) changed.
 	 * 
 	 * @return the IDs of the two changed nodes
 	 */
-	private int[] move() {
-//		return makeRandomSwap();
-//		return makeTopologicalMove();
-//		return makeVariableGrainSizeMove();
-		return makeTheMove();
+	protected int[] move() {
+		return makeRandomSwap();
 	}
 	
 	/**
@@ -1385,7 +1382,13 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		return new int[] { node1, node2 };
 	}
 	
-	private int selectCore() {
+	/**
+	 * Randomly chooses a core based on the probability distribution function
+	 * determined by the communications among cores
+	 * 
+	 * @return the chosen core
+	 */
+	protected int selectCore() {
 		int core = -1;
 		double p = uniformRandomVariable();
 		double sum = 0;
@@ -1448,89 +1451,6 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		return new int[] { node1, node2 };
 	}
 
-	private int[] makeTheMove() {
-		int node1;
-		int node2;
-		
-//		do {
-//			node1 = (int) uniformIntegerRandomVariable(0, nodesNumber - 1);
-//		} while ("-1".equals(nodes[node1].getCore()));
-//
-//		int core1 = Integer.valueOf(nodes[node1].getCore());
-		
-		int core1 = selectCore();
-		if (core1 == -1) {
-			logger.fatal("Unable to select any core for moving!");
-			System.exit(-1);
-		}
-		node1 = cores[core1].getNodeId();
-		
-		if (logger.isDebugEnabled()) {
-			logger.debug("Selected node " + node1 + " for moving. It has core " + core1);
-			logger.debug("Node " + node1 + " communicates with nodes " + nodeNeighbors[node1]);
-			logger.debug("Core " + core1 + " communicates with cores " + coreNeighbors[core1]);
-		}
-		
-		double[] core1CommunicationPDF = coresCommunicationPDF[core1];
-		int core2 = -1;
-		double p = uniformRandomVariable();
-		double sum = 0;
-		for (int i = 0; i < core1CommunicationPDF.length; i++) {
-			sum += core1CommunicationPDF[i];
-			if (MathUtils.definitelyLessThan((float)p, (float)sum) 
-					|| MathUtils.approximatelyEqual((float)p, (float)sum)) {
-				core2 = i;
-				break; // essential!
-			}
-		}
-		if (core2 == -1) {
-			logger.fatal("Unable to determine a core with which core " + core1 + " will swap");
-		}
-		int core2Node = cores[core2].getNodeId();
-		List<Integer> core1AllowedNodes = new ArrayList<Integer>(nodeNeighbors[core2Node]);
-		core1AllowedNodes.remove(new Integer(node1));
-		
-		
-		if (core1AllowedNodes.size() == 0) {
-			node2 = node1;
-			logger.warn("No nodes are allowed for core " + core1
-					+ ". We pretend we make a move by swapping node "
-					+ node1 + " with node " + node2);
-		} else {
-			int i = (int) uniformIntegerRandomVariable(0, core1AllowedNodes.size() - 1);
-			node2 = core1AllowedNodes.get(i);
-			
-//			node2 = -1;
-//			double[] core2CommunicationPDF = coresCommunicationPDF[core2];
-//			double min = Float.MAX_VALUE; // needs to be float, not double
-//			for (int i = 0; i < core1AllowedNodes.size(); i++) {
-//				Integer core1AllowedNode = core1AllowedNodes.get(i);
-//				String core = nodes[core1AllowedNode].getCore();
-//				if (MathUtils.definitelyLessThan(
-//						(float) core2CommunicationPDF[cores[Integer
-//								.valueOf(core)].getCoreId()], (float) min)) {
-//					min = core2CommunicationPDF[cores[Integer.valueOf(core)]
-//							.getCoreId()];
-//					node2 = core1AllowedNode;
-//				}
-//			}
-			
-			if (logger.isDebugEnabled()) {
-				logger.debug("Core " + core1 + " will be moved from node " + node1 + " to the allowed node " + node2);
-			}
-		}
-		logger.assertLog(
-				node1 != -1 && node2 != -1 && node1 != node2,
-				"At least one node is not defined (i.e. = -1) or the two nodes are identical; node1 = "
-						+ node1 + ", node2 = " + node2);
-		if (logger.isDebugEnabled()) {
-			logger.debug("Swapping nodes " + node1 + " and " + node2);
-		}
-		swapProcesses(node1, node2);
-		
-		return new int[] { node1, node2 };
-	}
-
 	/**
 	 * Swaps the processes from nodes with IDs t1 and t2
 	 * 
@@ -1539,7 +1459,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	 * @param t2
 	 *            the ID of the second node
 	 */
-	private void swapProcesses(int t1, int t2) {
+	protected void swapProcesses(int t1, int t2) {
 		NodeType node1 = nodes[t1];
 		NodeType node2 = nodes[t2];
 		logger.assertLog(node1 != null, null);
