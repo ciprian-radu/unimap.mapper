@@ -22,7 +22,6 @@ then
 		for routing in $ROUTING
 		do
 		java -classpath $CLASSPATH $mapper $@ $routing
-		echo "test"
 		done
 	done
 else
