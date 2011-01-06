@@ -1710,7 +1710,7 @@ public class ExhaustiveSearchMapper implements Mapper {
 			@Override
 			public void useMapper(String benchmarkFilePath, String benchmarkName,
 					String ctgId, String apcgId, List<CtgType> ctgTypes,
-					List<ApcgType> apcgTypes, boolean doRouting) throws JAXBException,
+					List<ApcgType> apcgTypes, boolean doRouting, Long seed) throws JAXBException,
 					TooFewNocNodesException, FileNotFoundException {
 				logger.info("Using an Exhaustive search mapper for "
 						+ benchmarkFilePath + "ctg-" + ctgId + " (APCG " + apcgId + ")");

@@ -179,8 +179,8 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	 */
 	private List<Integer>[][] linkUsageList = null;
 
-	/** the seed for the random number generator */
-	private int seed;
+	/** the seed for the random number generator of the initial population */
+	private Long seed;
 
 	/**
 	 * how many mapping attempts the algorithm tries per iteration. A mapping
@@ -406,14 +406,17 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	 *            one task associated to it
 	 * @param linkBandwidth
 	 *            the bandwidth of each network link
+	 * @param seed
+	 *            the seed for the random number generator of the initial
+	 *            population
 	 */
 	public SimulatedAnnealingTestMapper(String benchmarkName, String ctgId,
 			String apcgId, String topologyName, String topologySize,
 			File topologyDir, int coresNumber, double linkBandwidth,
-			float switchEBit, float linkEBit) throws JAXBException {
+			float switchEBit, float linkEBit, Long seed) throws JAXBException {
 		this(benchmarkName, ctgId, apcgId, topologyName, topologySize,
 				topologyDir, coresNumber, linkBandwidth, false,
-				LegalTurnSet.WEST_FIRST, 1.056f, 2.831f, switchEBit, linkEBit);
+				LegalTurnSet.WEST_FIRST, 1.056f, 2.831f, switchEBit, linkEBit, seed);
 	}
 
 	/**
@@ -453,13 +456,16 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	 *            the energy consumed for switching one bit of data
 	 * @param linkEBit
 	 *            the energy consumed for sending one data bit
+	 * @param seed
+	 *            the seed for the random number generator of the initial
+	 *            population (can be null)
 	 * @throws JAXBException
 	 */
 	public SimulatedAnnealingTestMapper(String benchmarkName, String ctgId, String apcgId,
 			String topologyName, String topologySize, File topologyDir, int coresNumber,
 			double linkBandwidth, boolean buildRoutingTable,
 			LegalTurnSet legalTurnSet, float bufReadEBit, float bufWriteEBit,
-			float switchEBit, float linkEBit) throws JAXBException {
+			float switchEBit, float linkEBit, Long seed) throws JAXBException {
 		logger.assertLog(topologyDir != null, "Please specify the NoC topology directory!");
 		logger.assertLog(topologyDir.isDirectory(),
 				"The specified NoC topology directory does not exist or is not a directory!");
@@ -475,6 +481,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		this.legalTurnSet = legalTurnSet;
 		this.bufReadEBit = bufReadEBit;
 		this.bufWriteEBit = bufWriteEBit;
+		this.seed = seed;
 
 		initializeNocTopology(switchEBit, linkEBit);
 		initializeCores();
@@ -771,7 +778,12 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	}
 
 	private void mapCoresToNocNodesRandomly() {
-		Random rand = new Random();
+		Random rand;
+		if (seed == null) {
+			rand = new Random();
+		} else {
+			rand = new Random(seed);
+		}
 		for (int i = 0; i < coresNumber; i++) {
 			int k = Math.abs(rand.nextInt()) % nodesNumber;
 			while (Integer.valueOf(nodes[k].getCore()) != -1) {
@@ -811,6 +823,9 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		}
 	}
 
+	/** seed for the {@link #uniformRandomVariable()} method */
+	private int urvSeed = 1234567;
+	
 	// ways to gen Random Vars with specific distributions
 	/**
 	 * Simple random number generator based on the linear-congruential method
@@ -830,11 +845,11 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		final int C = 226908347;
 		final int M = 1073741824;
 
-		seed = ((A * seed) + C) % M;
-		if (seed < 0) {
-			seed = -seed;
+		urvSeed = ((A * urvSeed) + C) % M;
+		if (urvSeed < 0) {
+			urvSeed = -urvSeed;
 		}
-		double u = (((double) seed) / ((double) M));
+		double u = (((double) urvSeed) / ((double) M));
 		if (logger.isTraceEnabled()) {
 			logger.trace(u);
 		}
@@ -855,13 +870,6 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 					+ ", " + imax + "] = " + m);
 		}
 		return m;
-	}
-
-	/**
-	 * Initialize the random number stream
-	 **/
-	private void initRand(int seed) {
-		this.seed = seed;
 	}
 
 	/**
@@ -1084,8 +1092,6 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		currentCost = initialCost;
 
 		setNumberOfIterationsPerTemperature();
-
-		initRand(1234567);
 
 		setInitialTemperature();
 
@@ -2341,7 +2347,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 			@Override
 			public void useMapper(String benchmarkFilePath, String benchmarkName,
 					String ctgId, String apcgId, List<CtgType> ctgTypes,
-					List<ApcgType> apcgTypes, boolean doRouting) throws JAXBException,
+					List<ApcgType> apcgTypes, boolean doRouting, Long seed) throws JAXBException,
 					TooFewNocNodesException, FileNotFoundException {
 				logger.info("Using a Simulated annealing mapper for "
 						+ benchmarkFilePath + "ctg-" + ctgId + " (APCG " + apcgId + ")");
@@ -2390,7 +2396,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 							topologyName, meshSize, new File(
 									topologyDir), cores, linkBandwidth,
 							true, LegalTurnSet.ODD_EVEN, bufReadEBit,
-							bufWriteEBit, switchEBit, linkEBit);
+							bufWriteEBit, switchEBit, linkEBit, seed);
 				} else {
 					values[values.length - 1] = "false";
 					MapperDatabase.getInstance().setParameters(parameters, values);
@@ -2400,7 +2406,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 							benchmarkName, ctgId, apcgId,
 							topologyName, meshSize, new File(
 									topologyDir), cores, linkBandwidth,
-							switchEBit, linkEBit);
+							switchEBit, linkEBit, seed);
 				}
 	
 	//			// read the input data from a traffic.config file (NoCmap style)

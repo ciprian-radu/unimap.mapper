@@ -116,6 +116,9 @@ public class BranchAndBoundMapper implements Mapper {
 	 * <tt>buildRoutingTable</tt> is <tt>true</tt> </b>
 	 */
 	List<Integer>[][] linkUsageList = null;
+	
+	/** the seed for the random number generator of the initial population */
+	private Long seed;
 
 	/**
 	 * whether or not to build routing table too. When the SA algorithm builds
@@ -391,6 +394,9 @@ public class BranchAndBoundMapper implements Mapper {
 	 *            the energy consumed for switching one bit of data
 	 * @param linkEBit
 	 *            the energy consumed for sending one data bit
+	 * @param seed
+	 *            the seed for the random number generator of the initial
+	 *            population
 	 * @throws JAXBException
 	 * @throws TooFewNocNodesException
 	 */
@@ -398,11 +404,11 @@ public class BranchAndBoundMapper implements Mapper {
 			String topologyName, String topologySize, File topologyDir,
 			int coresNumber, double linkBandwidth, int priorityQueueSize,
 			float bufReadEBit, float bufWriteEBit, float switchEBit,
-			float linkEBit) throws JAXBException, TooFewNocNodesException {
+			float linkEBit, Long seed) throws JAXBException, TooFewNocNodesException {
 		this(benchmarkName, ctgId, apcgId, topologyName, topologySize, topologyDir,
 				coresNumber, linkBandwidth, priorityQueueSize, false,
 				LegalTurnSet.WEST_FIRST, bufReadEBit, bufWriteEBit, switchEBit,
-				linkEBit);
+				linkEBit, seed);
 	}
 
 	/**
@@ -444,6 +450,9 @@ public class BranchAndBoundMapper implements Mapper {
 	 *            the energy consumed for switching one bit of data
 	 * @param linkEBit
 	 *            the energy consumed for sending one data bit
+	 * @param seed
+	 *            the seed for the random number generator of the initial
+	 *            population
 	 * @throws JAXBException
 	 * @throws TooFewNocNodesException 
 	 */
@@ -452,7 +461,7 @@ public class BranchAndBoundMapper implements Mapper {
 			int coresNumber, double linkBandwidth, int priorityQueueSize,
 			boolean buildRoutingTable, LegalTurnSet legalTurnSet,
 			float bufReadEBit, float bufWriteEBit, float switchEBit,
-			float linkEBit) throws JAXBException, TooFewNocNodesException {
+			float linkEBit, Long seed) throws JAXBException, TooFewNocNodesException {
 		logger.assertLog(topologyDir != null, "Please specify the NoC topology directory!");
 		logger.assertLog(topologyDir.isDirectory(),
 				"The specified NoC topology directory does not exist or is not a directory!");
@@ -469,6 +478,7 @@ public class BranchAndBoundMapper implements Mapper {
 		this.legalTurnSet = legalTurnSet;
 		this.bufReadEBit = bufReadEBit;
 		this.bufWriteEBit = bufWriteEBit;
+		this.seed = seed;
 
 		initializeNocTopology(topologyDir, switchEBit, linkEBit);
 		initializeCores();
@@ -749,7 +759,12 @@ public class BranchAndBoundMapper implements Mapper {
 	}
 
 	private void mapCoresToNocNodesRandomly() {
-		Random rand = new Random();
+		Random rand;
+		if (seed == null) {
+			rand = new Random();
+		} else {
+			rand = new Random(seed);
+		}
 		for (int i = 0; i < coresNumber; i++) {
 			int k = Math.abs(rand.nextInt()) % nodesNumber;
 			while (!Integer.toString(-1).equals(nodes[k].getCore())) {
@@ -1672,7 +1687,7 @@ public class BranchAndBoundMapper implements Mapper {
 			public void useMapper(String benchmarkFilePath,
 					String benchmarkName, String ctgId, String apcgId,
 					List<CtgType> ctgTypes, List<ApcgType> apcgTypes,
-					boolean doRouting) throws JAXBException,
+					boolean doRouting, Long seed) throws JAXBException,
 					TooFewNocNodesException, FileNotFoundException {
 				logger.info("Using a Branch and Bound mapper for "
 						+ benchmarkFilePath + "ctg-" + ctgId + " (APCG " + apcgId + ")");
@@ -1724,7 +1739,7 @@ public class BranchAndBoundMapper implements Mapper {
 									topologyDir), cores, linkBandwidth,
 							priorityQueueSize, true,
 							LegalTurnSet.ODD_EVEN, bufReadEBit,
-							bufWriteEBit, switchEBit, linkEBit);
+							bufWriteEBit, switchEBit, linkEBit, seed);
 				} else {
 					values[values.length - 1] = "false";
 					MapperDatabase.getInstance().setParameters(parameters, values);
@@ -1735,7 +1750,7 @@ public class BranchAndBoundMapper implements Mapper {
 							topologyName, meshSize, new File(
 									topologyDir), cores, linkBandwidth,
 							priorityQueueSize, bufReadEBit,
-							bufWriteEBit, switchEBit, linkEBit);
+							bufWriteEBit, switchEBit, linkEBit, seed);
 				}
 	
 	//			// read the input data from a traffic.config file (NoCmap style)
