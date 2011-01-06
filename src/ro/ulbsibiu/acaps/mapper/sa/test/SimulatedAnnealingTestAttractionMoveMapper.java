@@ -41,19 +41,19 @@ public class SimulatedAnnealingTestAttractionMoveMapper extends
 			String topologySize, File topologyDir, int coresNumber,
 			double linkBandwidth, boolean buildRoutingTable,
 			LegalTurnSet legalTurnSet, float bufReadEBit, float bufWriteEBit,
-			float switchEBit, float linkEBit) throws JAXBException {
+			float switchEBit, float linkEBit, Long seed) throws JAXBException {
 		super(benchmarkName, ctgId, apcgId, topologyName, topologySize,
 				topologyDir, coresNumber, linkBandwidth, buildRoutingTable,
-				legalTurnSet, bufReadEBit, bufWriteEBit, switchEBit, linkEBit);
+				legalTurnSet, bufReadEBit, bufWriteEBit, switchEBit, linkEBit, seed);
 	}
 
 	public SimulatedAnnealingTestAttractionMoveMapper(String benchmarkName,
 			String ctgId, String apcgId, String topologyName,
 			String topologySize, File topologyDir, int coresNumber,
-			double linkBandwidth, float switchEBit, float linkEBit)
+			double linkBandwidth, float switchEBit, float linkEBit, Long seed)
 			throws JAXBException {
 		super(benchmarkName, ctgId, apcgId, topologyName, topologySize,
-				topologyDir, coresNumber, linkBandwidth, switchEBit, linkEBit);
+				topologyDir, coresNumber, linkBandwidth, switchEBit, linkEBit, seed);
 	}
 
 	@Override
@@ -187,7 +187,7 @@ public class SimulatedAnnealingTestAttractionMoveMapper extends
 			@Override
 			public void useMapper(String benchmarkFilePath, String benchmarkName,
 					String ctgId, String apcgId, List<CtgType> ctgTypes,
-					List<ApcgType> apcgTypes, boolean doRouting) throws JAXBException,
+					List<ApcgType> apcgTypes, boolean doRouting, Long seed) throws JAXBException,
 					TooFewNocNodesException, FileNotFoundException {
 				logger.info("Using a Simulated annealing mapper for "
 						+ benchmarkFilePath + "ctg-" + ctgId + " (APCG " + apcgId + ")");
@@ -236,7 +236,7 @@ public class SimulatedAnnealingTestAttractionMoveMapper extends
 							topologyName, meshSize, new File(
 									topologyDir), cores, linkBandwidth,
 							true, LegalTurnSet.ODD_EVEN, bufReadEBit,
-							bufWriteEBit, switchEBit, linkEBit);
+							bufWriteEBit, switchEBit, linkEBit, seed);
 				} else {
 					values[values.length - 1] = "false";
 					MapperDatabase.getInstance().setParameters(parameters, values);
@@ -246,7 +246,7 @@ public class SimulatedAnnealingTestAttractionMoveMapper extends
 							benchmarkName, ctgId, apcgId,
 							topologyName, meshSize, new File(
 									topologyDir), cores, linkBandwidth,
-							switchEBit, linkEBit);
+							switchEBit, linkEBit, seed);
 				}
 		
 		//			// read the input data from a traffic.config file (NoCmap style)
