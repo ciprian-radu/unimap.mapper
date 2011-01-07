@@ -150,7 +150,7 @@ class MappingNode {
 		rSynLinkBandwidthUsageTemp = null;
 		
 		if (bbMapper.buildRoutingTable) {
-			routingTable = new int[bbMapper.edgeSize][bbMapper.edgeSize][bbMapper.nodesNumber][bbMapper.nodesNumber];
+			routingTable = new int[bbMapper.hSize][bbMapper.nodes.length / bbMapper.hSize][bbMapper.nodesNumber][bbMapper.nodesNumber];
 			for (int i = 0; i < routingTable.length; i++) {
 				for (int j = 0; j < routingTable[i].length; j++) {
 					for (int k = 0; k < routingTable[i][j].length; k++) {
@@ -191,9 +191,9 @@ class MappingNode {
 
 		if (bbMapper.buildRoutingTable) {
 			// Copy the parent's link bandwidth usage
-			rSynLinkBandwidthUsage = new int[bbMapper.edgeSize][bbMapper.edgeSize][4];
-			for (int i = 0; i < bbMapper.edgeSize; i++) {
-				for (int j = 0; j < bbMapper.edgeSize; j++) {
+			rSynLinkBandwidthUsage = new int[bbMapper.hSize][bbMapper.nodes.length / bbMapper.hSize][4];
+			for (int i = 0; i < bbMapper.hSize; i++) {
+				for (int j = 0; j < bbMapper.nodes.length / bbMapper.hSize; j++) {
 					rSynLinkBandwidthUsage[i][j] = Arrays.copyOf(
 							parent.rSynLinkBandwidthUsage[i][j], 4);
 				}
@@ -307,7 +307,7 @@ class MappingNode {
 		rSynLinkBandwidthUsageTemp = null;
 		
 		if (bbMapper.buildRoutingTable) {
-			routingTable = new int[bbMapper.edgeSize][bbMapper.edgeSize][bbMapper.nodesNumber][bbMapper.nodesNumber];
+			routingTable = new int[bbMapper.hSize][bbMapper.nodes.length / bbMapper.hSize][bbMapper.nodesNumber][bbMapper.nodesNumber];
 			for (int i = 0; i < routingTable.length; i++) {
 				for (int j = 0; j < routingTable[i].length; j++) {
 					for (int k = 0; k < routingTable[i][j].length; k++) {
@@ -350,9 +350,9 @@ class MappingNode {
 		}
 
 		if (bbMapper.buildRoutingTable) {
-			rSynLinkBandwidthUsage = new int[bbMapper.edgeSize][bbMapper.edgeSize][4];
-			for (int i = 0; i < bbMapper.edgeSize; i++) {
-				for (int j = 0; j < bbMapper.edgeSize; j++) {
+			rSynLinkBandwidthUsage = new int[bbMapper.hSize][bbMapper.nodes.length / bbMapper.hSize][4];
+			for (int i = 0; i < bbMapper.hSize; i++) {
+				for (int j = 0; j < bbMapper.nodes.length / bbMapper.hSize; j++) {
 					for (int k = 0; k < 4; k++) {
 						rSynLinkBandwidthUsage[i][j][k] = 0;
 					}
@@ -401,7 +401,7 @@ class MappingNode {
 		rSynLinkBandwidthUsageTemp = null;
 		
 		if (bbMapper.buildRoutingTable) {
-			routingTable = new int[bbMapper.edgeSize][bbMapper.edgeSize][bbMapper.nodesNumber][bbMapper.nodesNumber];
+			routingTable = new int[bbMapper.hSize][bbMapper.nodes.length / bbMapper.hSize][bbMapper.nodesNumber][bbMapper.nodesNumber];
 			for (int i = 0; i < routingTable.length; i++) {
 				for (int j = 0; j < routingTable[i].length; j++) {
 					for (int k = 0; k < routingTable[i][j].length; k++) {
@@ -433,9 +433,9 @@ class MappingNode {
 
 		if (bbMapper.buildRoutingTable) {
 			// Copy the parent's link bandwidth usage
-			rSynLinkBandwidthUsage = new int[bbMapper.edgeSize][bbMapper.edgeSize][4];
-			for (int i = 0; i < bbMapper.edgeSize; i++) {
-				for (int j = 0; j < bbMapper.edgeSize; j++) {
+			rSynLinkBandwidthUsage = new int[bbMapper.hSize][bbMapper.nodes.length / bbMapper.hSize][4];
+			for (int i = 0; i < bbMapper.hSize; i++) {
+				for (int j = 0; j < bbMapper.nodes.length / bbMapper.hSize; j++) {
 					rSynLinkBandwidthUsage[i][j] = Arrays.copyOf(
 							origin.rSynLinkBandwidthUsage[i][j], 4);
 				}
@@ -750,8 +750,8 @@ class MappingNode {
 					continue;
 				}
 				int tileId = mapping[j];
-				int row = tileId / bbMapper.edgeSize;
-				int col = tileId % bbMapper.edgeSize;
+				int row = tileId / bbMapper.hSize;
+				int col = tileId % bbMapper.hSize;
 				sumRow += bbMapper.procMatrix[i][j] * row;
 				sumCol += bbMapper.procMatrix[i][j] * col;
 				vol += bbMapper.procMatrix[i][j];
@@ -797,8 +797,8 @@ class MappingNode {
 				}
 				break;
 			}
-			int row = i / bbMapper.edgeSize;
-			int col = i % bbMapper.edgeSize;
+			int row = i / bbMapper.hSize;
+			int col = i % bbMapper.hSize;
 			float dist = Math.abs(goodRow - row) + Math.abs(goodCol - col);
 			// Note that we use machine epsilon to perform the following
 			// comparison between the float numbers
@@ -853,9 +853,9 @@ class MappingNode {
 
 	private void createBandwidthTempMemory() {
 		// Copy the bandwidth usage status to rSynLinkBandwidthUsageTemp
-		rSynLinkBandwidthUsageTemp = new int[bbMapper.edgeSize][bbMapper.edgeSize][4];
-		for (int i = 0; i < bbMapper.edgeSize; i++) {
-			for (int j = 0; j < bbMapper.edgeSize; j++) {
+		rSynLinkBandwidthUsageTemp = new int[bbMapper.hSize][bbMapper.nodes.length / bbMapper.hSize][4];
+		for (int i = 0; i < bbMapper.hSize; i++) {
+			for (int j = 0; j < bbMapper.nodes.length / bbMapper.hSize; j++) {
 				rSynLinkBandwidthUsageTemp[i][j] = Arrays.copyOf(
 						rSynLinkBandwidthUsage[i][j], 4);
 			}
@@ -1244,12 +1244,12 @@ class MappingNode {
 		int[][][] BW_usage = commit ? rSynLinkBandwidthUsage
 				: rSynLinkBandwidthUsageTemp;
 
-		// We can arrive at any destination with 2*bbMapper.edgeSize hops
+		// We can arrive at any destination with bbMapper.hSize + bbMapper.nodes.length / bbMapper.hSize hops
 		if (routingBitArray == null) {
-			routingBitArray = new int[2 * bbMapper.edgeSize];
+			routingBitArray = new int[bbMapper.hSize + bbMapper.nodes.length / bbMapper.hSize];
 		}
 		if (bestRoutingBitArray == null) {
-			bestRoutingBitArray = new int[2 * bbMapper.edgeSize];
+			bestRoutingBitArray = new int[bbMapper.hSize + bbMapper.nodes.length / bbMapper.hSize];
 		}
 
 		// In the following, we find the routing path which has the minimal
@@ -1519,7 +1519,7 @@ class MappingNode {
 	 * @return
 	 */
 	private boolean oneBits(int r, int onebits) {
-		routingBitArray = new int[2 * bbMapper.edgeSize];
+		routingBitArray = new int[bbMapper.hSize + bbMapper.nodes.length / bbMapper.hSize];
 		Arrays.fill(routingBitArray, 0);
 		int index = 0;
 		int currentOneBits = 0;
@@ -1552,9 +1552,9 @@ class MappingNode {
 			}
 		}
 
-		for (int row = 0; row < bbMapper.edgeSize; row++) {
-			for (int col = 0; col < bbMapper.edgeSize; col++) {
-				int tileId = row * bbMapper.edgeSize + col;
+		for (int row = 0; row < bbMapper.hSize; row++) {
+			for (int col = 0; col < bbMapper.nodes.length / bbMapper.hSize; col++) {
+				int tileId = row * bbMapper.hSize + col;
 				for (int srcTile = 0; srcTile < bbMapper.nodesNumber; srcTile++) {
 					for (int dstTile = 0; dstTile < bbMapper.nodesNumber; dstTile++) {
 						int linkId = locateLink(row, col,
@@ -1620,14 +1620,14 @@ class MappingNode {
 
 	private void generateRoutingTable() {
 		// reset all the BW_usage
-		for (int i = 0; i < bbMapper.edgeSize; i++)
-			for (int j = 0; j < bbMapper.edgeSize; j++)
+		for (int i = 0; i < bbMapper.hSize; i++)
+			for (int j = 0; j < bbMapper.nodes.length / bbMapper.hSize; j++)
 				for (int k = 0; k < 4; k++)
 					rSynLinkBandwidthUsage[i][j][k] = 0;
 
-		routingTable = new int[bbMapper.edgeSize][bbMapper.edgeSize][bbMapper.nodesNumber][bbMapper.nodesNumber];
-		for (int i = 0; i < bbMapper.edgeSize; i++) {
-			for (int j = 0; j < bbMapper.edgeSize; j++) {
+		routingTable = new int[bbMapper.hSize][bbMapper.nodes.length / bbMapper.hSize][bbMapper.nodesNumber][bbMapper.nodesNumber];
+		for (int i = 0; i < bbMapper.hSize; i++) {
+			for (int j = 0; j < bbMapper.nodes.length / bbMapper.hSize; j++) {
 				for (int k = 0; k < bbMapper.nodesNumber; k++) {
 					for (int m = 0; m < bbMapper.nodesNumber; m++)
 						routingTable[i][j][k][m] = -2;
