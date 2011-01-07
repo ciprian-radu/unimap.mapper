@@ -834,8 +834,12 @@ public class ExhaustiveSearchMapper implements Mapper {
 		long counter = 0;
 		final int STEP = 10;
 		int stepCounter = 0;
-		
+
+		long userStart = 0;
 		do {
+			if (logger.isDebugEnabled()) {
+				userStart = System.nanoTime();
+			}
 			if (!initialized) {
 				init(nodesNumber, a, available);
 				found = true;
@@ -886,6 +890,10 @@ public class ExhaustiveSearchMapper implements Mapper {
 						bestMapping[i] =  nodes[i].getCore();
 					}
 				}
+			}
+			if (logger.isDebugEnabled()) {
+				long userEnd = System.nanoTime();
+				logger.debug("Mapping generated in " + (userEnd - userStart) / 1.0e6 + " ms");
 			}
 		} while (found);
 		
