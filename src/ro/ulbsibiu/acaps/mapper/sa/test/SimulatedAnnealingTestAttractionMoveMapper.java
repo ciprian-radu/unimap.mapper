@@ -199,7 +199,13 @@ public class SimulatedAnnealingTestAttractionMoveMapper extends
 				}
 				int hSize = (int) Math.ceil(Math.sqrt(cores));
 				hSize = Math.max(2, hSize); // using at least a 2x2 2D mesh
-				String meshSize = hSize + "x" + hSize;
+				String meshSize;
+				// we allow rectangular 2D meshes as well
+				if (hSize * (hSize - 1) >= cores) {
+					meshSize = hSize + "x" + (hSize - 1);
+				} else {
+					meshSize = hSize + "x" + hSize;
+				}
 				logger.info("The algorithm has " + cores + " cores to map => working with a 2D mesh of size " + meshSize);
 				// working with a 2D mesh topology
 				String topologyName = "mesh2D";

@@ -80,11 +80,8 @@ public class BranchAndBoundMapper implements Mapper {
 	/** the number of tiles (nodes) from the NoC */
 	int nodesNumber;
 
-	/**
-	 * the size of the 2D mesh, sqrt(nodesNumber) (sqrt(nodesNumber) * sqrt(nodesNumber)
-	 * = nodesNumber)
-	 */
-	int edgeSize;
+	/** the number of mesh nodes placed horizontally */
+	int hSize;
 
 	/**
 	 * the number of processes (tasks). Note that each core has only one task
@@ -297,8 +294,8 @@ public class BranchAndBoundMapper implements Mapper {
 					routingTables[Integer.valueOf(node.getId())][0][dstNode] = -1;
 				} else {
 					// check out the dst Node's position first
-					int dstRow = dstNode / edgeSize;
-					int dstCol = dstNode % edgeSize;
+					int dstRow = dstNode / hSize;
+					int dstCol = dstNode % hSize;
 		
 					int row = Integer.valueOf(getNodeTopologyParameter(node, TopologyParameter.ROW));
 					int column = Integer.valueOf(getNodeTopologyParameter(node, TopologyParameter.COLUMN));
@@ -462,9 +459,14 @@ public class BranchAndBoundMapper implements Mapper {
 			boolean buildRoutingTable, LegalTurnSet legalTurnSet,
 			float bufReadEBit, float bufWriteEBit, float switchEBit,
 			float linkEBit, Long seed) throws JAXBException, TooFewNocNodesException {
-		logger.assertLog(topologyDir != null, "Please specify the NoC topology directory!");
-		logger.assertLog(topologyDir.isDirectory(),
-				"The specified NoC topology directory does not exist or is not a directory!");
+		if (topologyDir == null) {
+			logger.error("Please specify the NoC topology directory! Stopping...");
+			System.exit(0);
+		}
+		if (!topologyDir.isDirectory()) {
+			logger.error("The specified NoC topology directory does not exist or is not a directory! Stopping...");
+			System.exit(0);
+		}
 		this.benchmarkName = benchmarkName;
 		this.ctgId = ctgId;
 		this.apcgId = apcgId;
@@ -655,7 +657,12 @@ public class BranchAndBoundMapper implements Mapper {
 		nodes = new NodeType[nodesNumber];
 		nodeRows = new Integer[nodesNumber];
 		nodeColumns = new Integer[nodesNumber];
-		this.edgeSize = (int) Math.sqrt(nodesNumber);
+		try {
+			this.hSize = Integer.valueOf(topologySize.substring(0, topologySize.lastIndexOf("x")));
+		} catch (NumberFormatException e) {
+			logger.fatal("Could not determine the size of the 2D mesh! Stopping...", e);
+			System.exit(0);
+		}
 		for (int i = 0; i < nodeXmls.length; i++) {
 			JAXBContext jaxbContext = JAXBContext
 					.newInstance("ro.ulbsibiu.acaps.noc.xml.node");
@@ -961,10 +968,10 @@ public class BranchAndBoundMapper implements Mapper {
 		// And if we need to synthesize the routing table, then there is not
 		// much symmetry property to be exploited
 		if (!buildRoutingTable) {
-			int size = (edgeSize + 1) / 2;
+			int size = (hSize + 1) / 2;
 			for (int i = 0; i < size; i++) {
 				for (int j = 0; j <= i; j++) {
-					MappingNode pNode = new MappingNode(this, i * edgeSize + j);
+					MappingNode pNode = new MappingNode(this, i * hSize + j);
 					if (!pNode.isIllegal()) {
 						Q.insert(pNode);
 					}
@@ -973,10 +980,10 @@ public class BranchAndBoundMapper implements Mapper {
 		} else {
 			// for west-first or odd-even, we only need to consider the
 			// bottom half
-			int size = (edgeSize + 1) / 2;
+			int size = (hSize + 1) / 2;
 			for (int i = 0; i < size; i++) {
-				for (int j = 0; j < edgeSize; j++) {
-					MappingNode pNode = new MappingNode(this, i * edgeSize + j);
+				for (int j = 0; j < hSize; j++) {
+					MappingNode pNode = new MappingNode(this, i * hSize + j);
 					if (!pNode.isIllegal()) {
 						Q.insert(pNode);
 					}
@@ -1699,7 +1706,13 @@ public class BranchAndBoundMapper implements Mapper {
 				}
 				int hSize = (int) Math.ceil(Math.sqrt(cores));
 				hSize = Math.max(2, hSize); // using at least a 2x2 2D mesh
-				String meshSize = hSize + "x" + hSize;
+				String meshSize;
+				// we allow rectangular 2D meshes as well
+				if (hSize * (hSize - 1) >= cores) {
+					meshSize = hSize + "x" + (hSize - 1);
+				} else {
+					meshSize = hSize + "x" + hSize;
+				}
 				logger.info("The algorithm has " + cores + " cores to map => working with a 2D mesh of size " + meshSize);
 				// working with a 2D mesh topology
 				String topologyName = "mesh2D";

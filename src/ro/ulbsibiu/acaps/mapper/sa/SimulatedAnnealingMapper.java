@@ -127,11 +127,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 	/** the number of nodes (nodes) from the NoC */
 	private int nodesNumber;
 
-	/**
-	 * the size of the 2D mesh, sqrt(nodesNumber) (sqrt(nodesNumber) * sqrt(nodesNumber)
-	 * = nodesNumber)
-	 */
-	private int edgeSize;
+	/** the number of mesh nodes placed horizontally */
+	private int hSize;
 
 	/**
 	 * the number of processes (tasks). Note that each core has only one task
@@ -295,8 +292,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 					routingTables[Integer.valueOf(node.getId())][0][dstNode] = -1;
 				} else {
 					// check out the dst Node's position first
-					int dstRow = dstNode / edgeSize;
-					int dstCol = dstNode % edgeSize;
+					int dstRow = dstNode / hSize;
+					int dstCol = dstNode % hSize;
 		
 					int row = Integer.valueOf(getNodeTopologyParameter(node, TopologyParameter.ROW));
 					int column = Integer.valueOf(getNodeTopologyParameter(node, TopologyParameter.COLUMN));
@@ -445,9 +442,14 @@ public class SimulatedAnnealingMapper implements Mapper {
 			double linkBandwidth, boolean buildRoutingTable,
 			LegalTurnSet legalTurnSet, float bufReadEBit, float bufWriteEBit,
 			float switchEBit, float linkEBit, Long seed) throws JAXBException {
-		logger.assertLog(topologyDir != null, "Please specify the NoC topology directory!");
-		logger.assertLog(topologyDir.isDirectory(),
-				"The specified NoC topology directory does not exist or is not a directory!");
+		if (topologyDir == null) {
+			logger.error("Please specify the NoC topology directory! Stopping...");
+			System.exit(0);
+		}
+		if (!topologyDir.isDirectory()) {
+			logger.error("The specified NoC topology directory does not exist or is not a directory! Stopping...");
+			System.exit(0);
+		}
 		this.benchmarkName = benchmarkName;
 		this.ctgId = ctgId;
 		this.apcgId = apcgId;
@@ -632,7 +634,12 @@ public class SimulatedAnnealingMapper implements Mapper {
 		nodes = new NodeType[nodesNumber];
 		nodeRows = new Integer[nodesNumber];
 		nodeColumns = new Integer[nodesNumber];
-		this.edgeSize = (int) Math.sqrt(nodesNumber);
+		try {
+			this.hSize = Integer.valueOf(topologySize.substring(0, topologySize.lastIndexOf("x")));
+		} catch (NumberFormatException e) {
+			logger.fatal("Could not determine the size of the 2D mesh! Stopping...", e);
+			System.exit(0);
+		}
 		for (int i = 0; i < nodeXmls.length; i++) {
 			JAXBContext jaxbContext = JAXBContext
 					.newInstance("ro.ulbsibiu.acaps.noc.xml.node");
@@ -987,8 +994,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 		if (!buildRoutingTable) {
 			linkBandwidthUsage = new int[linksNumber];
 		} else {
-			synLinkBandwithUsage = new int[edgeSize][edgeSize][4];
-			saRoutingTable = new int[edgeSize][edgeSize][nodesNumber][nodesNumber];
+			synLinkBandwithUsage = new int[hSize][nodes.length / hSize][4];
+			saRoutingTable = new int[hSize][nodes.length / hSize][nodesNumber][nodesNumber];
 			for (int i = 0; i < saRoutingTable.length; i++) {
 				for (int j = 0; j < saRoutingTable[i].length; j++) {
 					for (int k = 0; k < saRoutingTable[i][j].length; k++) {
@@ -1231,8 +1238,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 		float overloadCost = 0.0f;
 
 		// Clear the link usage
-		for (int i = 0; i < edgeSize; i++) {
-			for (int j = 0; j < edgeSize; j++) {
+		for (int i = 0; i < hSize; i++) {
+			for (int j = 0; j < nodes.length / hSize; j++) {
 				Arrays.fill(synLinkBandwithUsage[i][j], 0);
 			}
 		}
@@ -1248,8 +1255,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 			}
 		}
 
-		for (int i = 0; i < edgeSize; i++) {
-			for (int j = 0; j < edgeSize; j++) {
+		for (int i = 0; i < hSize; i++) {
+			for (int j = 0; j < nodes.length / hSize; j++) {
 				for (int k = 0; k < 4; k++) {
 					if (synLinkBandwithUsage[i][j][k] > links[0].getBandwidth()) {
 						overloadCost += ((float) synLinkBandwithUsage[i][j][k])
@@ -1414,9 +1421,9 @@ public class SimulatedAnnealingMapper implements Mapper {
 			}
 		}
 
-		for (int row = 0; row < edgeSize; row++) {
-			for (int col = 0; col < edgeSize; col++) {
-				int nodeId = row * edgeSize + col;
+		for (int row = 0; row < hSize; row++) {
+			for (int col = 0; col < nodes.length / hSize; col++) {
+				int nodeId = row * hSize + col;
 				for (int srcNode = 0; srcNode < nodesNumber; srcNode++) {
 					for (int dstNode = 0; dstNode < nodesNumber; dstNode++) {
 						int linkId = locateLink(row, col,
@@ -1934,7 +1941,13 @@ public class SimulatedAnnealingMapper implements Mapper {
 				}
 				int hSize = (int) Math.ceil(Math.sqrt(cores));
 				hSize = Math.max(2, hSize); // using at least a 2x2 2D mesh
-				String meshSize = hSize + "x" + hSize;
+				String meshSize;
+				// we allow rectangular 2D meshes as well
+				if (hSize * (hSize - 1) >= cores) {
+					meshSize = hSize + "x" + (hSize - 1);
+				} else {
+					meshSize = hSize + "x" + hSize;
+				}
 				logger.info("The algorithm has " + cores + " cores to map => working with a 2D mesh of size " + meshSize);
 				// working with a 2D mesh topology
 				String topologyName = "mesh2D";
