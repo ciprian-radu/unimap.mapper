@@ -224,16 +224,18 @@ public class SimulatedAnnealingTestAttractionMoveMapper extends
 						"linkEBit",
 						"bufReadEBit",
 						"bufWriteEBit",
-						"routing"};
+						"routing",
+						"seed"};
 				String values[] = new String[] {
 						Integer.toString(applicationBandwithRequirement),
 						Double.toString(linkBandwidth),
 						Float.toString(switchEBit), Float.toString(linkEBit),
 						Float.toString(bufReadEBit),
 						Float.toString(bufWriteEBit),
-						null};
+						null,
+						seed == null ? null : Long.toString(seed)};
 				if (doRouting) {
-					values[values.length - 1] = "true";
+					values[values.length - 2] = "true";
 					MapperDatabase.getInstance().setParameters(parameters, values);
 					
 					// SA with routing
@@ -244,7 +246,7 @@ public class SimulatedAnnealingTestAttractionMoveMapper extends
 							true, LegalTurnSet.ODD_EVEN, bufReadEBit,
 							bufWriteEBit, switchEBit, linkEBit, seed);
 				} else {
-					values[values.length - 1] = "false";
+					values[values.length - 2] = "false";
 					MapperDatabase.getInstance().setParameters(parameters, values);
 					
 					// SA without routing
