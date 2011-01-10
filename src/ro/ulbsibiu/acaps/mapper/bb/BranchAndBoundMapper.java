@@ -788,6 +788,13 @@ public class BranchAndBoundMapper implements Mapper {
 //			cores[i].setNodeId(coreMap[i]);
 //			nodes[coreMap[i]].setCore(Integer.toString(i));
 //		}
+
+//		// optimal VOPD mapping
+//		int[] coreMap = new int[] { 14, 13, 15, 11, 10, 1, 0, 4, 8, 12, 9, 5, 7, 6, 2, 3 };
+//		for (int i = 0; i < coresNumber; i++) {
+//			cores[i].setNodeId(coreMap[i]);
+//			nodes[coreMap[i]].setCore(Integer.toString(i));
+//		}		
 	}
 
 	/**
@@ -1523,10 +1530,10 @@ public class BranchAndBoundMapper implements Mapper {
 	 * 
 	 * @return the communication energy
 	 */
-	private float calculateCommunicationEnergy() {
-		float switchEnergy = calculateSwitchEnergy();
-		float linkEnergy = calculateLinkEnergy();
-		float bufferEnergy = calculateBufferEnergy();
+	private double calculateCommunicationEnergy() {
+		double switchEnergy = calculateSwitchEnergy();
+		double linkEnergy = calculateLinkEnergy();
+		double bufferEnergy = calculateBufferEnergy();
 		if (logger.isTraceEnabled()) {
 			logger.trace("switch energy " + switchEnergy);
 			logger.trace("link energy " + linkEnergy);
@@ -1535,8 +1542,8 @@ public class BranchAndBoundMapper implements Mapper {
 		return switchEnergy + linkEnergy + bufferEnergy;
 	}
 	
-	private float calculateSwitchEnergy() {
-		float energy = 0;
+	private double calculateSwitchEnergy() {
+		double energy = 0;
 		for (int src = 0; src < nodesNumber; src++) {
 			for (int dst = 0; dst < nodesNumber; dst++) {
 				int srcProc = Integer.valueOf(nodes[src].getCore());
@@ -1581,8 +1588,8 @@ public class BranchAndBoundMapper implements Mapper {
 		return energy;
 	}
 
-	private float calculateLinkEnergy() {
-		float energy = 0;
+	private double calculateLinkEnergy() {
+		double energy = 0;
 		for (int src = 0; src < nodesNumber; src++) {
 			for (int dst = 0; dst < nodesNumber; dst++) {
 				int srcProc = Integer.valueOf(nodes[src].getCore());
@@ -1613,8 +1620,8 @@ public class BranchAndBoundMapper implements Mapper {
 		return energy;
 	}
 
-	private float calculateBufferEnergy() {
-		float energy = 0;
+	private double calculateBufferEnergy() {
+		double energy = 0;
 		for (int src = 0; src < nodesNumber; src++) {
 			for (int dst = 0; dst < nodesNumber; dst++) {
 				int srcProc = Integer.valueOf(nodes[src].getCore());
@@ -1670,12 +1677,12 @@ public class BranchAndBoundMapper implements Mapper {
 		    logger.debug("Energy consumed in switch is " + calculateSwitchEnergy());
 		    logger.debug("Energy consumed in buffer is " + calculateBufferEnergy());
 	    }
-	    float energy = calculateCommunicationEnergy();
+	    double energy = calculateCommunicationEnergy();
 	    logger.info("Total communication energy consumption is " + energy);
 	    
 		MapperDatabase.getInstance().setOutputs(
 				new String[] { "bandwidthRequirements", "energy" },
-				new String[] { bandwidthRequirements, Float.toString(energy) });
+				new String[] { bandwidthRequirements, Double.toString(energy) });
 	}
 	
 	public static void main(String[] args) throws TooFewNocNodesException,
@@ -1732,7 +1739,8 @@ public class BranchAndBoundMapper implements Mapper {
 						"linkEBit",
 						"bufReadEBit",
 						"bufWriteEBit",
-						"routing"};
+						"routing",
+						"seed"};
 				String values[] = new String[] {
 						Integer.toString(applicationBandwithRequirement),
 						Double.toString(linkBandwidth),
@@ -1740,9 +1748,10 @@ public class BranchAndBoundMapper implements Mapper {
 						Float.toString(switchEBit), Float.toString(linkEBit),
 						Float.toString(bufReadEBit),
 						Float.toString(bufWriteEBit),
-						null};
+						null,
+						seed == null ? null : Long.toString(seed)};
 				if (doRouting) {
-					values[values.length - 1] = "true";
+					values[values.length - 2] = "true";
 					MapperDatabase.getInstance().setParameters(parameters, values);
 					
 					// Branch and Bound with routing
@@ -1754,7 +1763,7 @@ public class BranchAndBoundMapper implements Mapper {
 							LegalTurnSet.ODD_EVEN, bufReadEBit,
 							bufWriteEBit, switchEBit, linkEBit, seed);
 				} else {
-					values[values.length - 1] = "false";
+					values[values.length - 2] = "false";
 					MapperDatabase.getInstance().setParameters(parameters, values);
 					
 					// Branch and Bound without routing

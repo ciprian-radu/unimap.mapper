@@ -1171,9 +1171,9 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 * 
 	 * @return the total cost
 	 */
-	private float calculateTotalCost() {
+	private double calculateTotalCost() {
 		// the communication energy part
-		float energyCost = calculateCommunicationEnergy();
+		double energyCost = calculateCommunicationEnergy();
 		float overloadCost;
 		// now calculate the overloaded BW cost
 		if (!buildRoutingTable) {
@@ -1442,10 +1442,10 @@ public class SimulatedAnnealingMapper implements Mapper {
 	 * 
 	 * @return the communication energy
 	 */
-	private float calculateCommunicationEnergy() {
-		float switchEnergy = calculateSwitchEnergy();
-		float linkEnergy = calculateLinkEnergy();
-		float bufferEnergy = calculateBufferEnergy();
+	private double calculateCommunicationEnergy() {
+		double switchEnergy = calculateSwitchEnergy();
+		double linkEnergy = calculateLinkEnergy();
+		double bufferEnergy = calculateBufferEnergy();
 		if (logger.isTraceEnabled()) {
 			logger.trace("switch energy " + switchEnergy);
 			logger.trace("link energy " + linkEnergy);
@@ -1454,8 +1454,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 		return switchEnergy + linkEnergy + bufferEnergy;
 	}
 
-	private float calculateSwitchEnergy() {
-		float energy = 0;
+	private double calculateSwitchEnergy() {
+		double energy = 0;
 		for (int src = 0; src < nodesNumber; src++) {
 			for (int dst = 0; dst < nodesNumber; dst++) {
 				int srcProc = Integer.valueOf(nodes[src].getCore());
@@ -1500,8 +1500,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 		return energy;
 	}
 
-	private float calculateLinkEnergy() {
-		float energy = 0;
+	private double calculateLinkEnergy() {
+		double energy = 0;
 		for (int src = 0; src < nodesNumber; src++) {
 			for (int dst = 0; dst < nodesNumber; dst++) {
 				int srcProc = Integer.valueOf(nodes[src].getCore());
@@ -1532,8 +1532,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 		return energy;
 	}
 
-	private float calculateBufferEnergy() {
-		float energy = 0;
+	private double calculateBufferEnergy() {
+		double energy = 0;
 		for (int src = 0; src < nodesNumber; src++) {
 			for (int dst = 0; dst < nodesNumber; dst++) {
 				int srcProc = Integer.valueOf(nodes[src].getCore());
@@ -1691,12 +1691,12 @@ public class SimulatedAnnealingMapper implements Mapper {
 		    logger.debug("Energy consumed in switch is " + calculateSwitchEnergy());
 		    logger.debug("Energy consumed in buffer is " + calculateBufferEnergy());
 	    }
-	    float energy = calculateCommunicationEnergy();
+	    double energy = calculateCommunicationEnergy();
 	    logger.info("Total communication energy consumption is " + energy);
 	    
 		MapperDatabase.getInstance().setOutputs(
 				new String[] { "bandwidthRequirements", "energy" },
-				new String[] { bandwidthRequirements, Float.toString(energy) });
+				new String[] { bandwidthRequirements, Double.toString(energy) });
 	}
 	
 	private void saveRoutingTables() {
@@ -1966,16 +1966,18 @@ public class SimulatedAnnealingMapper implements Mapper {
 						"linkEBit",
 						"bufReadEBit",
 						"bufWriteEBit",
-						"routing"};
+						"routing",
+						"seed"};
 				String values[] = new String[] {
 						Integer.toString(applicationBandwithRequirement),
 						Double.toString(linkBandwidth),
 						Float.toString(switchEBit), Float.toString(linkEBit),
 						Float.toString(bufReadEBit),
 						Float.toString(bufWriteEBit),
-						null};
+						null,
+						seed == null ? null : Long.toString(seed)};
 				if (doRouting) {
-					values[values.length - 1] = "true";
+					values[values.length - 2] = "true";
 					MapperDatabase.getInstance().setParameters(parameters, values);
 					
 					// SA with routing
@@ -1986,7 +1988,7 @@ public class SimulatedAnnealingMapper implements Mapper {
 							true, LegalTurnSet.ODD_EVEN, bufReadEBit,
 							bufWriteEBit, switchEBit, linkEBit, seed);
 				} else {
-					values[values.length - 1] = "false";
+					values[values.length - 2] = "false";
 					MapperDatabase.getInstance().setParameters(parameters, values);
 					
 					// SA without routing
