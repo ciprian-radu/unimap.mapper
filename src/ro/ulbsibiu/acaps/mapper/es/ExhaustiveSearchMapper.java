@@ -185,7 +185,7 @@ public class ExhaustiveSearchMapper implements Mapper {
 	/** the topology size */
 	private String topologySize;
 	
-	private float bestCost = Float.MAX_VALUE;
+	private double bestCost = Float.MAX_VALUE;
 	
 	private String[] bestMapping = null;
 	
@@ -882,8 +882,8 @@ public class ExhaustiveSearchMapper implements Mapper {
 					nodes[a[i]].setCore(Integer.toString(i));
 					cores[i].setNodeId(a[i]);
 				}
-				float cost = calculateTotalCost();
-				if (MathUtils.definitelyLessThan(cost, bestCost)) {
+				double cost = calculateTotalCost();
+				if (MathUtils.definitelyLessThan((float) cost, (float) bestCost)) {
 					bestCost = cost;
 					bestMapping = new String[nodes.length];
 					for (int i = 0; i < nodes.length; i++) {
@@ -968,9 +968,9 @@ public class ExhaustiveSearchMapper implements Mapper {
 	 * 
 	 * @return the total cost
 	 */
-	private float calculateTotalCost() {
+	private double calculateTotalCost() {
 		// the communication energy part
-		float energyCost = calculateCommunicationEnergy();
+		double energyCost = calculateCommunicationEnergy();
 		float overloadCost;
 		// now calculate the overloaded BW cost
 		if (!buildRoutingTable) {
@@ -1239,10 +1239,10 @@ public class ExhaustiveSearchMapper implements Mapper {
 	 * 
 	 * @return the communication energy
 	 */
-	private float calculateCommunicationEnergy() {
-		float switchEnergy = calculateSwitchEnergy();
-		float linkEnergy = calculateLinkEnergy();
-		float bufferEnergy = calculateBufferEnergy();
+	private double calculateCommunicationEnergy() {
+		double switchEnergy = calculateSwitchEnergy();
+		double linkEnergy = calculateLinkEnergy();
+		double bufferEnergy = calculateBufferEnergy();
 		if (logger.isTraceEnabled()) {
 			logger.trace("switch energy " + switchEnergy);
 			logger.trace("link energy " + linkEnergy);
@@ -1251,8 +1251,8 @@ public class ExhaustiveSearchMapper implements Mapper {
 		return switchEnergy + linkEnergy + bufferEnergy;
 	}
 
-	private float calculateSwitchEnergy() {
-		float energy = 0;
+	private double calculateSwitchEnergy() {
+		double energy = 0;
 		for (int src = 0; src < nodesNumber; src++) {
 			for (int dst = 0; dst < nodesNumber; dst++) {
 				int srcProc = Integer.valueOf(nodes[src].getCore());
@@ -1297,8 +1297,8 @@ public class ExhaustiveSearchMapper implements Mapper {
 		return energy;
 	}
 
-	private float calculateLinkEnergy() {
-		float energy = 0;
+	private double calculateLinkEnergy() {
+		double energy = 0;
 		for (int src = 0; src < nodesNumber; src++) {
 			for (int dst = 0; dst < nodesNumber; dst++) {
 				int srcProc = Integer.valueOf(nodes[src].getCore());
@@ -1329,8 +1329,8 @@ public class ExhaustiveSearchMapper implements Mapper {
 		return energy;
 	}
 
-	private float calculateBufferEnergy() {
-		float energy = 0;
+	private double calculateBufferEnergy() {
+		double energy = 0;
 		for (int src = 0; src < nodesNumber; src++) {
 			for (int dst = 0; dst < nodesNumber; dst++) {
 				int srcProc = Integer.valueOf(nodes[src].getCore());
@@ -1488,12 +1488,12 @@ public class ExhaustiveSearchMapper implements Mapper {
 		    logger.debug("Energy consumed in switch is " + calculateSwitchEnergy());
 		    logger.debug("Energy consumed in buffer is " + calculateBufferEnergy());
 	    }
-	    float energy = calculateCommunicationEnergy();
+	    double energy = calculateCommunicationEnergy();
 	    logger.info("Total communication energy consumption is " + energy);
 	    
 		MapperDatabase.getInstance().setOutputs(
 				new String[] { "bandwidthRequirements", "energy" },
-				new String[] { bandwidthRequirements, Float.toString(energy) });
+				new String[] { bandwidthRequirements, Double.toString(energy) });
 	}
 	
 	private void saveRoutingTables() {
