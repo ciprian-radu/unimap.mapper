@@ -123,8 +123,18 @@ public class SimulatedAnnealingTestAttractionMoveMapper extends
 			}
 		}
 		if (core2 == -1) {
-			logger.fatal("Unable to determine a core with which core " + core1
-					+ " will swap");
+			if (MathUtils.approximatelyEqual((float) sum, 0)) {
+				core2 = (int) uniformIntegerRandomVariable(0, cores.length - 1);
+				if (logger.isDebugEnabled()) {
+					logger.debug("Core "
+							+ core1
+							+ " doesn't communicate with any core. It will be swapped with core "
+							+ core2 + " (randomly chosen)");
+				}
+			} else {
+				logger.fatal("Unable to determine a core with which core " + core1
+						+ " will swap");
+			}
 		}
 		int core2Node = cores[core2].getNodeId();
 		List<Integer> core1AllowedNodes = new ArrayList<Integer>(
