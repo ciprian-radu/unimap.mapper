@@ -52,7 +52,7 @@ import ro.ulbsibiu.acaps.noc.xml.node.TopologyParameterType;
  * possible mappings.
  * 
  * <p>
- * Note that currently, this algorithm works only with N x N 2D mesh NoCs
+ * Note that currently, this algorithm works only with M x N 2D mesh NoCs
  * </p>
  * 
  * @author cipi
@@ -438,10 +438,10 @@ public class ExhaustiveSearchMapper implements Mapper {
 		cores = new Core[coresNumber];
 		for (int i = 0; i < cores.length; i++) {
 			cores[i] = new Core(i, null, -1);
-			cores[i].setFromCommunication(new long[nodesNumber]);
-			cores[i].setToCommunication(new long[nodesNumber]);
-			cores[i].setFromBandwidthRequirement(new long[nodesNumber]);
-			cores[i].setToBandwidthRequirement(new long[nodesNumber]);
+			cores[i].setFromCommunication(new long[coresNumber]);
+			cores[i].setToCommunication(new long[coresNumber]);
+			cores[i].setFromBandwidthRequirement(new long[coresNumber]);
+			cores[i].setToBandwidthRequirement(new long[coresNumber]);
 		}
 	}
 
@@ -1640,7 +1640,7 @@ public class ExhaustiveSearchMapper implements Mapper {
 		int benchmarkId = MapperDatabase.getInstance().getBenchmarkId(benchmarkName, ctgId);
 		int nocTopologyId = MapperDatabase.getInstance().getNocTopologyId(topologyName, topologySize);
 		MapperDatabase.getInstance().saveMapping(getMapperId(),
-				"Simulated Annealing (test)", benchmarkId, apcgId, nocTopologyId,
+				"Exhaustive Search", benchmarkId, apcgId, nocTopologyId,
 				stringWriter.toString(), startDate,
 				(realEnd - realStart) / 1e9, (userEnd - userStart) / 1e9,
 				(sysEnd - sysStart) / 1e9, monitor.getAverageUsedHeap(), null);
@@ -1774,7 +1774,7 @@ public class ExhaustiveSearchMapper implements Mapper {
 					values[values.length - 1] = "true";
 					MapperDatabase.getInstance().setParameters(parameters, values);
 					
-					// SA with routing
+					// with routing
 					esMapper = new ExhaustiveSearchMapper(
 							benchmarkName, ctgId, apcgId,
 							topologyName, meshSize, new File(
@@ -1785,7 +1785,7 @@ public class ExhaustiveSearchMapper implements Mapper {
 					values[values.length - 1] = "false";
 					MapperDatabase.getInstance().setParameters(parameters, values);
 					
-					// SA without routing
+					// without routing
 					esMapper = new ExhaustiveSearchMapper(
 							benchmarkName, ctgId, apcgId,
 							topologyName, meshSize, new File(

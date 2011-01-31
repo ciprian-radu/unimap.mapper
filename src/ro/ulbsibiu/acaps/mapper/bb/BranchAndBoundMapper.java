@@ -50,7 +50,7 @@ import ro.ulbsibiu.acaps.noc.xml.node.TopologyParameterType;
  * href="http://www.ece.cmu.edu/~sld/wiki/doku.php?id=shared:nocmap">NoCMap</a>
  * 
  * <p>
- * Note that currently, this algorithm works only with N x N 2D mesh NoCs
+ * Note that currently, this algorithm works only with M x N 2D mesh NoCs
  * </p>
  * 
  * @see MappingNode
@@ -204,6 +204,9 @@ public class BranchAndBoundMapper implements Mapper {
 
 	/** the best mapping */
 	private MappingNode bestMapping;
+	
+	/** the number of ignored (partial) mappings */
+	private int ignoredMappings;
 
 	/** the benchmark's name */
 	private String benchmarkName;
@@ -498,10 +501,10 @@ public class BranchAndBoundMapper implements Mapper {
 		cores = new Core[coresNumber];
 		for (int i = 0; i < cores.length; i++) {
 			cores[i] = new Core(i, null,  -1);
-			cores[i].setFromCommunication(new long[nodesNumber]);
-			cores[i].setToCommunication(new long[nodesNumber]);
-			cores[i].setFromBandwidthRequirement(new long[nodesNumber]);
-			cores[i].setToBandwidthRequirement(new long[nodesNumber]);
+			cores[i].setFromCommunication(new long[coresNumber]);
+			cores[i].setToCommunication(new long[coresNumber]);
+			cores[i].setFromBandwidthRequirement(new long[coresNumber]);
+			cores[i].setToBandwidthRequirement(new long[coresNumber]);
 		}
 	}
 
@@ -1006,6 +1009,18 @@ public class BranchAndBoundMapper implements Mapper {
 			MappingNode pNode = Q.next();
 			if (MathUtils.definitelyGreaterThan(pNode.cost, minCost)
 					|| MathUtils.definitelyGreaterThan(pNode.lowerBound, minUpperBound)) {
+				if (logger.isDebugEnabled()) {
+					if (MathUtils.definitelyGreaterThan(pNode.cost, minCost)) {
+						logger.debug("The following mapping is skipped because its cost, " + pNode.cost + ", is > " + minCost + " (minimum cost)");
+					} else {
+						if (MathUtils.definitelyGreaterThan(pNode.lowerBound, minUpperBound)) {
+							logger.debug("The following mapping (cost " + pNode.cost + 
+									") is skipped because its lower bound, " + pNode.lowerBound + ", is > " + minUpperBound + " (minimum upper bound)");
+						}
+					}
+					pNode.printMapping();
+				}
+				ignoredMappings++;
 				continue;
 			}
 
@@ -1023,9 +1038,10 @@ public class BranchAndBoundMapper implements Mapper {
 				selectiveInsert(pNode, Q);
 			}
 		}
-		if (logger.isDebugEnabled()) {
-			logger.debug("Totally " + MappingNode.cnt + " have been generated");
-		}
+		logger.info("Totally " + MappingNode.cnt
+				+ " (partial) mappings have been generated. From these, "
+				+ ignoredMappings + " mappings (" + ignoredMappings * 100.0
+				/ MappingNode.cnt + "%) were pruned.");
 		if (bestMapping != null) {
 			applyMapping(bestMapping);
 		} else {
@@ -1054,7 +1070,19 @@ public class BranchAndBoundMapper implements Mapper {
 						|| MathUtils.definitelyGreaterThan(child.cost, minCost)
 						|| (MathUtils.approximatelyEqual(child.cost, minCost) && bestMapping != null)
 						|| child.isIllegal()) {
-					;
+					if (logger.isDebugEnabled()) {
+						if (MathUtils.definitelyGreaterThan(child.cost, minCost) 
+								|| (MathUtils.approximatelyEqual(child.cost, minCost) && bestMapping != null)) {
+							logger.debug("The following mapping is skipped because its cost, " + child.cost + ", is >= " + minCost + " (minimum cost)");
+						} else {
+							if (MathUtils.definitelyGreaterThan(child.lowerBound, minUpperBound)) {
+								logger.debug("The following mapping (cost " + child.cost + 
+										") is skipped because its lower bound, " + child.lowerBound + ", is > " + minUpperBound + " (minimum upper bound)");
+							}
+						}
+						child.printMapping();
+					}
+					ignoredMappings++;
 				} else {
 					if (logger.isTraceEnabled()) {
 						logger.trace("Child upper upper bound is "
@@ -1122,6 +1150,19 @@ public class BranchAndBoundMapper implements Mapper {
 		if (MathUtils.definitelyGreaterThan(child.lowerBound, minUpperBound)
 				|| MathUtils.definitelyGreaterThan(child.cost, minCost)
 				|| (MathUtils.approximatelyEqual(child.cost, minCost) && bestMapping != null)) {
+			if (logger.isDebugEnabled()) {
+				if (MathUtils.definitelyGreaterThan(child.cost, minCost) 
+						|| (MathUtils.approximatelyEqual(child.cost, minCost) && bestMapping != null)) {
+					logger.debug("The following mapping is skipped because its cost, " + child.cost + ", is >= " + minCost + " (minimum cost)");
+				} else {
+					if (MathUtils.definitelyGreaterThan(child.lowerBound, minUpperBound)) {
+						logger.debug("The following mapping (cost " + child.cost + 
+								") is skipped because its lower bound, " + child.lowerBound + ", is > " + minUpperBound + " (minimum upper bound)");
+					}
+				}
+				child.printMapping();
+			}
+			ignoredMappings++;
 			return;
 		}
 		else {
@@ -1166,6 +1207,18 @@ public class BranchAndBoundMapper implements Mapper {
 		child = new MappingNode(this, pNode, index, true);
 		if (MathUtils.definitelyGreaterThan(child.lowerBound, minUpperBound)
 				|| MathUtils.definitelyGreaterThan(child.cost, minCost)) {
+			if (logger.isDebugEnabled()) {
+				if (MathUtils.definitelyGreaterThan(child.cost, minCost)) {
+					logger.debug("The following mapping is skipped because its cost, " + child.cost + ", is > " + minCost + " (minimum cost)");
+				} else {
+					if (MathUtils.definitelyGreaterThan(child.lowerBound, minUpperBound)) {
+						logger.debug("The following mapping (cost " + child.cost + 
+								") is skipped because its lower bound, " + child.lowerBound + ", is > " + minUpperBound + " (minimum upper bound)");
+					}
+				}
+				child.printMapping();
+			}
+			ignoredMappings++;
 			return;
 		}
 		else {
