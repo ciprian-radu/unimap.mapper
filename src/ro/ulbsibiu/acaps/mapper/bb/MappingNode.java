@@ -830,10 +830,24 @@ class MappingNode {
 		return expandable;
 	}
 
+	void printMapping() {
+		if (logger.isDebugEnabled()) {
+			for (int i = 0; i < mapping.length; i++) {
+				logger.debug("Core " + mapping[i] + " is mapped to node " + i);
+			}
+		}
+	}
+	
 	/**
 	 * @return whether this node is illegal or not
 	 */
 	public boolean isIllegal() {
+		if (illegal) {
+			if (logger.isDebugEnabled()) {
+				logger.debug("The following mapping is illegal (cost " + cost + ")");
+				printMapping();
+			}
+		}
 		return illegal;
 	}
 

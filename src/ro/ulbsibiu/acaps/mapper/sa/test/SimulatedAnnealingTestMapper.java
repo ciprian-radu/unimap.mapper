@@ -55,7 +55,7 @@ import ro.ulbsibiu.acaps.noc.xml.node.TopologyParameterType;
  * href="http://www.ece.cmu.edu/~sld/wiki/doku.php?id=shared:nocmap">NoCMap</a>
  * 
  * <p>
- * Note that currently, this algorithm works only with N x N 2D mesh NoCs
+ * Note that currently, this algorithm works only with M x N 2D mesh NoCs
  * </p>
  * 
  * @see SimulatedAnnealingMapper
@@ -499,10 +499,10 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		cores = new Core[coresNumber];
 		for (int i = 0; i < cores.length; i++) {
 			cores[i] = new Core(i, null, -1);
-			cores[i].setFromCommunication(new long[nodesNumber]);
-			cores[i].setToCommunication(new long[nodesNumber]);
-			cores[i].setFromBandwidthRequirement(new long[nodesNumber]);
-			cores[i].setToBandwidthRequirement(new long[nodesNumber]);
+			cores[i].setFromCommunication(new long[coresNumber]);
+			cores[i].setToCommunication(new long[coresNumber]);
+			cores[i].setFromBandwidthRequirement(new long[coresNumber]);
+			cores[i].setToBandwidthRequirement(new long[coresNumber]);
 		}
 	}
 
