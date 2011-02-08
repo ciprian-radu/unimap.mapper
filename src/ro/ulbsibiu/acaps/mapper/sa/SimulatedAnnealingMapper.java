@@ -542,7 +542,6 @@ public class SimulatedAnnealingMapper implements Mapper {
 		logger.assertLog(ctg != null, "The CTG cannot be null");
 		
 		// we use previousCoreCount to shift the cores from each APCG
-		int tasks = 0;
 		List<CoreType> coreList = apcg.getCore();
 		for (int i = 0; i < coreList.size(); i++) {
 			CoreType coreType = coreList.get(i);
@@ -601,9 +600,8 @@ public class SimulatedAnnealingMapper implements Mapper {
 					}
 				}
 			}
-			tasks += taskList.size();
 		}
-		previousCoreCount += tasks;
+		previousCoreCount += coreList.size();
 	}
 	
 	/**
