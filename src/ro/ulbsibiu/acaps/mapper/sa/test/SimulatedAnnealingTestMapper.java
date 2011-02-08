@@ -1426,7 +1426,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 //			sum += (meanPDF + temperature * (coreToCommunication[i] - meanPDF)) / totalToCommunication;
 			
 			// as the temperature decreases, the probabilities equalize more and more
-			sum += ((totalToCommunication * 1.0 / cores.length) + temperature
+			sum += ((totalToCommunication * 1.0 / cores.length) + (temperature / getInitialTemperature())
 					* (coreToCommunication[i] - (totalToCommunication * 1.0 / cores.length)))
 					/ totalToCommunication;
 			if (MathUtils.definitelyLessThan((float)p, (float)sum) 
