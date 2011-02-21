@@ -1,4 +1,4 @@
-package ro.ulbsibiu.acaps.mapper.sa.test;
+package ro.ulbsibiu.acaps.mapper.osa;
 
 import org.apache.log4j.Logger;
 
@@ -19,24 +19,25 @@ import ro.ulbsibiu.acaps.mapper.util.MapperInputProcessor;
 import ro.ulbsibiu.acaps.mapper.util.MathUtils;
 
 /**
- * {@link SimulatedAnnealingTestMapper} that replaces the random swapping with
- * an attraction move.
+ * Optimized Simulated Annealing (OSA). Read my CSCS paper
+ * ("Optimized Simulated Annealing for Network-on-Chip Application Mapping") for
+ * details.
  * 
- * @see SimulatedAnnealingTestMapper
+ * @see OptimizedSimulatedAnnealingWithoutClusteringMapper
  * 
  * @author cipi
  * 
  */
-public class SimulatedAnnealingTestAttractionMoveMapper extends
-		SimulatedAnnealingTestMapper {
+public class OptimizedSimulatedAnnealingMapper extends
+		OptimizedSimulatedAnnealingWithoutClusteringMapper {
 	
 	/**
 	 * Logger for this class
 	 */
 	private static final Logger logger = Logger
-			.getLogger(SimulatedAnnealingTestAttractionMoveMapper.class);
+			.getLogger(OptimizedSimulatedAnnealingMapper.class);
 
-	public SimulatedAnnealingTestAttractionMoveMapper(String benchmarkName,
+	public OptimizedSimulatedAnnealingMapper(String benchmarkName,
 			String ctgId, String apcgId, String topologyName,
 			String topologySize, File topologyDir, int coresNumber,
 			double linkBandwidth, boolean buildRoutingTable,
@@ -47,7 +48,7 @@ public class SimulatedAnnealingTestAttractionMoveMapper extends
 				legalTurnSet, bufReadEBit, bufWriteEBit, switchEBit, linkEBit, seed);
 	}
 
-	public SimulatedAnnealingTestAttractionMoveMapper(String benchmarkName,
+	public OptimizedSimulatedAnnealingMapper(String benchmarkName,
 			String ctgId, String apcgId, String topologyName,
 			String topologySize, File topologyDir, int coresNumber,
 			double linkBandwidth, float switchEBit, float linkEBit, Long seed)
@@ -58,7 +59,7 @@ public class SimulatedAnnealingTestAttractionMoveMapper extends
 
 	@Override
 	public String getMapperId() {
-		return super.getMapperId() + "-" + "attraction_move";
+		return "osa";
 	}
 
 	@Override
@@ -199,10 +200,10 @@ public class SimulatedAnnealingTestAttractionMoveMapper extends
 					String ctgId, String apcgId, List<CtgType> ctgTypes,
 					List<ApcgType> apcgTypes, boolean doRouting, Long seed) throws JAXBException,
 					TooFewNocNodesException, FileNotFoundException {
-				logger.info("Using a Simulated annealing mapper for "
+				logger.info("Using an Optimized Simulated Annealing mapper for "
 						+ benchmarkFilePath + "ctg-" + ctgId + " (APCG " + apcgId + ")");
 				
-				SimulatedAnnealingTestMapper saMapper;
+				OptimizedSimulatedAnnealingWithoutClusteringMapper osaMapper;
 				int cores = 0;
 				for (int k = 0; k < apcgTypes.size(); k++) {
 					cores += apcgTypes.get(k).getCore().size();
@@ -248,8 +249,8 @@ public class SimulatedAnnealingTestAttractionMoveMapper extends
 					values[values.length - 2] = "true";
 					MapperDatabase.getInstance().setParameters(parameters, values);
 					
-					// SA with routing
-					saMapper = new SimulatedAnnealingTestAttractionMoveMapper(
+					// OSA with routing
+					osaMapper = new OptimizedSimulatedAnnealingMapper(
 							benchmarkName, ctgId, apcgId,
 							topologyName, meshSize, new File(
 									topologyDir), cores, linkBandwidth,
@@ -259,8 +260,8 @@ public class SimulatedAnnealingTestAttractionMoveMapper extends
 					values[values.length - 2] = "false";
 					MapperDatabase.getInstance().setParameters(parameters, values);
 					
-					// SA without routing
-					saMapper = new SimulatedAnnealingTestAttractionMoveMapper(
+					// OSA without routing
+					osaMapper = new OptimizedSimulatedAnnealingMapper(
 							benchmarkName, ctgId, apcgId,
 							topologyName, meshSize, new File(
 									topologyDir), cores, linkBandwidth,
@@ -268,20 +269,20 @@ public class SimulatedAnnealingTestAttractionMoveMapper extends
 				}
 		
 		//			// read the input data from a traffic.config file (NoCmap style)
-		//			saMapper(
+		//			osaMapper(
 		//					"telecom-mocsyn-16tile-selectedpe.traffic.config",
 		//					linkBandwidth);
 				
 				for (int k = 0; k < apcgTypes.size(); k++) {
 					// read the input data using the Unified Framework's XML interface
-					saMapper.parseApcg(apcgTypes.get(k), ctgTypes.get(k), applicationBandwithRequirement);
+					osaMapper.parseApcg(apcgTypes.get(k), ctgTypes.get(k), applicationBandwithRequirement);
 				}
 				
 		//			// This is just for checking that bbMapper.parseTrafficConfig(...)
 		//			// and parseApcg(...) have the same effect
-		//			bbMapper.printCores();
+		//			osaMapper.printCores();
 		
-				String mappingXml = saMapper.map();
+				String mappingXml = osaMapper.map();
 				File dir = new File(benchmarkFilePath + "ctg-" + ctgId);
 				dir.mkdirs();
 				String routing = "";
@@ -290,16 +291,16 @@ public class SimulatedAnnealingTestAttractionMoveMapper extends
 				}
 				String mappingXmlFilePath = benchmarkFilePath + "ctg-" + ctgId
 						+ File.separator + "mapping-" + apcgId + "_"
-						+ saMapper.getMapperId() + routing + ".xml";
+						+ osaMapper.getMapperId() + routing + ".xml";
 				PrintWriter pw = new PrintWriter(mappingXmlFilePath);
 				logger.info("Saving the mapping XML file" + mappingXmlFilePath);
 				pw.write(mappingXml);
 				pw.close();
 		
 				logger.info("The generated mapping is:");
-				saMapper.printCurrentMapping();
+				osaMapper.printCurrentMapping();
 				
-				saMapper.analyzeIt();
+				osaMapper.analyzeIt();
 			}
 		};
 		mapperInputProcessor.processInput(args);

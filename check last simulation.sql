@@ -1,0 +1,135 @@
+SELECT *
+FROM UniMap.MAPPER
+WHERE
+	TIMEDIFF(START_DATETIME, '2011-02-21 09:00:00') > 0
+--	AND
+--	NAME = 'sa'
+--	NAME = 'sa_test-attraction_move'
+ORDER BY
+	START_DATETIME
+;
+
+SELECT M.NAME, M.BENCHMARK, M.APCG_ID, COUNT(APCG_ID)
+FROM UniMap.MAPPER M, UniMap.PARAMETER P
+WHERE
+	M.RUN = P.ID
+	AND
+	P.NAME = 'routing'
+	AND
+	(P.VALUE = 'true' OR P.VALUE = 'false')
+	AND
+	TIMEDIFF(START_DATETIME, '2011-01-25 16:30:00') > 0
+GROUP BY M.NAME, M.BENCHMARK, M.APCG_ID
+ORDER BY M.NAME, M.BENCHMARK, M.APCG_ID
+;
+
+SELECT SUM(COUNTER) AS HOW_MANY_SIMULATIONS_FAILED
+FROM
+		(
+		SELECT 1000 - COUNT(APCG_ID) AS COUNTER
+		FROM UniMap.MAPPER M, UniMap.PARAMETER P
+		WHERE
+			M.RUN = P.ID
+			AND
+			P.NAME = 'routing'
+			AND
+			(P.VALUE = 'true' OR P.VALUE = 'false')
+			AND
+			TIMEDIFF(START_DATETIME, '2011-01-25 16:30:00') > 0
+		GROUP BY M.NAME, M.BENCHMARK, M.APCG_ID, P.VALUE
+		HAVING
+			1000 - COUNT(APCG_ID) >= 0
+		ORDER BY COUNT(APCG_ID)
+		) AS SOME_ALIAS
+;
+
+SELECT M1.MAPPING_XML, O1.VALUE, COUNT(O1.VALUE)
+FROM UniMap.MAPPER M1, UniMap.OUTPUT O1, UniMap.PARAMETER P1
+WHERE
+	TIMEDIFF(M1.START_DATETIME, '2011-02-07 10:00:00') > 0
+	AND
+--	M1.NAME = 'sa'
+--	M1.NAME = 'sa_test'
+	M1.NAME = 'sa_test-attraction_move'
+--	M1.NAME = 'bb'
+	AND
+	M1.RUN = O1.ID
+	AND
+	O1.NAME = 'energy'
+	AND
+	M1.RUN = P1.ID
+	AND
+	P1.NAME = 'routing'
+	AND
+	P1.VALUE = 'false'
+GROUP BY
+	O1.VALUE
+ORDER BY
+	O1.VALUE
+;
+
+SELECT
+-- *
+-- AVG(O.VALUE)
+-- AVG(M.USER_TIME)
+AVG(M.AVG_HEAP_MEMORY)
+FROM UniMap.MAPPER M, UniMap.OUTPUT O, UniMap.PARAMETER P
+WHERE
+	TIMEDIFF(M.START_DATETIME, '2011-01-25 16:30:00') > 0
+	AND
+--	M.NAME = 'sa_test-attraction_move'
+--	M.NAME = 'sa_test'
+--	M.NAME = 'sa'
+	M.NAME = 'bb'
+	AND
+	M.RUN = O.ID
+	AND
+	O.NAME = 'energy'
+	AND
+	M.RUN = P.ID
+	AND
+	P.NAME = 'routing'
+	AND
+	P.VALUE = 'false'
+ORDER BY
+--	M.START_DATETIME
+	O.VALUE
+;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

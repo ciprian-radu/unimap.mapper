@@ -1,4 +1,4 @@
-package ro.ulbsibiu.acaps.mapper.sa.test;
+package ro.ulbsibiu.acaps.mapper.osa;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -50,9 +50,9 @@ import ro.ulbsibiu.acaps.noc.xml.node.RoutingTableEntryType;
 import ro.ulbsibiu.acaps.noc.xml.node.TopologyParameterType;
 
 /**
- * This is a test version of Simulated Annealing algorithm for Network-on-Chip
- * (NoC) application mapping. The implementation is based on the one from <a
- * href="http://www.ece.cmu.edu/~sld/wiki/doku.php?id=shared:nocmap">NoCMap</a>
+ * Optimized Simulated Annealing (OSA), <b>without clustering</b>. Read my CSCS paper
+ * ("Optimized Simulated Annealing for Network-on-Chip Application Mapping") for
+ * details.
  * 
  * <p>
  * Note that currently, this algorithm works only with M x N 2D mesh NoCs
@@ -63,15 +63,15 @@ import ro.ulbsibiu.acaps.noc.xml.node.TopologyParameterType;
  * @author cipi
  * 
  */
-public class SimulatedAnnealingTestMapper implements Mapper {
+public class OptimizedSimulatedAnnealingWithoutClusteringMapper implements Mapper {
 	
 	/**
 	 * Logger for this class
 	 */
 	private static final Logger logger = Logger
-			.getLogger(SimulatedAnnealingTestMapper.class);
+			.getLogger(OptimizedSimulatedAnnealingWithoutClusteringMapper.class);
 	
-	private static final String MAPPER_ID = "sa_test";
+	private static final String MAPPER_ID = "osa_w/o_clustering";
 
 	private static final int NORTH = 0;
 
@@ -408,7 +408,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	 *            the seed for the random number generator of the initial
 	 *            population
 	 */
-	public SimulatedAnnealingTestMapper(String benchmarkName, String ctgId,
+	public OptimizedSimulatedAnnealingWithoutClusteringMapper(String benchmarkName, String ctgId,
 			String apcgId, String topologyName, String topologySize,
 			File topologyDir, int coresNumber, double linkBandwidth,
 			float switchEBit, float linkEBit, Long seed) throws JAXBException {
@@ -459,7 +459,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 	 *            population (can be null)
 	 * @throws JAXBException
 	 */
-	public SimulatedAnnealingTestMapper(String benchmarkName, String ctgId, String apcgId,
+	public OptimizedSimulatedAnnealingWithoutClusteringMapper(String benchmarkName, String ctgId, String apcgId,
 			String topologyName, String topologySize, File topologyDir, int coresNumber,
 			double linkBandwidth, boolean buildRoutingTable,
 			LegalTurnSet legalTurnSet, float bufReadEBit, float bufWriteEBit,
@@ -2221,7 +2221,9 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		printCurrentMapping();
 
 		if (coresNumber == 1) {
-			logger.info("Simulated Annealing Test will not start for mapping a single core. This core simply mapped randomly.");
+			logger.info("Optimized Simulated Annealing ( "
+					+ getMapperId()
+					+ " ) will not start for mapping a single core. This core simply mapped randomly.");
 		} else {
 			logger.info("Start mapping...");
 
@@ -2282,10 +2284,11 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 		int benchmarkId = MapperDatabase.getInstance().getBenchmarkId(benchmarkName, ctgId);
 		int nocTopologyId = MapperDatabase.getInstance().getNocTopologyId(topologyName, topologySize);
 		MapperDatabase.getInstance().saveMapping(getMapperId(),
-				"Simulated Annealing (test)", benchmarkId, apcgId, nocTopologyId,
-				stringWriter.toString(), startDate,
-				(realEnd - realStart) / 1e9, (userEnd - userStart) / 1e9,
-				(sysEnd - sysStart) / 1e9, monitor.getAverageUsedHeap(), null);
+				"Optimized Simulated Annealing (" + getMapperId() + ")",
+				benchmarkId, apcgId, nocTopologyId, stringWriter.toString(),
+				startDate, (realEnd - realStart) / 1e9,
+				(userEnd - userStart) / 1e9, (sysEnd - sysStart) / 1e9,
+				monitor.getAverageUsedHeap(), null);
 
 		return stringWriter.toString();
 	}
@@ -2369,10 +2372,10 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 					String ctgId, String apcgId, List<CtgType> ctgTypes,
 					List<ApcgType> apcgTypes, boolean doRouting, Long seed) throws JAXBException,
 					TooFewNocNodesException, FileNotFoundException {
-				logger.info("Using a Simulated annealing mapper for "
+				logger.info("Using an Optimized Simulated Annealing without clustering mapper for "
 						+ benchmarkFilePath + "ctg-" + ctgId + " (APCG " + apcgId + ")");
 				
-				SimulatedAnnealingTestMapper saMapper;
+				OptimizedSimulatedAnnealingWithoutClusteringMapper saMapper;
 				int cores = 0;
 				for (int k = 0; k < apcgTypes.size(); k++) {
 					cores += apcgTypes.get(k).getCore().size();
@@ -2419,7 +2422,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 					MapperDatabase.getInstance().setParameters(parameters, values);
 					
 					// SA with routing
-					saMapper = new SimulatedAnnealingTestMapper(
+					saMapper = new OptimizedSimulatedAnnealingWithoutClusteringMapper(
 							benchmarkName, ctgId, apcgId,
 							topologyName, meshSize, new File(
 									topologyDir), cores, linkBandwidth,
@@ -2430,7 +2433,7 @@ public class SimulatedAnnealingTestMapper implements Mapper {
 					MapperDatabase.getInstance().setParameters(parameters, values);
 					
 					// SA without routing
-					saMapper = new SimulatedAnnealingTestMapper(
+					saMapper = new OptimizedSimulatedAnnealingWithoutClusteringMapper(
 							benchmarkName, ctgId, apcgId,
 							topologyName, meshSize, new File(
 									topologyDir), cores, linkBandwidth,

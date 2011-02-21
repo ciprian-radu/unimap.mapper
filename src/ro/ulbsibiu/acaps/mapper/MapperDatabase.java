@@ -102,7 +102,14 @@ public class MapperDatabase {
 			basicDataSource.setDriverClassName(JDBC_DRIVER);
 			basicDataSource.setUsername(this.userId);
 			basicDataSource.setPassword(this.password);
-			basicDataSource.setUrl(this.url); 
+			basicDataSource.setUrl(this.url);
+			basicDataSource.setMinEvictableIdleTimeMillis(1000 * 60 * 60 * 4); // 4 hours (MySQL has a default wait_timeout of 8 hours)
+			basicDataSource.setTimeBetweenEvictionRunsMillis(1000 * 60 * 60 * 4);
+			basicDataSource.setNumTestsPerEvictionRun(basicDataSource.getMaxIdle());
+			basicDataSource.setValidationQuery("SELECT 1");
+			basicDataSource.setTestOnBorrow(true);
+			basicDataSource.setTestWhileIdle(true);
+			basicDataSource.setTestOnReturn(true);
 			
 			connection = basicDataSource.getConnection();
 			logger.debug("Database installation successful");
