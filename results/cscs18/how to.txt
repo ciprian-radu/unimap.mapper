@@ -1,0 +1,166 @@
+This file describes how I run simulations with the mapping algorithms.
+
+The algorithms: SA, BB, OSA, OSA w/o clustering
+Number of runs: 1000 per algorithm
+
+
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-sa.sh 1000 ../CTG-XML/xml/VOPD --ctg 0 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa_without_clustering.sh 1000 ../CTG-XML/xml/VOPD --ctg 0 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa.sh 1000 ../CTG-XML/xml/VOPD --ctg 0 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-bb.sh 1000 ../CTG-XML/xml/VOPD --ctg 0 --apcg m false
+
+
+
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-sa.sh 1000 ../CTG-XML/xml/MMS --ctg 0 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa_without_clustering.sh 1000 ../CTG-XML/xml/MMS --ctg 0 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa.sh 1000 ../CTG-XML/xml/MMS --ctg 0 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-bb.sh 1000 ../CTG-XML/xml/MMS --ctg 0 --apcg m false
+
+
+
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-sa.sh 1000 ../CTG-XML/xml/MMS --ctg 1 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa_without_clustering.sh 1000 ../CTG-XML/xml/MMS --ctg 1 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa.sh 1000 ../CTG-XML/xml/MMS --ctg 1 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-bb.sh 1000 ../CTG-XML/xml/MMS --ctg 1 --apcg m false
+
+
+
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-sa.sh 1000 ../CTG-XML/xml/VOPD --ctg 1 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa_without_clustering.sh 1000 ../CTG-XML/xml/VOPD --ctg 1 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa.sh 1000 ../CTG-XML/xml/VOPD --ctg 1 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-bb.sh 1000 ../CTG-XML/xml/VOPD --ctg 1 --apcg m false
+
+
+
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-sa.sh 1000 ../CTG-XML/xml/MPEG4 --ctg 0 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa_without_clustering.sh 1000 ../CTG-XML/xml/MPEG4 --ctg 0 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa.sh 1000 ../CTG-XML/xml/MPEG4 --ctg 0 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-bb.sh 1000 ../CTG-XML/xml/MPEG4 --ctg 0 --apcg m false
+
+
+
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-sa.sh 1000 ../CTG-XML/xml/MWD --ctg 0 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa_without_clustering.sh 1000 ../CTG-XML/xml/MWD --ctg 0 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa.sh 1000 ../CTG-XML/xml/MWD --ctg 0 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-bb.sh 1000 ../CTG-XML/xml/MWD --ctg 0 --apcg m false
+
+
+
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-sa.sh 1000 ../CTG-XML/xml/H.264 --ctg 0 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa_without_clustering.sh 1000 ../CTG-XML/xml/H.264 --ctg 0 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa.sh 1000 ../CTG-XML/xml/H.264 --ctg 0 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-bb.sh 1000 ../CTG-XML/xml/H.264 --ctg 0 --apcg m false
+
+
+
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-sa.sh 1000 ../CTG-XML/xml/H.264 --ctg 1 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa_without_clustering.sh 1000 ../CTG-XML/xml/H.264 --ctg 1 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa.sh 1000 ../CTG-XML/xml/H.264 --ctg 1 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-bb.sh 1000 ../CTG-XML/xml/H.264 --ctg 1 --apcg m false
+
+
+
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-sa.sh 1000 ../CTG-XML/xml/PIP --ctg 0 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa_without_clustering.sh 1000 ../CTG-XML/xml/PIP --ctg 0 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa.sh 1000 ../CTG-XML/xml/PIP --ctg 0 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-bb.sh 1000 ../CTG-XML/xml/PIP --ctg 0 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-es.sh 1 ../CTG-XML/xml/PIP --ctg 0 --apcg m false
+
+
+
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-sa.sh 1000 ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff --ctg 0+1+2+3 --apcg 2 false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa_without_clustering.sh 1000 ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff --ctg 0+1+2+3 --apcg 2 false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa.sh 1000 ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff --ctg 0+1+2+3 --apcg 2 false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-bb.sh 1000 ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff --ctg 0+1+2+3 --apcg 2 false
+
+
+
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-sa.sh 1000 ../CTG-XML/xml/e3s/consumer-mocsyn.tgff --ctg 0+1 --apcg 2 false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa_without_clustering.sh 1000 ../CTG-XML/xml/e3s/consumer-mocsyn.tgff --ctg 0+1 --apcg 2 false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa.sh 1000 ../CTG-XML/xml/e3s/consumer-mocsyn.tgff --ctg 0+1 --apcg 2 false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-bb.sh 1000 ../CTG-XML/xml/e3s/consumer-mocsyn.tgff --ctg 0+1 --apcg 2 false
+
+
+
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-sa.sh 1000 ../CTG-XML/xml/e3s/networking-mocsyn.tgff --ctg 0+1+2+3 --apcg 2 false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa_without_clustering.sh 1000 ../CTG-XML/xml/e3s/networking-mocsyn.tgff --ctg 0+1+2+3 --apcg 2 false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa.sh 1000 ../CTG-XML/xml/e3s/networking-mocsyn.tgff --ctg 0+1+2+3 --apcg 2 false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-bb.sh 1000 ../CTG-XML/xml/e3s/networking-mocsyn.tgff --ctg 0+1+2+3 --apcg 2 false
+
+
+
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-sa.sh 1000 ../CTG-XML/xml/e3s/office-automation-mocsyn.tgff --ctg 0 --apcg 2 false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa_without_clustering.sh 1000 ../CTG-XML/xml/e3s/office-automation-mocsyn.tgff --ctg 0 --apcg 2 false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa.sh 1000 ../CTG-XML/xml/e3s/office-automation-mocsyn.tgff --ctg 0 --apcg 2 false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-bb.sh 1000 ../CTG-XML/xml/e3s/office-automation-mocsyn.tgff --ctg 0 --apcg 2 false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-es.sh 1 ../CTG-XML/xml/e3s/office-automation-mocsyn.tgff --ctg 0 --apcg 2 false
+
+
+
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-sa.sh 1000 ../CTG-XML/xml/e3s/telecom-mocsyn.tgff --ctg 0+1+2+3+4+5+6+7+8 --apcg 2 false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa_without_clustering.sh 1000 ../CTG-XML/xml/e3s/telecom-mocsyn.tgff --ctg 0+1+2+3+4+5+6+7+8 --apcg 2 false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa.sh 1000 ../CTG-XML/xml/e3s/telecom-mocsyn.tgff --ctg 0+1+2+3+4+5+6+7+8 --apcg 2 false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-bb.sh 1000 ../CTG-XML/xml/e3s/telecom-mocsyn.tgff --ctg 0+1+2+3+4+5+6+7+8 --apcg 2 false
+
+
+
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-sa.sh 10 ../CTG-XML/xml/VOPD --ctg 0+2+3+4 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa.sh 100 ../CTG-XML/xml/VOPD --ctg 0+2+3+4 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-bb.sh 100 ../CTG-XML/xml/VOPD --ctg 0+2+3+4 --apcg m false
+
+
+
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-sa.sh 10 ../CTG-XML/xml/e3s/all-mocsyn.tgff --ctg 0+1+2+3+4+5+6+7+8+9+10+11+12+13+14+15+16+17+18+19 --apcg 2 false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa.sh 100 ../CTG-XML/xml/e3s/all-mocsyn.tgff --ctg 0+1+2+3+4+5+6+7+8+9+10+11+12+13+14+15+16+17+18+19 --apcg 2 false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-bb.sh 100 ../CTG-XML/xml/e3s/all-mocsyn.tgff --ctg 0+1+2+3+4+5+6+7+8+9+10+11+12+13+14+15+16+17+18+19 --apcg 2 false
+
+
+
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa.sh 10 ../CTG-XML/xml/97-cores --ctg 0+1+2+3+4+5 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-bb.sh 10 ../CTG-XML/xml/97-cores --ctg 0+1+2+3+4+5 --apcg m false
+
+
+
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa.sh 10 ../CTG-XML/xml/131-cores --ctg 0+1+2+3+4+5+6+7+8 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-bb.sh 10 ../CTG-XML/xml/131-cores --ctg 0+1+2+3+4+5+6+7+8 --apcg m false
+
+
+
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-osa.sh 10 ../CTG-XML/xml/215-cores --ctg 0+1+2+3+4+5+6+7+8+9+10+11+12+13+14+15+16+17+18+19+20+21+22+23+24+25+26+27+28 --apcg m false
+./lava-schedule-on-xeon.sh ./map-app-zamolxe-bb.sh 10 ../CTG-XML/xml/215-cores --ctg 0+1+2+3+4+5+6+7+8+9+10+11+12+13+14+15+16+17+18+19+20+21+22+23+24+25+26+27+28 --apcg m false
+
+Advice: note the date and time when you started scheduling simulations.
+
+Simulations are scheduled by LAVA. Use:
+
+bjobs
+
+and
+
+bjobs | wc
+
+to check the status of the jobs and how many jobs are left to run.
+Also, note that for each LAVA job, the ouput is place into files job-<job id>.out.log and job-<job id>.err.log
+While the simulations are running, you may issue:
+
+cat `ls *.err.log`
+
+to check if there are errors
+
+After all simulations are done, use SQL script "check last simulation.sql" (available on Zamolxe) to check the results.
+You just need the date and time when you started the simulation.
+
+Then, use SQL script "comparison.sql" (available on Zamolxe). 
+Create a copy of template.ods, name it something like "mms ctg 0 (12  - 13 01 2011).ods"
+For each algorithm, copy the results of the SQL query into the .ods file.
+
+Finally, remove all log files:
+
+rm job*.{err,out}.log
+
+---
+Ciprian Radu
+
+ciprian.radu@ulbsibiu.ro
+
+January 13th, 2011
