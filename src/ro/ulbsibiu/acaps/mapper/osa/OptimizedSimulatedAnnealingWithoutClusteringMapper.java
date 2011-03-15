@@ -2,52 +2,32 @@ package ro.ulbsibiu.acaps.mapper.osa;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
 
 import org.apache.log4j.Logger;
 
 import ro.ulbsibiu.acaps.ctg.xml.apcg.ApcgType;
-import ro.ulbsibiu.acaps.ctg.xml.apcg.CoreType;
-import ro.ulbsibiu.acaps.ctg.xml.apcg.TaskType;
-import ro.ulbsibiu.acaps.ctg.xml.ctg.CommunicationType;
 import ro.ulbsibiu.acaps.ctg.xml.ctg.CtgType;
-import ro.ulbsibiu.acaps.ctg.xml.mapping.MapType;
-import ro.ulbsibiu.acaps.ctg.xml.mapping.MappingType;
-import ro.ulbsibiu.acaps.mapper.Mapper;
+import ro.ulbsibiu.acaps.mapper.BandwidthConstrainedEnergyAndPerformanceAwareMapper;
 import ro.ulbsibiu.acaps.mapper.MapperDatabase;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
 import ro.ulbsibiu.acaps.mapper.sa.Core;
 import ro.ulbsibiu.acaps.mapper.sa.SimulatedAnnealingMapper;
-import ro.ulbsibiu.acaps.mapper.util.HeapUsageMonitor;
 import ro.ulbsibiu.acaps.mapper.util.MapperInputProcessor;
 import ro.ulbsibiu.acaps.mapper.util.MathUtils;
-import ro.ulbsibiu.acaps.mapper.util.TimeUtils;
-import ro.ulbsibiu.acaps.noc.xml.link.LinkType;
 import ro.ulbsibiu.acaps.noc.xml.node.NodeType;
-import ro.ulbsibiu.acaps.noc.xml.node.ObjectFactory;
-import ro.ulbsibiu.acaps.noc.xml.node.RoutingTableEntryType;
-import ro.ulbsibiu.acaps.noc.xml.node.TopologyParameterType;
 
 /**
  * Optimized Simulated Annealing (OSA), <b>without clustering</b>. Read my CSCS paper
@@ -63,7 +43,8 @@ import ro.ulbsibiu.acaps.noc.xml.node.TopologyParameterType;
  * @author cipi
  * 
  */
-public class OptimizedSimulatedAnnealingWithoutClusteringMapper implements Mapper {
+public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
+		BandwidthConstrainedEnergyAndPerformanceAwareMapper {
 	
 	/**
 	 * Logger for this class
@@ -73,85 +54,12 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper implements Mappe
 	
 	private static final String MAPPER_ID = "osa_w/o_clustering";
 
-	private static final int NORTH = 0;
-
-	private static final int SOUTH = 1;
-
-	private static final int EAST = 2;
-
-	private static final int WEST = 3;
-
-	/**
-	 * how costly is each unit of link overload (a link is overloaded when it
-	 * has to send more bits/s than its bandwidth)
-	 */
-	private final float OVERLOAD_UNIT_COST = 1000000000;
-
-	/**
-	 * whether or not to build routing table too. When the SA algorithm builds
-	 * the routing table, the mapping process takes more time but, this should
-	 * yield better performance
-	 */
-	private boolean buildRoutingTable;
-
-	/**
-	 * When the algorithm builds the routing table, it avoids deadlocks by
-	 * employing a set of legal turns.
-	 * 
-	 * @author cipi
-	 * 
-	 */
-	public enum LegalTurnSet {
-		WEST_FIRST, ODD_EVEN
-	}
-
-	/**
-	 * what {@link LegalTurnSet} the SA algorithm should use (this is useful
-	 * only when the routing table is built)
-	 */
-	private LegalTurnSet legalTurnSet;
-
-	/** the link bandwidth */
-	private double linkBandwidth;
-	
-	/** energy consumption per bit read */
-	private float bufReadEBit;
-
-	/** energy consumption per bit write */
-	private float bufWriteEBit;
-
-	/** the number of nodes (nodes) from the NoC */
-	private int nodesNumber;
-
-	/** the number of mesh nodes placed horizontally */
-	private int hSize;
-
-	/**
-	 * the number of processes (tasks). Note that each core has only one task
-	 * associated to it.
-	 */
-	private int coresNumber;
-	
-	/** counts how many cores were parsed from the parsed APCGs */
-	private int previousCoreCount = 0;
-
-	/**
-	 * the number of links from the NoC
-	 */
-	private int linksNumber;
-
-	/** the nodes from the Network-on-Chip (NoC) */
-	protected NodeType[] nodes;
-	
 	/** the distinct nodes with which each node communicates directly (through a single link) */
 	protected Set<Integer>[] nodeNeighbors;
 	
 	/** the maximum neighbors a node can have */
 	private int maxNodeNeighbors = 0;
 
-	/** the processes (tasks, cores) */
-	protected Core[] cores;
-	
 	/** the distinct cores with which each core communicates directly */
 	protected Set<Integer>[] coreNeighbors;
 	
@@ -165,17 +73,6 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper implements Mappe
 	
 	/** for every core, the (from and to) communication probability density function */
 	protected double[][] coresCommunicationPDF;
-
-	/** the communication channels from the NoC */
-	private ro.ulbsibiu.acaps.noc.xml.link.LinkType[] links;
-
-	/**
-	 * what links are used by nodes to communicate (each source - destination
-	 * node pair has a list of link IDs). The matrix must have size
-	 * <tt>nodesNumber x nodesNumber</tt>. <b>This must be <tt>null</tt> when
-	 * <tt>buildRoutingTable</tt> is <tt>true</tt> </b>
-	 */
-	private List<Integer>[][] linkUsageList = null;
 
 	/** the seed for the random number generator of the initial population */
 	private Long seed;
@@ -200,39 +97,6 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper implements Mappe
 	/** the acceptance ratio */
 	private double acceptRatio;
 
-	/**
-	 * per link bandwidth usage (used only when the algorithm doesn't build the
-	 * routing table)
-	 */
-	private int[] linkBandwidthUsage = null;
-
-	/**
-	 * per link bandwidth usage (used only when the algorithm builds the routing
-	 * table)
-	 */
-	private int[][][] synLinkBandwithUsage = null;
-
-	/** holds the generated routing table */
-	private int[][][][] saRoutingTable = null;
-
-	/** the benchmark's name */
-	private String benchmarkName;
-	
-	/** the CTG ID */
-	private String ctgId;
-	
-	/** the ACPG ID */
-	private String apcgId;
-	
-	/** the directory where the NoC topology is described */
-	private File topologyDir;
-	
-	/** the topology name */
-	private String topologyName;
-	
-	/** the topology size */
-	private String topologySize;
-	
 	private String[] bestSolution;
 	
 	private double bestCost = Float.MAX_VALUE;
@@ -243,142 +107,6 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper implements Mappe
 	
 	private int mappingIteration;
 	
-	private static enum TopologyParameter {
-		/** on what row of a 2D mesh the node is located */
-		ROW,
-		/** on what column of a 2D mesh the node is located */
-		COLUMN,
-	};
-	
-	private static final String LINK_IN = "in";
-	
-	private static final String LINK_OUT = "out";
-	
-	private Integer[] nodeRows;
-	
-	private Integer[] nodeColumns;
-	
-	private String getNodeTopologyParameter(NodeType node,
-			TopologyParameter parameter) {
-		String value = null;
-		if (TopologyParameter.ROW.equals(parameter)
-				&& nodeRows[Integer.valueOf(node.getId())] != null) {
-			value = Integer.toString(nodeRows[Integer.valueOf(node.getId())]);
-		} else {
-			if (TopologyParameter.COLUMN.equals(parameter)
-					&& nodeColumns[Integer.valueOf(node.getId())] != null) {
-				value = Integer.toString(nodeColumns[Integer.valueOf(node
-						.getId())]);
-			} else {
-				List<TopologyParameterType> topologyParameters = node
-						.getTopologyParameter();
-				for (int i = 0; i < topologyParameters.size(); i++) {
-					if (parameter.toString().equalsIgnoreCase(
-							topologyParameters.get(i).getType())) {
-						value = topologyParameters.get(i).getValue();
-						break;
-					}
-				}
-				logger.assertLog(value != null,
-						"Couldn't find the topology parameter '" + parameter
-								+ "' in the node " + node.getId());
-
-				if (TopologyParameter.ROW.equals(parameter)) {
-					nodeRows[Integer.valueOf(node.getId())] = Integer
-							.valueOf(value);
-				}
-				if (TopologyParameter.COLUMN.equals(parameter)) {
-					nodeColumns[Integer.valueOf(node.getId())] = Integer
-							.valueOf(value);
-				}
-			}
-		}
-
-		return value;
-	}
-	
-	/** routingTables[nodeId][sourceNode][destinationNode] = link ID */
-	private int[][][] routingTables;
-	
-	public void generateXYRoutingTable() {
-		for (int n = 0; n < nodes.length; n++) {
-			NodeType node = nodes[n];
-			for (int i = 0; i < nodesNumber; i++) {
-				for (int j = 0; j < nodesNumber; j++) {
-					routingTables[Integer.valueOf(node.getId())][i][j] = -2;
-				}
-			}
-	
-			for (int dstNode = 0; dstNode < nodesNumber; dstNode++) {
-				if (dstNode == Integer.valueOf(node.getId())) { // deliver to me
-					routingTables[Integer.valueOf(node.getId())][0][dstNode] = -1;
-				} else {
-					// check out the dst Node's position first
-					int dstRow = dstNode / hSize;
-					int dstCol = dstNode % hSize;
-		
-					int row = Integer.valueOf(getNodeTopologyParameter(node, TopologyParameter.ROW));
-					int column = Integer.valueOf(getNodeTopologyParameter(node, TopologyParameter.COLUMN));
-					int nextStepRow = row;
-					int nextStepCol = column;
-		
-					if (dstCol != column) { // We should go horizontally
-						if (column > dstCol) {
-							nextStepCol--;
-						} else {
-							nextStepCol++;
-						}
-					} else { // We should go vertically
-						if (row > dstRow) {
-							nextStepRow--;
-						} else {
-							nextStepRow++;
-						}
-					}
-		
-					for (int i = 0; i < node.getLink().size(); i++) {
-						if (LINK_OUT.equals(node.getLink().get(i).getType())) {
-							String nodeRow = "-1";
-							String nodeColumn = "-1";
-							// the links are bidirectional
-							if (links[Integer.valueOf(node.getLink().get(i).getValue())].getFirstNode().equals(node.getId())) {
-								nodeRow = getNodeTopologyParameter(
-										nodes[Integer.valueOf(links[Integer.valueOf(node.getLink().get(i).getValue())].getSecondNode())],
-										TopologyParameter.ROW);
-								nodeColumn = getNodeTopologyParameter(
-										nodes[Integer.valueOf(links[Integer.valueOf(node.getLink().get(i).getValue())].getSecondNode())],
-										TopologyParameter.COLUMN);
-							} else {
-								if (links[Integer.valueOf(node.getLink().get(i).getValue())].getSecondNode().equals(node.getId())) {
-									nodeRow = getNodeTopologyParameter(
-											nodes[Integer.valueOf(links[Integer.valueOf(node.getLink().get(i).getValue())].getFirstNode())],
-											TopologyParameter.ROW);
-									nodeColumn = getNodeTopologyParameter(
-											nodes[Integer.valueOf(links[Integer.valueOf(node.getLink().get(i).getValue())].getFirstNode())],
-											TopologyParameter.COLUMN);
-								}
-							}
-							if (Integer.valueOf(nodeRow) == nextStepRow
-									&& Integer.valueOf(nodeColumn) == nextStepCol) {
-								routingTables[Integer.valueOf(node.getId())][0][dstNode] = Integer.valueOf(links[Integer
-										.valueOf(node.getLink().get(i).getValue())]
-										.getId());
-								break;
-							}
-						}
-					}
-				}
-			}
-	
-			// Duplicate this routing row to the other routing rows.
-			for (int i = 1; i < nodesNumber; i++) {
-				for (int j = 0; j < nodesNumber; j++) {
-					routingTables[Integer.valueOf(node.getId())][i][j] = routingTables[Integer.valueOf(node.getId())][0][j];
-				}
-			}
-		}
-	}
-
 	/**
 	 * Default constructor
 	 * <p>
@@ -464,248 +192,23 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper implements Mappe
 			double linkBandwidth, boolean buildRoutingTable,
 			LegalTurnSet legalTurnSet, float bufReadEBit, float bufWriteEBit,
 			float switchEBit, float linkEBit, Long seed) throws JAXBException {
-		if (topologyDir == null) {
-			logger.error("Please specify the NoC topology directory! Stopping...");
-			System.exit(0);
-		}
-		if (!topologyDir.isDirectory()) {
-			logger.error("The specified NoC topology directory does not exist or is not a directory! Stopping...");
-			System.exit(0);
-		}
-		this.benchmarkName = benchmarkName;
-		this.ctgId = ctgId;
-		this.apcgId = apcgId;
-		this.topologyName = topologyName;
-		this.topologySize = topologySize;
-		this.topologyDir = topologyDir;
-		this.coresNumber = coresNumber;
-		this.linkBandwidth = linkBandwidth;
-		this.buildRoutingTable = buildRoutingTable;
-		this.legalTurnSet = legalTurnSet;
-		this.bufReadEBit = bufReadEBit;
-		this.bufWriteEBit = bufWriteEBit;
+		
+		super(benchmarkName, ctgId, apcgId, topologyName, topologySize,
+				topologyDir, coresNumber, linkBandwidth, buildRoutingTable,
+				legalTurnSet, bufReadEBit, bufWriteEBit, switchEBit, linkEBit);
+		
 		this.seed = seed;
 
-		initializeNocTopology(switchEBit, linkEBit);
-		initializeCores();
-	}
-	
-	@Override
-	public String getMapperId() {
-		return MAPPER_ID;
-	}
-
-	private void initializeCores() {
-		cores = new Core[coresNumber];
-		for (int i = 0; i < cores.length; i++) {
-			cores[i] = new Core(i, null, -1);
-			cores[i].setFromCommunication(new long[coresNumber]);
-			cores[i].setToCommunication(new long[coresNumber]);
-			cores[i].setFromBandwidthRequirement(new long[coresNumber]);
-			cores[i].setToBandwidthRequirement(new long[coresNumber]);
-		}
-	}
-
-	private List<CommunicationType> getCommunications(CtgType ctg, String sourceTaskId) {
-		logger.assertLog(ctg != null, null);
-		logger.assertLog(sourceTaskId != null, null);
-		
-		List<CommunicationType> communications = new ArrayList<CommunicationType>();
-		List<CommunicationType> communicationTypeList = ctg.getCommunication();
-		for (int i = 0; i < communicationTypeList.size(); i++) {
-			CommunicationType communicationType = communicationTypeList.get(i);
-			if (sourceTaskId.equals(communicationType.getSource().getId())
-					|| sourceTaskId.equals(communicationType.getDestination().getId())) {
-				communications.add(communicationType);
+		nodeNeighbors = new LinkedHashSet[nodes.length];
+		for (int i = 0; i < links.length; i++) {
+			if (nodeNeighbors[Integer.valueOf(links[i].getFirstNode())] == null) {
+				nodeNeighbors[Integer.valueOf(links[i].getFirstNode())] = new LinkedHashSet<Integer>();
 			}
-		}
-		
-		return communications;
-	}
-
-	private String getCoreUid(ApcgType apcg, String sourceTaskId) {
-		logger.assertLog(apcg != null, null);
-		logger.assertLog(sourceTaskId != null, null);
-		
-		String coreUid = null;
-		
-		List<CoreType> cores = apcg.getCore();
-		done: for (int i = 0; i < cores.size(); i++) {
-			List<TaskType> tasks = cores.get(i).getTask();
-			for (int j = 0; j < tasks.size(); j++) {
-				if (sourceTaskId.equals(tasks.get(j).getId())) {
-					coreUid = cores.get(i).getUid();
-					break done;
-				}
+			if (nodeNeighbors[Integer.valueOf(links[i].getSecondNode())] == null) {
+				nodeNeighbors[Integer.valueOf(links[i].getSecondNode())] = new LinkedHashSet<Integer>();
 			}
-		}
-
-		return coreUid;
-	}
-	
-	/**
-	 * Reads the information from the (Application Characterization Graph) APCG
-	 * and its corresponding (Communication Task Graph) CTG. Additionally, it
-	 * informs the algorithm about the application's bandwidth requirement. The
-	 * bandwidth requirements of the application are expressed as a multiple of
-	 * the communication volume. For example, a value of 2 means that each two
-	 * communicating IP cores require a bandwidth twice their communication
-	 * volume.
-	 * 
-	 * @param apcg
-	 *            the APCG XML
-	 * @param ctg
-	 *            the CTG XML
-	 * @param applicationBandwithRequirement
-	 *            the bandwidth requirement of the application
-	 */
-	public void parseApcg(ApcgType apcg, CtgType ctg, int applicationBandwithRequirement) {
-		logger.assertLog(apcg != null, "The APCG cannot be null");
-		logger.assertLog(ctg != null, "The CTG cannot be null");
-		
-		// we use previousCoreCount to shift the cores from each APCG
-		List<CoreType> coreList = apcg.getCore();
-		for (int i = 0; i < coreList.size(); i++) {
-			CoreType coreType = coreList.get(i);
-			List<TaskType> taskList = coreType.getTask();
-			for (int j = 0; j < taskList.size(); j++) {
-				TaskType taskType = taskList.get(j);
-				String taskId = taskType.getId();
-				cores[previousCoreCount + Integer.valueOf(coreType.getUid())].setApcgId(apcg.getId());
-				List<CommunicationType> communications = getCommunications(ctg, taskId);
-				for (int k = 0; k < communications.size(); k++) {
-					CommunicationType communicationType = communications.get(k);
-					String sourceId = communicationType.getSource().getId();
-					String destinationId = communicationType.getDestination().getId();
-					
-					String sourceCoreId = null;
-					String destinationCoreId = null;
-					
-					if (taskId.equals(sourceId)) {
-						sourceCoreId = getCoreUid(apcg, sourceId);
-						destinationCoreId = getCoreUid(apcg, destinationId);
-						cores[previousCoreCount + Integer.valueOf(sourceCoreId)].setCoreId(Integer.valueOf(coreType.getUid()));
-					}
-					if (taskId.equals(destinationId)) {
-						sourceCoreId = getCoreUid(apcg, sourceId);
-						destinationCoreId = getCoreUid(apcg, destinationId);
-						cores[previousCoreCount + Integer.valueOf(destinationCoreId)].setCoreId(Integer.valueOf(coreType.getUid()));
-					}
-					
-					logger.assertLog(sourceCoreId != null, null);
-					logger.assertLog(destinationCoreId != null, null);
-					
-					if (sourceCoreId.equals(destinationCoreId)) {
-						logger.warn("Ignoring communication between tasks "
-								+ sourceId + " and " + destinationId
-								+ " because they are on the same core ("
-								+ sourceCoreId + ")");
-					} else {
-						cores[previousCoreCount + Integer.valueOf(sourceCoreId)]
-								.getToCommunication()[previousCoreCount
-								+ Integer.valueOf(destinationCoreId)] = (long) communicationType
-								.getVolume();
-						cores[previousCoreCount + Integer.valueOf(sourceCoreId)]
-								.getToBandwidthRequirement()[previousCoreCount
-								+ Integer.valueOf(destinationCoreId)] = (long) (applicationBandwithRequirement * communicationType
-								.getVolume());
-						cores[previousCoreCount
-								+ Integer.valueOf(destinationCoreId)]
-								.getFromCommunication()[previousCoreCount
-								+ Integer.valueOf(sourceCoreId)] = (long) communicationType
-								.getVolume();
-						cores[previousCoreCount
-								+ Integer.valueOf(destinationCoreId)]
-								.getFromBandwidthRequirement()[previousCoreCount
-								+ Integer.valueOf(sourceCoreId)] = (long) (applicationBandwithRequirement * communicationType
-								.getVolume());
-					}
-				}
-			}
-		}
-		previousCoreCount += coreList.size();
-	}
-	
-	/**
-	 * Initializes the NoC topology for XML files. These files are split into
-	 * two categories: nodes and links. The nodes are expected to be located
-	 * into the "nodes" subdirectory, and the links into the "links"
-	 * subdirectory.
-	 * 
-	 * @param switchEBit
-	 *            the energy consumed for switching a bit of data
-	 * @param linkEBit
-	 *            the energy consumed for sending a data bit
-	 * @throws JAXBException 
-	 */
-	private void initializeNocTopology(float switchEBit, float linkEBit) throws JAXBException {
-		// initialize nodes
-		File nodesDir = new File(topologyDir, "nodes");
-		logger.assertLog(nodesDir.isDirectory(), nodesDir.getName() + " is not a directory!");
-		File[] nodeXmls = nodesDir.listFiles(new FileFilter() {
-			
-			@Override
-			public boolean accept(File pathname) {
-				return pathname.getName().endsWith(".xml");
-			}
-		});
-		logger.debug("Found " + nodeXmls.length + " nodes");
-		this.nodesNumber = nodeXmls.length;
-		nodes = new NodeType[nodesNumber];
-		nodeNeighbors = new LinkedHashSet[nodesNumber];
-		nodeRows = new Integer[nodesNumber];
-		nodeColumns = new Integer[nodesNumber];
-		try {
-			this.hSize = Integer.valueOf(topologySize.substring(0, topologySize.lastIndexOf("x")));
-		} catch (NumberFormatException e) {
-			logger.fatal("Could not determine the size of the 2D mesh! Stopping...", e);
-			System.exit(0);
-		}
-		for (int i = 0; i < nodeXmls.length; i++) {
-			JAXBContext jaxbContext = JAXBContext
-					.newInstance("ro.ulbsibiu.acaps.noc.xml.node");
-			Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
-			@SuppressWarnings("unchecked")
-			NodeType node = ((JAXBElement<NodeType>) unmarshaller
-					.unmarshal(nodeXmls[i])).getValue();
-			
-			node.setCore(Integer.toString(-1));
-			node.setCost((double)switchEBit);
-			nodes[Integer.valueOf(node.getId())] = node;
-		}
-		// initialize links
-		File linksDir = new File(topologyDir, "links");
-		logger.assertLog(linksDir.isDirectory(), linksDir.getName() + " is not a directory!");
-		File[] linkXmls = linksDir.listFiles(new FileFilter() {
-			
-			@Override
-			public boolean accept(File pathname) {
-				return pathname.getName().endsWith(".xml");
-			}
-		});
-		logger.debug("Found " + linkXmls.length + " links");
-		this.linksNumber = linkXmls.length;
-		links = new LinkType[linksNumber];
-		for (int i = 0; i < linkXmls.length; i++) {
-			JAXBContext jaxbContext = JAXBContext
-					.newInstance("ro.ulbsibiu.acaps.noc.xml.link");
-			Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
-			@SuppressWarnings("unchecked")
-			LinkType link = ((JAXBElement<LinkType>) unmarshaller
-					.unmarshal(linkXmls[i])).getValue();
-			
-			link.setBandwidth(linkBandwidth);
-			link.setCost((double)linkEBit);
-			links[Integer.valueOf(link.getId())] = link;
-			
-			if (nodeNeighbors[Integer.valueOf(link.getFirstNode())] == null) {
-				nodeNeighbors[Integer.valueOf(link.getFirstNode())] = new LinkedHashSet<Integer>();
-			}
-			if (nodeNeighbors[Integer.valueOf(link.getSecondNode())] == null) {
-				nodeNeighbors[Integer.valueOf(link.getSecondNode())] = new LinkedHashSet<Integer>();
-			}
-			nodeNeighbors[Integer.valueOf(link.getFirstNode())].add(Integer.valueOf(link.getSecondNode()));
-			nodeNeighbors[Integer.valueOf(link.getSecondNode())].add(Integer.valueOf(link.getFirstNode()));
+			nodeNeighbors[Integer.valueOf(links[i].getFirstNode())].add(Integer.valueOf(links[i].getSecondNode()));
+			nodeNeighbors[Integer.valueOf(links[i].getSecondNode())].add(Integer.valueOf(links[i].getFirstNode()));
 		}
 		for (int i = 0; i < nodeNeighbors.length; i++) {
 			if (nodeNeighbors[i].size() > maxNodeNeighbors) {
@@ -718,69 +221,11 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper implements Mappe
 			}
 			logger.debug("The maximum nodes a node has is " + maxNodeNeighbors);
 		}
-
-		// for each router generate a routing table provided by the XY routing
-		// protocol
-		routingTables = new int[nodesNumber][nodesNumber][nodesNumber];
-		generateXYRoutingTable();
-
-		generateLinkUsageList();
 	}
-
-	private void generateLinkUsageList() {
-		if (this.buildRoutingTable == true) {
-			linkUsageList = null;
-		} else {
-			// Allocate the space for the link usage table
-			int[][][] linkUsageMatrix = new int[nodesNumber][nodesNumber][linksNumber];
-
-			// Setting up the link usage matrix
-			for (int srcId = 0; srcId < nodesNumber; srcId++) {
-				for (int dstId = 0; dstId < nodesNumber; dstId++) {
-					if (srcId == dstId) {
-						continue;
-					}
-					NodeType currentNode = nodes[srcId];
-					while (Integer.valueOf(currentNode.getId()) != dstId) {
-						int linkId = routingTables[Integer.valueOf(currentNode.getId())][srcId][dstId];
-						LinkType link = links[linkId];
-						linkUsageMatrix[srcId][dstId][linkId] = 1;
-						String node = "-1";
-						// we work with with bidirectional links
-						if (currentNode.getId().equals(link.getFirstNode())) {
-							node = link.getSecondNode();
-						} else {
-							if (currentNode.getId().equals(link.getSecondNode())) {
-								node = link.getFirstNode();
-							}
-						}
-						currentNode = nodes[Integer.valueOf(node)];
-					}
-				}
-			}
-
-			// Now build the link usage list
-			linkUsageList = new ArrayList[nodesNumber][nodesNumber];
-			for (int src = 0; src < nodesNumber; src++) {
-				for (int dst = 0; dst < nodesNumber; dst++) {
-					linkUsageList[src][dst] = new ArrayList<Integer>();
-					if (src == dst) {
-						continue;
-					}
-					for (int linkId = 0; linkId < linksNumber; linkId++) {
-						if (linkUsageMatrix[src][dst][linkId] == 1) {
-							linkUsageList[src][dst].add(linkId);
-						}
-					}
-				}
-			}
-
-			logger.assertLog(this.linkUsageList != null, null);
-			logger.assertLog(linkUsageList.length == nodesNumber, null);
-			for (int i = 0; i < linkUsageList.length; i++) {
-				logger.assertLog(linkUsageList[i].length == nodesNumber, null);
-			}
-		}
+	
+	@Override
+	public String getMapperId() {
+		return MAPPER_ID;
 	}
 
 	private void mapCoresToNocNodesRandomly() {
@@ -790,10 +235,10 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper implements Mappe
 		} else {
 			rand = new Random(seed);
 		}
-		for (int i = 0; i < coresNumber; i++) {
-			int k = Math.abs(rand.nextInt()) % nodesNumber;
+		for (int i = 0; i < cores.length; i++) {
+			int k = Math.abs(rand.nextInt()) % nodes.length;
 			while (Integer.valueOf(nodes[k].getCore()) != -1) {
-				k = Math.abs(rand.nextInt()) % nodesNumber;
+				k = Math.abs(rand.nextInt()) % nodes.length;
 			}
 			cores[i].setNodeId(k);
 			nodes[k].setCore(Integer.toString(i));
@@ -802,45 +247,31 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper implements Mappe
 //		// this maps the cores like NoCMap does
 //		int[] coreMap = new int[] { 11, 13, 10, 8, 12, 0, 9, 1, 2, 4, 14, 15,
 //				5, 3, 7, 6 };
-//		for (int i = 0; i < coresNumber; i++) {
+//		for (int i = 0; i < cores.length; i++) {
 //			cores[i].setNodeId(coreMap[i]);
 //			nodes[coreMap[i]].setCore(Integer.toString(i));
 //		}
 		
 //		// VOPD mapping that leads to optimal mapping when using random swapping
 //		int[] coreMap = new int[] { 14, 3, 9, 15, 4, 13, 5, 1, 6, 0, 8, 7, 2, 12, 11, 10 };
-//		for (int i = 0; i < coresNumber; i++) {
+//		for (int i = 0; i < cores.length; i++) {
 //			cores[i].setNodeId(coreMap[i]);
 //			nodes[coreMap[i]].setCore(Integer.toString(i));
 //		}
 //		
 //		// optimal VOPD mapping
 //		int[] coreMap = new int[] { 14, 13, 15, 11, 10, 1, 0, 4, 8, 12, 9, 5, 7, 6, 2, 3 };
-//		for (int i = 0; i < coresNumber; i++) {
+//		for (int i = 0; i < cores.length; i++) {
 //			cores[i].setNodeId(coreMap[i]);
 //			nodes[coreMap[i]].setCore(Integer.toString(i));
 //		}
 		
 //		// sub-optimal VOPD mapping, only is float is used instead of double (for mapping cost calculation)
 //		int[] coreMap = new int[] { 13, 12, 14, 6, 5, 2, 3, 7, 11, 15, 10, 9, 1, 8, 4, 0 };
-//		for (int i = 0; i < coresNumber; i++) {
+//		for (int i = 0; i < cores.length; i++) {
 //			cores[i].setNodeId(coreMap[i]);
 //			nodes[coreMap[i]].setCore(Integer.toString(i));
 //		}
-	}
-
-	/**
-	 * Prints the current mapping
-	 */
-	protected void printCurrentMapping() {
-		for (int i = 0; i < nodesNumber; i++) {
-			String apcg = "";
-			if (!"-1".equals(nodes[i].getCore())) {
-				apcg = cores[Integer.valueOf(nodes[i].getCore())].getApcgId();
-			}
-			System.out.println("NoC node " + nodes[i].getId() + " has core "
-					+ nodes[i].getCore() + " (APCG " + apcg + ")");
-		}
 	}
 
 	/** seed for the {@link #uniformRandomVariable()} method */
@@ -1050,9 +481,9 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper implements Mappe
 	}
 	
 	public void setNumberOfIterationsPerTemperature() {
-		numberOfIterationsPerTemperature = (nodesNumber * (nodesNumber - 1)) / 2 - ((nodesNumber - coresNumber - 1) * (nodesNumber - coresNumber)) / 2;
-//		numberOfIterationsPerTemperature = coresNumber * (nodesNumber - 1);
-//		numberOfIterationsPerTemperature = nodesNumber - 2; // diameter of the 2D mesh 
+		numberOfIterationsPerTemperature = (nodes.length * (nodes.length - 1)) / 2 - ((nodes.length - cores.length - 1) * (nodes.length - cores.length)) / 2;
+//		numberOfIterationsPerTemperature = cores.length * (nodes.length - 1);
+//		numberOfIterationsPerTemperature = nodes.length - 2; // diameter of the 2D mesh 
 	}
 	
 	public double getInitialTemperature() {
@@ -1087,24 +518,8 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper implements Mappe
 			&& numberOfConsecutiveRejectedMoves >= numberOfIterationsPerTemperature;
 	}
 
-	private void anneal() {
+	protected void doMapping() {
 		double totalDeltaCost;
-
-		if (!buildRoutingTable) {
-			linkBandwidthUsage = new int[linksNumber];
-		} else {
-			synLinkBandwithUsage = new int[hSize][nodes.length / hSize][4];
-			saRoutingTable = new int[hSize][nodes.length / hSize][nodesNumber][nodesNumber];
-			for (int i = 0; i < saRoutingTable.length; i++) {
-				for (int j = 0; j < saRoutingTable[i].length; j++) {
-					for (int k = 0; k < saRoutingTable[i][j].length; k++) {
-						for (int l = 0; l < saRoutingTable[i][j][k].length; l++) {
-							saRoutingTable[i][j][k][l] = -2;
-						}
-					}
-				}
-			}
-		}
 
 		// set up the global control parameters for this annealing run
 		mappingIteration = 0;
@@ -1169,14 +584,14 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper implements Mappe
 	 * @return an array with exactly 2 integers
 	 */
 	private int[] makeRandomSwap() {
-		int node1 = (int) uniformIntegerRandomVariable(0, nodesNumber - 1);
+		int node1 = (int) uniformIntegerRandomVariable(0, nodes.length - 1);
 		int node2 = -1;
 
 		int cnt = 0;
 		while (true) {
 			cnt++;
 			// select two nodes to swap
-			node2 = (int) uniformIntegerRandomVariable(0, nodesNumber - 1);
+			node2 = (int) uniformIntegerRandomVariable(0, nodes.length - 1);
 			if (node1 != node2
 					&& (!"-1".equals(nodes[node1].getCore()) || !"-1"
 							.equals(nodes[node2].getCore()))) {
@@ -1524,614 +939,6 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper implements Mappe
 		}
 	}
 
-	/**
-	 * Calculate the total cost in terms of the sum of the energy consumption
-	 * and the penalty of the link overloading
-	 * 
-	 * @return the total cost
-	 */
-	private double calculateTotalCost() {
-		// the communication energy part
-		double energyCost = calculateCommunicationEnergy();
-		float overloadCost;
-		// now calculate the overloaded BW cost
-		if (!buildRoutingTable) {
-			overloadCost = calculateOverloadWithFixedRouting();
-		} else {
-			overloadCost = calculateOverloadWithAdaptiveRouting();
-		}
-		if (logger.isTraceEnabled()) {
-			logger.trace("energy cost " + energyCost);
-			logger.trace("overload cost " + overloadCost);
-			logger.trace("total cost " + (energyCost + overloadCost));
-		}
-		return energyCost + overloadCost;
-	}
-
-	/**
-	 * Computes the overload of the links when no routing is performed
-	 * 
-	 * @return the overload
-	 */
-	private float calculateOverloadWithFixedRouting() {
-		Arrays.fill(linkBandwidthUsage, 0);
-		for (int proc1 = 0; proc1 < coresNumber; proc1++) {
-			for (int proc2 = proc1 + 1; proc2 < coresNumber; proc2++) {
-				if (cores[proc1].getToBandwidthRequirement()[proc2] > 0) {
-					int node1 = cores[proc1].getNodeId();
-					int node2 = cores[proc2].getNodeId();
-					for (int i = 0; i < linkUsageList[node1][node2].size(); i++) {
-						int linkId = linkUsageList[node1][node2].get(i);
-						linkBandwidthUsage[linkId] += cores[proc1]
-								.getToBandwidthRequirement()[proc2];
-					}
-				}
-				if (cores[proc1].getFromBandwidthRequirement()[proc2] > 0) {
-					int node1 = cores[proc1].getNodeId();
-					int node2 = cores[proc2].getNodeId();
-					for (int i = 0; i < linkUsageList[node1][node2].size(); i++) {
-						int linkId = linkUsageList[node2][node1].get(i);
-						linkBandwidthUsage[linkId] += cores[proc1]
-								.getFromBandwidthRequirement()[proc2];
-					}
-				}
-			}
-		}
-		float overloadCost = 0;
-		for (int i = 0; i < linksNumber; i++) {
-			if (linkBandwidthUsage[i] > links[i].getBandwidth()) {
-				overloadCost = ((float) linkBandwidthUsage[i])
-						/ links[i].getBandwidth().floatValue() - 1.0f;
-			}
-		}
-		overloadCost *= OVERLOAD_UNIT_COST;
-		return overloadCost;
-	}
-
-	/**
-	 * Computes the overload of the links when routing is performed
-	 * 
-	 * @return the overload
-	 */
-	private float calculateOverloadWithAdaptiveRouting() {
-		float overloadCost = 0.0f;
-
-		// Clear the link usage
-		for (int i = 0; i < hSize; i++) {
-			for (int j = 0; j < nodes.length / hSize; j++) {
-				Arrays.fill(synLinkBandwithUsage[i][j], 0);
-			}
-		}
-
-		for (int src = 0; src < coresNumber; src++) {
-			for (int dst = 0; dst < coresNumber; dst++) {
-				int node1 = cores[src].getNodeId();
-				int node2 = cores[dst].getNodeId();
-				if (cores[src].getToBandwidthRequirement()[dst] > 0) {
-					routeTraffic(node1, node2,
-							cores[src].getToBandwidthRequirement()[dst]);
-				}
-			}
-		}
-
-		for (int i = 0; i < hSize; i++) {
-			for (int j = 0; j < nodes.length / hSize; j++) {
-				for (int k = 0; k < 4; k++) {
-					if (synLinkBandwithUsage[i][j][k] > links[0].getBandwidth()) {
-						overloadCost += ((float) synLinkBandwithUsage[i][j][k])
-								/ links[0].getBandwidth() - 1.0;
-					}
-				}
-			}
-		}
-
-		overloadCost *= OVERLOAD_UNIT_COST;
-		return overloadCost;
-	}
-
-	/**
-	 * Routes the traffic. Hence, the routing table is computed here by the
-	 * algorithm.
-	 * 
-	 * @param srcNode
-	 *            the source node
-	 * @param dstNode
-	 *            the destination node
-	 * @param bandwidth
-	 *            the bandwidth
-	 */
-	private void routeTraffic(int srcNode, int dstNode, long bandwidth) {
-		boolean commit = true;
-
-		int srcRow = Integer.valueOf(getNodeTopologyParameter(nodes[srcNode], TopologyParameter.ROW));
-		int srcColumn = Integer.valueOf(getNodeTopologyParameter(nodes[srcNode], TopologyParameter.COLUMN));
-		int dstRow = Integer.valueOf(getNodeTopologyParameter(nodes[dstNode], TopologyParameter.ROW));
-		int dstColumn = Integer.valueOf(getNodeTopologyParameter(nodes[dstNode], TopologyParameter.COLUMN));
-
-		int row = srcRow;
-		int col = srcColumn;
-
-		int direction = -2;
-		while (row != dstRow || col != dstColumn) {
-			// For west-first routing
-			if (LegalTurnSet.WEST_FIRST.equals(legalTurnSet)) {
-				if (col > dstColumn) {
-					// step west
-					direction = WEST;
-				} else {
-					if (col == dstColumn) {
-						direction = (row < dstRow) ? NORTH : SOUTH;
-					} else {
-						if (row == dstRow) {
-							direction = EAST;
-						}
-						else {
-							// Here comes the flexibility. We can choose whether to
-							// go
-							// vertical or horizontal
-							int direction1 = (row < dstRow) ? NORTH : SOUTH;
-							if (synLinkBandwithUsage[row][col][direction1] < synLinkBandwithUsage[row][col][EAST]) {
-								direction = direction1;
-							} else {
-								if (synLinkBandwithUsage[row][col][direction1] > synLinkBandwithUsage[row][col][EAST]) {
-									direction = EAST;
-								} else {
-									// In this case, we select the direction
-									// which has the
-									// longest
-									// distance to the destination
-									if ((dstColumn - col) * (dstColumn - col) <= (dstRow - row)
-											* (dstRow - row)) {
-										direction = direction1;
-									} else {
-										// Horizontal move
-										direction = EAST;
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-			// For odd-even routing
-			else {
-				if (LegalTurnSet.ODD_EVEN.equals(legalTurnSet)) {
-					int e0 = dstColumn - col;
-					int e1 = dstRow - row;
-					if (e0 == 0) {
-						// currently the same column as destination
-						direction = (e1 > 0) ? NORTH : SOUTH;
-					} else {
-						if (e0 > 0) { // eastbound messages
-							if (e1 == 0) {
-								direction = EAST;
-							} else {
-								int direction1 = -1, direction2 = -1;
-								if (col % 2 == 1 || col == srcColumn) {
-									direction1 = (e1 > 0) ? NORTH : SOUTH;
-								}
-								if (dstColumn % 2 == 1 || e0 != 1) {
-									direction2 = EAST;
-								}
-								if (direction1 == -1 && direction2 == -1) {
-									logger.fatal("Error. Exiting...");
-									System.exit(0);
-								}
-								if (direction1 == -1) {
-									direction = direction2;
-								} else {
-									if (direction2 == -1) {
-										direction = direction1;
-									} else {
-										// we have two choices
-										direction = (synLinkBandwithUsage[row][col][direction1] < synLinkBandwithUsage[row][col][direction2]) ? direction1
-												: direction2;
-									}
-								}
-							}
-						} else { // westbound messages
-							if (col % 2 != 0 || e1 == 0) {
-								direction = WEST;
-							} else {
-								int direction1 = (e1 > 0) ? NORTH : SOUTH;
-								direction = (synLinkBandwithUsage[row][col][WEST] < synLinkBandwithUsage[row][col][direction1]) ? WEST
-										: direction1;
-							}
-						}
-					}
-				}
-			}
-			synLinkBandwithUsage[row][col][direction] += bandwidth;
-
-			if (commit) {
-				saRoutingTable[row][col][srcNode][dstNode] = direction;
-			}
-			switch (direction) {
-			case SOUTH:
-				row--;
-				break;
-			case NORTH:
-				row++;
-				break;
-			case EAST:
-				col++;
-				break;
-			case WEST:
-				col--;
-				break;
-			default:
-				logger.error("Error. Unknown direction!");
-				break;
-			}
-		}
-	}
-
-	private void programRouters() {
-		// clean all the old routing table
-		for (int nodeId = 0; nodeId < nodesNumber; nodeId++) {
-			for (int srcNode = 0; srcNode < nodesNumber; srcNode++) {
-				for (int dstNode = 0; dstNode < nodesNumber; dstNode++) {
-					if (nodeId == dstNode) {
-						routingTables[Integer.valueOf(nodes[nodeId].getId())][srcNode][dstNode] = -1;
-					} else {
-						routingTables[Integer.valueOf(nodes[nodeId].getId())][srcNode][dstNode] = -2;
-					}
-				}
-			}
-		}
-
-		for (int row = 0; row < hSize; row++) {
-			for (int col = 0; col < nodes.length / hSize; col++) {
-				int nodeId = row * hSize + col;
-				for (int srcNode = 0; srcNode < nodesNumber; srcNode++) {
-					for (int dstNode = 0; dstNode < nodesNumber; dstNode++) {
-						int linkId = locateLink(row, col,
-								saRoutingTable[row][col][srcNode][dstNode]);
-						if (linkId != -1) {
-							routingTables[Integer.valueOf(nodes[nodeId].getId())][srcNode][dstNode] = linkId;
-						}
-					}
-				}
-			}
-		}
-	}
-
-	/**
-	 * Computes the communication energy
-	 * 
-	 * @return the communication energy
-	 */
-	private double calculateCommunicationEnergy() {
-		double switchEnergy = calculateSwitchEnergy();
-		double linkEnergy = calculateLinkEnergy();
-		double bufferEnergy = calculateBufferEnergy();
-		if (logger.isTraceEnabled()) {
-			logger.trace("switch energy " + switchEnergy);
-			logger.trace("link energy " + linkEnergy);
-			logger.trace("buffer energy " + bufferEnergy);
-		}
-		return switchEnergy + linkEnergy + bufferEnergy;
-	}
-
-	private double calculateSwitchEnergy() {
-		double energy = 0;
-		for (int src = 0; src < nodesNumber; src++) {
-			for (int dst = 0; dst < nodesNumber; dst++) {
-				int srcProc = Integer.valueOf(nodes[src].getCore());
-				int dstProc = Integer.valueOf(nodes[dst].getCore());
-				if (srcProc > -1 && dstProc > -1) {
-					long commVol = cores[srcProc].getToCommunication()[dstProc];
-					if (commVol > 0) {
-						energy += nodes[src].getCost() * commVol;
-						NodeType currentNode = nodes[src];
-						if (logger.isTraceEnabled()) {
-							logger.trace("adding " + currentNode.getCost() + " * "
-									+ commVol + " (core " + srcProc + " to core "
-									+ dstProc + ") current node "
-									+ currentNode.getId());
-						}
-						while (Integer.valueOf(currentNode.getId()) != dst) {
-							int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
-							LinkType link = links[linkId];
-							String node = "-1";
-							// we work with with bidirectional links
-							if (currentNode.getId().equals(link.getFirstNode())) {
-								node = link.getSecondNode();
-							} else {
-								if (currentNode.getId().equals(link.getSecondNode())) {
-									node = link.getFirstNode();
-								}
-							}
-							currentNode = nodes[Integer.valueOf(node)];
-							energy += currentNode.getCost() * commVol;
-							if (logger.isTraceEnabled()) {
-								logger.trace("adding " + currentNode.getCost()
-										+ " * " + commVol + " (core " + srcProc
-										+ " to core " + dstProc + ") current node "
-										+ currentNode.getId() + " link ID "
-										+ linkId);
-							}
-						}
-					}
-				}
-			}
-		}
-		return energy;
-	}
-
-	private double calculateLinkEnergy() {
-		double energy = 0;
-		for (int src = 0; src < nodesNumber; src++) {
-			for (int dst = 0; dst < nodesNumber; dst++) {
-				int srcProc = Integer.valueOf(nodes[src].getCore());
-				int dstProc = Integer.valueOf(nodes[dst].getCore());
-				if (srcProc > -1 && dstProc > -1) {
-					long commVol = cores[srcProc].getToCommunication()[dstProc];
-					if (commVol > 0) {
-						NodeType currentNode = nodes[src];
-						while (Integer.valueOf(currentNode.getId()) != dst) {
-							int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
-							energy += links[linkId].getCost() * commVol;
-							LinkType link = links[linkId];
-							String node = "-1";
-							// we work with with bidirectional links
-							if (currentNode.getId().equals(link.getFirstNode())) {
-								node = link.getSecondNode();
-							} else {
-								if (currentNode.getId().equals(link.getSecondNode())) {
-									node = link.getFirstNode();
-								}
-							}
-							currentNode = nodes[Integer.valueOf(node)];
-						}
-					}
-				}
-			}
-		}
-		return energy;
-	}
-
-	private double calculateBufferEnergy() {
-		double energy = 0;
-		for (int src = 0; src < nodesNumber; src++) {
-			for (int dst = 0; dst < nodesNumber; dst++) {
-				int srcProc = Integer.valueOf(nodes[src].getCore());
-				int dstProc = Integer.valueOf(nodes[dst].getCore());
-				if (srcProc > -1 && dstProc > -1) {
-					long commVol = cores[srcProc].getToCommunication()[dstProc];
-					if (commVol > 0) {
-						NodeType currentNode = nodes[src];
-						while (Integer.valueOf(currentNode.getId()) != dst) {
-							int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
-							energy += (bufReadEBit + bufWriteEBit) * commVol;
-							LinkType link = links[linkId];
-							String node = "-1";
-							// we work with with bidirectional links
-							if (currentNode.getId().equals(link.getFirstNode())) {
-								node = link.getSecondNode();
-							} else {
-								if (currentNode.getId().equals(link.getSecondNode())) {
-									node = link.getFirstNode();
-								}
-							}
-							currentNode = nodes[Integer.valueOf(node)];
-						}
-						energy += bufWriteEBit * commVol;
-					}
-				}
-			}
-		}
-		return energy;
-	}
-
-	/**
-	 * find out the link ID. If the direction is not set, return -1
-	 * 
-	 * @param row
-	 *            the row from the 2D mesh
-	 * @param column
-	 *            the column form the 2D mesh
-	 * @param direction
-	 *            the direction
-	 * @return the link ID
-	 */
-	private int locateLink(int row, int column, int direction) {
-		int origRow = row;
-		int origColumn = column;
-		switch (direction) {
-		case NORTH:
-			row++;
-			break;
-		case SOUTH:
-			row--;
-			break;
-		case EAST:
-			column++;
-			break;
-		case WEST:
-			column--;
-			break;
-		default:
-			return -1;
-		}
-		int linkId;
-		for (linkId = 0; linkId < linksNumber; linkId++) {
-			if (Integer.valueOf(getNodeTopologyParameter(nodes[Integer.valueOf(links[linkId].getFirstNode())], TopologyParameter.ROW)) == origRow
-					&& Integer.valueOf(getNodeTopologyParameter(nodes[Integer.valueOf(links[linkId].getFirstNode())], TopologyParameter.COLUMN)) == origColumn
-					&& Integer.valueOf(getNodeTopologyParameter(nodes[Integer.valueOf(links[linkId].getSecondNode())], TopologyParameter.ROW)) == row
-					&& Integer.valueOf(getNodeTopologyParameter(nodes[Integer.valueOf(links[linkId].getSecondNode())], TopologyParameter.COLUMN)) == column)
-				break;
-			if (Integer.valueOf(getNodeTopologyParameter(nodes[Integer.valueOf(links[linkId].getSecondNode())], TopologyParameter.ROW)) == origRow
-					&& Integer.valueOf(getNodeTopologyParameter(nodes[Integer.valueOf(links[linkId].getSecondNode())], TopologyParameter.COLUMN)) == origColumn
-					&& Integer.valueOf(getNodeTopologyParameter(nodes[Integer.valueOf(links[linkId].getFirstNode())], TopologyParameter.ROW)) == row
-					&& Integer.valueOf(getNodeTopologyParameter(nodes[Integer.valueOf(links[linkId].getFirstNode())], TopologyParameter.COLUMN)) == column)
-				break;
-		}
-		if (linkId == linksNumber) {
-			logger.fatal("Error in locating link");
-			System.exit(-1);
-		}
-		return linkId;
-	}
-
-	private boolean verifyBandwidthRequirement() {
-		generateLinkUsageList();
-
-		int[] usedBandwidth = new int[linksNumber];
-		
-		for (int i = 0; i < linksNumber; i++) {
-			usedBandwidth[i] = 0;
-		}
-
-		for (int src = 0; src < nodesNumber; src++) {
-			for (int dst = 0; dst < nodesNumber; dst++) {
-	            if (src == dst) {
-	                continue;
-	            }
-	            int srcProc = Integer.valueOf(nodes[src].getCore());
-	            int dstProc = Integer.valueOf(nodes[dst].getCore());
-	            if (srcProc > -1 && dstProc > -1) {
-	            	long commLoad = cores[srcProc].getToBandwidthRequirement()[dstProc];
-		            if (commLoad == 0) {
-		                continue;
-		            }
-		            NodeType currentNode = nodes[src];
-		            while (Integer.valueOf(currentNode.getId()) != dst) {
-		                int linkId = routingTables[Integer.valueOf(currentNode.getId())][src][dst];
-		                LinkType link = links[linkId];
-						String node = "-1";
-						// we work with with bidirectional links
-						if (currentNode.getId().equals(link.getFirstNode())) {
-							node = link.getSecondNode();
-						} else {
-							if (currentNode.getId().equals(link.getSecondNode())) {
-								node = link.getFirstNode();
-							}
-						}
-						currentNode = nodes[Integer.valueOf(node)];
-		                usedBandwidth[linkId] += commLoad;
-		            }
-	            }
-	        }
-	    }
-	    //check for the overloaded links
-	    int violations = 0;
-		for (int i = 0; i < linksNumber; i++) {
-	        if (usedBandwidth[i] > links[i].getBandwidth()) {
-	        	System.out.println("Link " + i + " is overloaded: " + usedBandwidth[i] + " > "
-	                 + links[i].getBandwidth());
-	            violations ++;
-	        }
-	    }
-		return violations == 0;
-	}
-	
-	/**
-	 * Performs an analysis of the mapping. It verifies if bandwidth
-	 * requirements are met and computes the link, switch and buffer energy.
-	 * The communication energy is also computed (as a sum of the three energy
-	 * components).
-	 */
-	public void analyzeIt() {
-	    logger.info("Verify the communication load of each link...");
-	    String bandwidthRequirements;
-	    if (verifyBandwidthRequirement()) {
-	    	logger.info("Succes");
-	    	bandwidthRequirements = "Succes";
-	    }
-	    else {
-	    	logger.info("Fail");
-	    	bandwidthRequirements = "Fail";
-	    }
-	    if (logger.isDebugEnabled()) {
-		    logger.debug("Energy consumption estimation ");
-		    logger.debug("(note that this is not exact numbers, but serve as a relative energy indication) ");
-		    logger.debug("Energy consumed in link is " + calculateLinkEnergy());
-		    logger.debug("Energy consumed in switch is " + calculateSwitchEnergy());
-		    logger.debug("Energy consumed in buffer is " + calculateBufferEnergy());
-	    }
-	    double energy = calculateCommunicationEnergy();
-	    logger.info("Total communication energy consumption is " + energy);
-	    
-		MapperDatabase.getInstance().setOutputs(
-				new String[] { "bandwidthRequirements", "energy" },
-				new String[] { bandwidthRequirements, Double.toString(energy) });
-	}
-	
-	private void saveRoutingTables() {
-		if (logger.isInfoEnabled()) {
-			logger.info("Saving the routing tables");
-		}
-		
-		for (int i = 0; i < nodes.length; i++) {
-			int[][] routingEntries = routingTables[Integer.valueOf(nodes[i].getId())];
-			for (int j = 0; j < routingEntries.length; j++) {
-				for (int k = 0; k < routingEntries[j].length; k++) {
-					if (routingEntries[j][k] >= 0) {
-						RoutingTableEntryType routingTableEntry = new RoutingTableEntryType();
-						routingTableEntry.setSource(Integer.toString(j));
-						routingTableEntry.setDestination(Integer.toString(k));
-						routingTableEntry.setLink(Integer.toString(routingEntries[j][k]));
-						nodes[i].getRoutingTableEntry().add(routingTableEntry);
-					}
-				}
-			}
-		}
-	}
-	
-	private void saveTopology() {
-		try {
-			// save the nodes
-			JAXBContext jaxbContext = JAXBContext.newInstance(NodeType.class);
-			Marshaller marshaller = jaxbContext.createMarshaller();
-			marshaller.setProperty("jaxb.formatted.output", Boolean.TRUE);
-			ObjectFactory nodeFactory = new ObjectFactory();
-			for (int i = 0; i < nodes.length; i++) {
-				StringWriter stringWriter = new StringWriter();
-				JAXBElement<NodeType> node = nodeFactory.createNode(nodes[i]);
-				marshaller.marshal(node, stringWriter);	
-				String routing = "";
-				if (buildRoutingTable) {
-					routing = "_routing";
-				}
-				File file = new File(topologyDir + File.separator + "sa" + routing
-						+ File.separator + "nodes");
-				file.mkdirs();
-				PrintWriter pw = new PrintWriter(file + File.separator
-						+ "node-" + i + ".xml");
-				logger.debug("Saving the XML for node " + i);
-				pw.write(stringWriter.toString());
-				pw.close();
-			}
-			// save the links
-			jaxbContext = JAXBContext.newInstance(LinkType.class);
-			marshaller = jaxbContext.createMarshaller();
-			marshaller.setProperty("jaxb.formatted.output", Boolean.TRUE);
-			ro.ulbsibiu.acaps.noc.xml.link.ObjectFactory linkFactory = new ro.ulbsibiu.acaps.noc.xml.link.ObjectFactory();
-			for (int i = 0; i < links.length; i++) {
-				StringWriter stringWriter = new StringWriter();
-				JAXBElement<LinkType> link = linkFactory.createLink(links[i]);
-				marshaller.marshal(link, stringWriter);
-				String routing = "";
-				if (buildRoutingTable) {
-					routing = "_routing";
-				}
-				File file = new File(topologyDir + File.separator + "sa" + routing
-						+ File.separator + "links");
-				file.mkdirs();
-				PrintWriter pw = new PrintWriter(file + File.separator
-						+ "link-" + i + ".xml");
-				logger.debug("Saving the XML for link " + i);
-				pw.write(stringWriter.toString());
-				pw.close();
-			}
-		} catch (JAXBException e) {
-			logger.error("JAXB encountered an error", e);
-		} catch (FileNotFoundException e) {
-			logger.error("File not found", e);
-		}
-	}
-	
 	private void computeCoreToCommunicationPDF() {
 		totalToCommunication = 0;
 		coreToCommunication = new double[cores.length];
@@ -2209,88 +1016,18 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper implements Mappe
 	}
 	
 	@Override
-	public String map() throws TooFewNocNodesException {
-		if (nodesNumber < coresNumber) {
-			throw new TooFewNocNodesException(coresNumber, nodesNumber);
-		}
-
+	protected void doBeforeMapping() {
 		computeCoreNeighbors();
 		computeCoreToCommunicationPDF();
 		computeCoresCommunicationPDF();
 		mapCoresToNocNodesRandomly();
 		printCurrentMapping();
+	}
 
-		if (coresNumber == 1) {
-			logger.info("Optimized Simulated Annealing ( "
-					+ getMapperId()
-					+ " ) will not start for mapping a single core. This core simply mapped randomly.");
-		} else {
-			logger.info("Start mapping...");
-
-			logger.assertLog((coresNumber == ((int) cores.length)), null);
-
-		}
-		Date startDate = new Date();
-		HeapUsageMonitor monitor = new HeapUsageMonitor();
-		monitor.startMonitor();
-		long userStart = TimeUtils.getUserTime();
-		long sysStart = TimeUtils.getSystemTime();
-		long realStart = System.nanoTime();
-		
-		if (coresNumber > 1) {
-			anneal();
-		}
-		
-		long userEnd = TimeUtils.getUserTime();
-		long sysEnd = TimeUtils.getSystemTime();
-		long realEnd = System.nanoTime();
-		monitor.stopMonitor();
-		logger.info("Mapping process finished successfully.");
-		logger.info("Time: " + (realEnd - realStart) / 1e9 + " seconds");
-		logger.info("Memory: " + monitor.getAverageUsedHeap()
-				/ (1024 * 1024 * 1.0) + " MB");
-		
+	@Override
+	protected void doBeforeSavingMapping() {
 		logger.info("Best mapping found at round " + bestSolutionIteration + 
 				", temperature " + bestSolutionTemperature + ", with cost " + bestCost);
-		
-		saveRoutingTables();
-		
-		saveTopology();
-
-		MappingType mapping = new MappingType();
-		mapping.setId(MAPPER_ID);
-		mapping.setRuntime(new Double(realEnd - realStart));
-		for (int i = 0; i < nodes.length; i++) {
-			if (!"-1".equals(nodes[i].getCore())) {
-				MapType map = new MapType();
-				map.setNode(nodes[i].getId());
-				map.setCore(Integer.toString(cores[Integer.parseInt(nodes[i].getCore())].getCoreId()));
-				map.setApcg(cores[Integer.parseInt(nodes[i].getCore())].getApcgId());
-				mapping.getMap().add(map);
-			}
-		}
-		StringWriter stringWriter = new StringWriter();
-		ro.ulbsibiu.acaps.ctg.xml.mapping.ObjectFactory mappingFactory = new ro.ulbsibiu.acaps.ctg.xml.mapping.ObjectFactory();
-		JAXBElement<MappingType> jaxbElement = mappingFactory.createMapping(mapping);
-		try {
-			JAXBContext jaxbContext = JAXBContext.newInstance(MappingType.class);
-			Marshaller marshaller = jaxbContext.createMarshaller();
-			marshaller.setProperty("jaxb.formatted.output", Boolean.TRUE);
-			marshaller.marshal(jaxbElement, stringWriter);
-		} catch (JAXBException e) {
-			logger.error("JAXB encountered an error", e);
-		}
-		
-		int benchmarkId = MapperDatabase.getInstance().getBenchmarkId(benchmarkName, ctgId);
-		int nocTopologyId = MapperDatabase.getInstance().getNocTopologyId(topologyName, topologySize);
-		MapperDatabase.getInstance().saveMapping(getMapperId(),
-				"Optimized Simulated Annealing (" + getMapperId() + ")",
-				benchmarkId, apcgId, nocTopologyId, stringWriter.toString(),
-				startDate, (realEnd - realStart) / 1e9,
-				(userEnd - userStart) / 1e9, (sysEnd - sysStart) / 1e9,
-				monitor.getAverageUsedHeap(), null);
-
-		return stringWriter.toString();
 	}
 
 	private void parseTrafficConfig(String filePath, double linkBandwidth)
