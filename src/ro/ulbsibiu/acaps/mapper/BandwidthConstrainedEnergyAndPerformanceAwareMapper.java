@@ -77,15 +77,15 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 	 */
 	private final float OVERLOAD_UNIT_COST = 1000000000;
 	
-	private static final int NORTH = 0;
+	protected static final int NORTH = 0;
 
-	private static final int SOUTH = 1;
+	protected static final int SOUTH = 1;
 
-	private static final int EAST = 2;
+	protected static final int EAST = 2;
 
-	private static final int WEST = 3;
+	protected static final int WEST = 3;
 	
-	private static enum TopologyParameter {
+	protected static enum TopologyParameter {
 		/** on what row of a 2D mesh the node is located */
 		ROW,
 		/** on what column of a 2D mesh the node is located */
@@ -130,7 +130,7 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 	 * what {@link LegalTurnSet} the SA algorithm should use (this is useful
 	 * only when the routing table is built)
 	 */
-	private LegalTurnSet legalTurnSet;
+	protected LegalTurnSet legalTurnSet;
 	
 	/** the benchmark's name */
 	protected String benchmarkName;
@@ -154,7 +154,7 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 	protected NodeType[] nodes;
 	
 	/** the link bandwidth */
-	private double linkBandwidth;
+	protected double linkBandwidth;
 	
 	/** the communication channels from the NoC */
 	protected ro.ulbsibiu.acaps.noc.xml.link.LinkType[] links;
@@ -165,22 +165,22 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 	 * <tt>nodes.length x nodes.length</tt>. <b>This must be <tt>null</tt> when
 	 * <tt>buildRoutingTable</tt> is <tt>true</tt> </b>
 	 */
-	private List<Integer>[][] linkUsageList = null;
+	protected List<Integer>[][] linkUsageList = null;
 	
 	/**
 	 * per link bandwidth usage (used only when the algorithm doesn't build the
 	 * routing table)
 	 */
-	private int[] linkBandwidthUsage = null;
+	protected int[] linkBandwidthUsage = null;
 
 	/**
 	 * per link bandwidth usage (used only when the algorithm builds the routing
 	 * table)
 	 */
-	private int[][][] synLinkBandwithUsage = null;
+	protected int[][][] synLinkBandwithUsage = null;
 	
 	/** the number of mesh nodes placed horizontally */
-	private int hSize;
+	protected int hSize;
 	
 	/** the processes (tasks, cores) */
 	protected Core[] cores;
@@ -189,10 +189,10 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 	private int previousCoreCount = 0;
 	
 	/** routingTables[nodeId][sourceNode][destinationNode] = link ID */
-	private int[][][] routingTables;
+	protected int[][][] routingTables;
 	
 	/** holds the generated routing table */
-	private int[][][][] generatedRoutingTable = null;
+	protected int[][][][] generatedRoutingTable = null;
 	
 	private Integer[] nodeRows;
 	
@@ -448,7 +448,7 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 		}
 	}
 	
-	private String getNodeTopologyParameter(NodeType node,
+	protected String getNodeTopologyParameter(NodeType node,
 			TopologyParameter parameter) {
 		String value = null;
 		if (TopologyParameter.ROW.equals(parameter)
@@ -1311,9 +1311,7 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 		doBeforeMapping();
 		
 		if (cores.length == 1) {
-			logger.info("Optimized Simulated Annealing ( "
-					+ getMapperId()
-					+ " ) will not start for mapping a single core. This core simply mapped randomly.");
+			logger.info(getMapperId() + " will not start for mapping a single core. This core simply mapped randomly.");
 		} else {
 			logger.info("Start mapping...");
 
@@ -1372,8 +1370,8 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 		
 		int benchmarkId = MapperDatabase.getInstance().getBenchmarkId(benchmarkName, ctgId);
 		int nocTopologyId = MapperDatabase.getInstance().getNocTopologyId(topologyName, topologySize);
-		MapperDatabase.getInstance().saveMapping(getMapperId(),
-				"Optimized Simulated Annealing (" + getMapperId() + ")",
+		// TODO add some mechanism to get a description for the algorithm (and insert it into the database)
+		MapperDatabase.getInstance().saveMapping(getMapperId(), getMapperId(),
 				benchmarkId, apcgId, nocTopologyId, stringWriter.toString(),
 				startDate, (realEnd - realStart) / 1e9,
 				(userEnd - userStart) / 1e9, (sysEnd - sysStart) / 1e9,
