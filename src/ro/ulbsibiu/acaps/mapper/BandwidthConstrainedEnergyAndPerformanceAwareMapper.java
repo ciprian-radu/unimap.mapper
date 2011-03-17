@@ -171,13 +171,13 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 	 * per link bandwidth usage (used only when the algorithm doesn't build the
 	 * routing table)
 	 */
-	protected int[] linkBandwidthUsage = null;
+	private int[] linkBandwidthUsage = null;
 
 	/**
 	 * per link bandwidth usage (used only when the algorithm builds the routing
 	 * table)
 	 */
-	protected int[][][] synLinkBandwithUsage = null;
+	private int[][][] synLinkBandwithUsage = null;
 	
 	/** the number of mesh nodes placed horizontally */
 	protected int hSize;
@@ -192,7 +192,7 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 	protected int[][][] routingTables;
 	
 	/** holds the generated routing table */
-	protected int[][][][] generatedRoutingTable = null;
+	private int[][][][] generatedRoutingTable = null;
 	
 	private Integer[] nodeRows;
 	
@@ -1023,7 +1023,7 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 		}
 	}
 	
-	protected void saveRoutingTables() {
+	private void saveRoutingTables() {
 		if (logger.isInfoEnabled()) {
 			logger.info("Saving the routing tables");
 		}
