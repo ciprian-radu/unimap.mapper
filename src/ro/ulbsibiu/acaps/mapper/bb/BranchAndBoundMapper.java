@@ -22,6 +22,7 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 
+import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
 
 import ro.ulbsibiu.acaps.ctg.xml.apcg.ApcgType;
@@ -851,7 +852,7 @@ public class BranchAndBoundMapper extends BandwidthConstrainedEnergyAndPerforman
 	}
 
 	public static void main(String[] args) throws TooFewNocNodesException,
-			IOException, JAXBException {
+			IOException, JAXBException, ParseException {
 		final int applicationBandwithRequirement = 3; // a multiple of the communication volume
 		final double linkBandwidth = 256E9;
 		final int priorityQueueSize = 2000;

@@ -16,6 +16,7 @@ import java.util.Set;
 
 import javax.xml.bind.JAXBException;
 
+import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
 
 import ro.ulbsibiu.acaps.ctg.xml.apcg.ApcgType;
@@ -1094,7 +1095,7 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 	}
 
 	public static void main(String[] args) throws TooFewNocNodesException,
-			IOException, JAXBException {
+			IOException, JAXBException, ParseException {
 		final int applicationBandwithRequirement = 3; // a multiple of the communication volume
 		final double linkBandwidth = 256E9;
 		final float switchEBit = 0.284f;
