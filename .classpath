@@ -32,6 +32,11 @@
 			<attribute name="javadoc_location" value="jar:platform:/resource/Mapper/lib/commons-pool-1.5.5-javadoc.jar!/"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="lib/commons-cli-1.2.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/Mapper/lib/commons-cli-1.2-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry combineaccessrules="false" kind="src" path="/CTG-XML"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/NoC-XML"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>

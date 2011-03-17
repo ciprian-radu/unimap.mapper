@@ -91,7 +91,7 @@ public class GeneticAlgorithmMapper implements Mapper {
 	private ArrayList<Communication> communications;
 
 	/** counts how many cores were parsed from the parsed APCGs */
-	int previousCoreCount = 0;
+	private int previousCoreCount = 0;
 
 	public GeneticAlgorithmMapper(List<CtgType> ctg, List<ApcgType> apcg,
 			int noOfIpCores, int noOfNodes) {
@@ -228,8 +228,7 @@ public class GeneticAlgorithmMapper implements Mapper {
 			}
 			// calculate the fitness here
 			double fitnessOfIndividual = fitnessCalculation(tempIndividual);
-			population.add(new Individual(noOfNodes, tempIndividual,
-					fitnessOfIndividual));
+			population.add(new Individual(tempIndividual, fitnessOfIndividual));
 
 		}
 	}
@@ -253,10 +252,10 @@ public class GeneticAlgorithmMapper implements Mapper {
 		int child2[] = new int[noOfNodes];
 
 		// copy parents from population
-		parent1 = Arrays.copyOf(population.get(pr1).getGene(),
-				population.get(pr1).getGene().length);
-		parent2 = Arrays.copyOf(population.get(pr2).getGene(),
-				population.get(pr2).getGene().length);
+		parent1 = Arrays.copyOf(population.get(pr1).getGenes(),
+				population.get(pr1).getGenes().length);
+		parent2 = Arrays.copyOf(population.get(pr2).getGenes(),
+				population.get(pr2).getGenes().length);
 
 		Random rm = new Random();
 
@@ -425,10 +424,10 @@ public class GeneticAlgorithmMapper implements Mapper {
 		int child2[] = new int[noOfNodes];
 
 		// copy parents from population
-		parent1 = Arrays.copyOf(population.get(pr1).getGene(),
-				population.get(pr1).getGene().length);
-		parent2 = Arrays.copyOf(population.get(pr2).getGene(),
-				population.get(pr2).getGene().length);
+		parent1 = Arrays.copyOf(population.get(pr1).getGenes(),
+				population.get(pr1).getGenes().length);
+		parent2 = Arrays.copyOf(population.get(pr2).getGenes(),
+				population.get(pr2).getGenes().length);
 
 		if (rm.nextInt(100) <= crossoverPr) {
 
@@ -542,10 +541,10 @@ public class GeneticAlgorithmMapper implements Mapper {
 		int child2[] = new int[noOfNodes];
 
 		// copy parents from population
-		parent1 = Arrays.copyOf(population.get(pr1).getGene(),
-				population.get(pr1).getGene().length);
-		parent2 = Arrays.copyOf(population.get(pr2).getGene(),
-				population.get(pr2).getGene().length);
+		parent1 = Arrays.copyOf(population.get(pr1).getGenes(),
+				population.get(pr1).getGenes().length);
+		parent2 = Arrays.copyOf(population.get(pr2).getGenes(),
+				population.get(pr2).getGenes().length);
 
 		if (rm.nextInt(100) <= crossoverPr) {
 
@@ -686,7 +685,7 @@ public class GeneticAlgorithmMapper implements Mapper {
 	 * @return the fitness of the individual
 	 */
 
-	double fitnessCalculation(int[] indv) {
+	private double fitnessCalculation(int[] indv) {
 
 		// raw fitness of the individual
 		double fitOfIndv = 0.0;
@@ -790,9 +789,9 @@ public class GeneticAlgorithmMapper implements Mapper {
 
 	private void insertCurrentChildrenInTonewPopulation() {
 
-		newPopulation.add(new Individual(noOfNodes, currentChild1,
+		newPopulation.add(new Individual(currentChild1,
 				fitnessCalculation(currentChild1)));
-		newPopulation.add(new Individual(noOfNodes, currentChild2,
+		newPopulation.add(new Individual(currentChild2,
 				fitnessCalculation(currentChild2)));
 
 	}
@@ -976,7 +975,7 @@ public class GeneticAlgorithmMapper implements Mapper {
 			// get the core number in integer and find it within the individual
 			int currentIpCore = cores[i].getCoreNo();
 			for (j = 0; j < this.noOfNodes; j++) {
-				if (currentIpCore == population.get(0).getGene()[j]) {
+				if (currentIpCore == population.get(0).getGenes()[j]) {
 					break;
 				}
 			}
@@ -1011,7 +1010,7 @@ public class GeneticAlgorithmMapper implements Mapper {
 	 * @param apcg
 	 * 
 	 */
-	void parseApcg(ApcgType apcg) {
+	private void parseApcg(ApcgType apcg) {
 		int i;
 		for (i = 0; i < apcg.getCore().size(); i++) {
 			cores[previousCoreCount + i].setApcgId(apcg.getId());
@@ -1031,7 +1030,7 @@ public class GeneticAlgorithmMapper implements Mapper {
 			int j;
 			int currentIpCore = cores[i].getCoreNo();
 			for (j = 0; j < this.noOfNodes; j++) {
-				if (currentIpCore == population.get(i).getGene()[j]) {
+				if (currentIpCore == population.get(i).getGenes()[j]) {
 					break;
 				}
 			}

@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.FilenameFilter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 import javax.xml.bind.JAXBContext;
@@ -12,6 +13,13 @@ import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.PosixParser;
 import org.apache.log4j.Logger;
 
 import ro.ulbsibiu.acaps.ctg.xml.apcg.ApcgType;
@@ -87,21 +95,35 @@ public abstract class MapperInputProcessor {
 	 * @throws JAXBException
 	 * @throws TooFewNocNodesException
 	 * @throws FileNotFoundException
+	 * @throws ParseException
 	 */
-	public void processInput(String[] args) throws JAXBException, TooFewNocNodesException, FileNotFoundException {
+	public void processInput(String[] args) throws JAXBException, TooFewNocNodesException, FileNotFoundException, ParseException {
+		Options options = new Options();
+		options.addOption("b", "benchmarks", true, "the benchmarks file paths");
+		options.addOption("c", "ctg", true, "the file path to the Communication Task Graph");
+		options.addOption("a", "apcg", true, "the file path to the Application Characterization Graph");
+		options.addOption("r", "with-routing", false, "the algorithm generates routes");
+		options.addOption("s", "seed", true, "random generator seed");
+		options.addOption("h", "help", false, "print this message");
+		
+		HelpFormatter formatter = new HelpFormatter();
+		String helpMessage = "java <TheMapper>.class [-b E3S benchmarks] [-c ID] [-a ID] [-r] [-s seed]\n\n"
+				+ "If -b is not used, all E3S benchmarks are considered."
+				+ "Note that the algorithm can do or not routing."
+				+ "The optional seed parameter can be used to control the initial mapping, which is randomly generated."
+				+ "Example 1 (specify the benchmarks & require routing & impose seed): java {TheMapper}.class -b ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff ../CTG-XML/xml/e3s/telecom-mocsyn.tgff -r -s 123456"
+				+ "Example 2 (map the entire E3S benchmark suite): java {TheMapper}.class";
+		
+		CommandLineParser parser = new PosixParser();
+		CommandLine cmd = parser.parse(options, args);
+		
 		if (args == null || args.length < 1) {
-			System.err.println("usage:   java {TheMapper}.class [E3S benchmarks] [--ctg {ID}] [--apcg {ID}] {false|true} [seed]");
-			System.err.println("	     Note that false or true specifies if the algorithm should generate routes (routing may be true or false; any other value means false)");
-			System.err.println("	     The optional seed parameter can be used to control the initial mapping, which is randomly generated");
-			System.err.println("example 1 (specify the tgff file): java {TheMapper}.class ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff ../CTG-XML/xml/e3s/telecom-mocsyn.tgff false 123456");
-			System.err.println("example 2 (map the entire E3S benchmark suite): java {TheMapper}.class false");
+			formatter.printHelp(helpMessage, options);
 		} else {
 			File[] tgffFiles = null;
 			String specifiedCtgId = null;
 			String specifiedApcgId = null;
-			int parsedArgs = 0;
-			if (args.length == 1 
-					|| (args.length == 2 && ("true".equals(args[0]) || "false".equals(args[0])))) {
+			if (!cmd.hasOption("b")) {
 				File e3sDir = new File(".." + File.separator + "CTG-XML"
 						+ File.separator + "xml" + File.separator + "e3s");
 				logger.assertLog(e3sDir.isDirectory(),
@@ -114,39 +136,17 @@ public abstract class MapperInputProcessor {
 					}
 				});
 			} else {
-				List<File> tgffFileList = new ArrayList<File>(args.length - 1);
-				for (parsedArgs = 0; parsedArgs < args.length - 1; parsedArgs++) {
-					if (args[parsedArgs].startsWith("--ctg") || args[parsedArgs].startsWith("--apcg")) {
-						break;
-					}
-					tgffFileList.add(new File(args[parsedArgs]));
+				List<File> tgffFileList = new ArrayList<File>();
+				String[] optionValues = cmd.getOptionValues("b");
+				for (int i = 0; i < optionValues.length; i++) {
+					tgffFileList.add(new File(optionValues[i]));
 				}
 				tgffFiles = tgffFileList.toArray(new File[tgffFileList.size()]);
-				if (args[parsedArgs].startsWith("--ctg")) {
-					logger.assertLog(args.length > parsedArgs + 1,
-							"Expecting CTG ID after --ctg option");
-					specifiedCtgId = args[parsedArgs + 1];
-				} else {
-					if (args[parsedArgs].startsWith("--apcg")) {
-						logger.assertLog(args.length > parsedArgs + 1,
-								"Expecting APCG ID after --ctg option");
-						specifiedApcgId = args[parsedArgs + 1];
-					}
+				if (cmd.hasOption("c")) {
+					specifiedCtgId = cmd.getOptionValue("c");
 				}
-				parsedArgs += 2;
-				if (args.length > parsedArgs + 1) {
-					if (args[parsedArgs].startsWith("--ctg")) {
-						logger.assertLog(args.length > parsedArgs + 1,
-								"Expecting CTG ID after --ctg option");
-						specifiedCtgId = args[parsedArgs + 1];
-					} else {
-						if (args[parsedArgs].startsWith("--apcg")) {
-							logger.assertLog(args.length > parsedArgs + 1,
-									"Expecting APCG ID after --ctg option");
-							specifiedApcgId = args[parsedArgs + 1];
-						}
-					}
-					parsedArgs += 2;
+				if (cmd.hasOption("a")) {
+					specifiedApcgId = cmd.getOptionValue("a");
 				}
 				if (specifiedCtgId != null) {
 					logger.info("Mapping only CTGs with ID " + specifiedCtgId);
@@ -227,17 +227,17 @@ public abstract class MapperInputProcessor {
 								"An equal number of CTGs and APCGs is expected!");
 						
 						Long seed = null;
-						if (parsedArgs + 1 == args.length - 1) {
+						if (cmd.hasOption("s")) {
 							try {
-								seed = new Long(args[parsedArgs + 1]);
+								seed = new Long(cmd.getOptionValue("s"));
 							} catch (NumberFormatException e) {
 								logger.fatal("Seed is not a number! Stoping...", e);
 								System.exit(0);
 							}
 						}
 						useMapper(path, tgffFiles[i].getName(), ctgId, apcgId,
-								ctgTypes, apcgTypes,
-								"true".equals(args[parsedArgs]), seed);
+								ctgTypes, apcgTypes, Boolean.parseBoolean(cmd
+										.getOptionValue("r", "false")), seed);
 						
 						// increment the mapper database run ID after each
 						// mapped CTG, except the last one (no need to do this
