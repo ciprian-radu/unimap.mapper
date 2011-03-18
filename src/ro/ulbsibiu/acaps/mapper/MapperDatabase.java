@@ -4,7 +4,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -17,7 +16,7 @@ import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.log4j.Logger;
 
 /**
- * Singleton that allows connectivity with the MAPPER SQLite database.
+ * Singleton that allows connectivity with the UniMap MySQL database.
  * <p>
  * <b>Note: </b>Any failed database operation leads to stopping the program that
  * uses this class.
@@ -38,6 +37,9 @@ public class MapperDatabase {
 	private static MapperDatabase instance = null;
 
 	private BasicDataSource basicDataSource;
+	
+	/** whether or not the database is used */
+	private boolean use = false;
 	
 	private String url = null;
 
@@ -66,6 +68,10 @@ public class MapperDatabase {
 		Properties properties = new Properties();
 		try {
 			properties.load(new FileInputStream("mysql.properties"));
+			this.use = Boolean.parseBoolean(properties.getProperty("database.use"));
+			if (!use) {
+				logger.warn("The database will not be used (change the 'database.use' property to true if you want to use the database)");
+			}
 			this.url = properties.getProperty("database.url");
 			this.userId = properties.getProperty("database.user");;
 			this.password = properties.getProperty("database.password");
@@ -86,7 +92,7 @@ public class MapperDatabase {
 	 * @param password
 	 *            the password
 	 */
-	public synchronized void connect(String url, String userId, String password) {
+	private synchronized void connect(String url, String userId, String password) {
 		this.url = url;
 		this.userId = userId;
 		this.password = password;
@@ -143,14 +149,20 @@ public class MapperDatabase {
 	}
 
 	/**
-	 * @return the database connection
-	 * @throws SQLException 
+	 * @return the database connection, or <tt>null</tt> if the database is not
+	 *         used
+	 * @throws SQLException
 	 */
-	public synchronized Connection getConnection() throws SQLException {
-		if (basicDataSource == null) {
-			connect(url, userId, password);
+	private synchronized Connection getConnection() throws SQLException {
+		Connection connection = null;
+		if (use) {
+			if (basicDataSource == null) {
+				connect(url, userId, password);
+			}
+			connection = basicDataSource.getConnection();
 		}
-		return basicDataSource.getConnection();
+		
+		return connection;
 	}
 	
 	/**
@@ -186,22 +198,26 @@ public class MapperDatabase {
 		ResultSet resultSet = null;
 		try {
 			connection = getConnection();
-			statement = connection.createStatement();
-			statement
-					.executeUpdate("INSERT INTO RUN SELECT MAX(ID) + 1 FROM RUN", Statement.RETURN_GENERATED_KEYS);
-			resultSet = statement.getGeneratedKeys();
-			while (resultSet.next()) {
-				run = resultSet.getInt(1);
-				logger.debug("Run ID is " + run);
-			}
-			if (resultSet != null) {
-				resultSet.close();
-			}
-			if (statement != null) {
-				statement.close();
-			}
 			if (connection != null) {
-				connection.close();
+				statement = connection.createStatement();
+				statement
+						.executeUpdate("INSERT INTO RUN SELECT MAX(ID) + 1 FROM RUN", Statement.RETURN_GENERATED_KEYS);
+				resultSet = statement.getGeneratedKeys();
+				while (resultSet.next()) {
+					run = resultSet.getInt(1);
+					logger.debug("Run ID is " + run);
+				}
+				if (resultSet != null) {
+					resultSet.close();
+				}
+				if (statement != null) {
+					statement.close();
+				}
+				if (connection != null) {
+					connection.close();
+				}
+			} else {
+				logger.warn("Calling this method is pointless because no database connection is used!");
 			}
 		} catch (SQLException e) {
 			logger.error(e);
@@ -234,7 +250,7 @@ public class MapperDatabase {
 	 *            the CTG ID
 	 * @return the benchmark ID
 	 */
-	public int getBenchmarkId(String benchmarkName, String ctgId) {
+	public Integer getBenchmarkId(String benchmarkName, String ctgId) {
 		Integer id = null;
 
 		Connection connection = null;
@@ -242,37 +258,41 @@ public class MapperDatabase {
 		ResultSet resultSet = null;
 		try {
 			connection = getConnection();
-			statement = connection.createStatement();
-			resultSet = statement
-					.executeQuery("SELECT ID FROM BENCHMARK WHERE NAME = '"
-							+ benchmarkName + "' AND CTG_ID = '" + ctgId + "'");
-			while (resultSet.next()) {
-				if (id != null) {
-					throw new SQLException("Multiple IDs returned");
-				}
-				id = resultSet.getInt(1);
-			}
-			if (id == null) {
-				logger.warn("No ID found. Inserting this benchmark CTG into the database");
-				statement.executeUpdate("INSERT INTO BENCHMARK (NAME, CTG_ID) VALUES ('"
-								+ benchmarkName + "', '" + ctgId + "')", Statement.RETURN_GENERATED_KEYS);
-				resultSet = statement.getGeneratedKeys();
+			if (connection != null) {
+				statement = connection.createStatement();
+				resultSet = statement
+						.executeQuery("SELECT ID FROM BENCHMARK WHERE NAME = '"
+								+ benchmarkName + "' AND CTG_ID = '" + ctgId + "'");
 				while (resultSet.next()) {
 					if (id != null) {
 						throw new SQLException("Multiple IDs returned");
 					}
 					id = resultSet.getInt(1);
 				}
-				logger.assertLog(id != null, "No ID found");
-			}
-			if (resultSet != null) {
-				resultSet.close();
-			}
-			if (statement != null) {
-				statement.close();
-			}
-			if (connection != null) {
-				connection.close();
+				if (id == null) {
+					logger.warn("No ID found. Inserting this benchmark CTG into the database");
+					statement.executeUpdate("INSERT INTO BENCHMARK (NAME, CTG_ID) VALUES ('"
+									+ benchmarkName + "', '" + ctgId + "')", Statement.RETURN_GENERATED_KEYS);
+					resultSet = statement.getGeneratedKeys();
+					while (resultSet.next()) {
+						if (id != null) {
+							throw new SQLException("Multiple IDs returned");
+						}
+						id = resultSet.getInt(1);
+					}
+					logger.assertLog(id != null, "No ID found");
+				}
+				if (resultSet != null) {
+					resultSet.close();
+				}
+				if (statement != null) {
+					statement.close();
+				}
+				if (connection != null) {
+					connection.close();
+				}
+			} else {
+				logger.warn("Calling this method is pointless because no database connection is used!");
 			}
 		} catch (SQLException e) {
 			logger.error(e);
@@ -316,19 +336,23 @@ public class MapperDatabase {
 		Statement statement = null;
 		try {
 			connection = getConnection();
-			statement = connection.createStatement();
-			for (int i = 0; i < parameters.length; i++) {
-				statement
-						.addBatch("INSERT INTO PARAMETER (ID, NAME, VALUE) VALUES ("
-								+ run
-								+ ", '"
-								+ parameters[i]
-								+ "', '"
-								+ values[i] + "')");
-			}
-			statement.executeBatch();
-			if (statement != null) {
-				statement.close();
+			if (connection != null) {
+				statement = connection.createStatement();
+				for (int i = 0; i < parameters.length; i++) {
+					statement
+							.addBatch("INSERT INTO PARAMETER (ID, NAME, VALUE) VALUES ("
+									+ run
+									+ ", '"
+									+ parameters[i]
+									+ "', '"
+									+ values[i] + "')");
+				}
+				statement.executeBatch();
+				if (statement != null) {
+					statement.close();
+				}
+			} else {
+				logger.warn("Calling this method is pointless because no database connection is used!");
 			}
 		} catch (SQLException e) {
 			logger.error(e);
@@ -358,7 +382,7 @@ public class MapperDatabase {
 	 *            the size of the topology
 	 * @return
 	 */
-	public int getNocTopologyId(String topologyName, String topologySize) {
+	public Integer getNocTopologyId(String topologyName, String topologySize) {
 		Integer id = null;
 
 		Connection connection = null;
@@ -366,34 +390,38 @@ public class MapperDatabase {
 		ResultSet resultSet = null;
 		try {
 			connection = getConnection();
-			statement = connection.createStatement();
-			resultSet = statement
-					.executeQuery("SELECT ID FROM NOC_TOPOLOGY WHERE NAME = '"
-							+ topologyName + "' AND SIZE = '" + topologySize
-							+ "'");
-			while (resultSet.next()) {
-				if (id != null) {
-					throw new SQLException("Multiple IDs returned");
-				}
-				id = resultSet.getInt(1);
-			}
-			if (id == null) {
-				logger.warn("No ID found. Inserting this topology into the database");
-				statement
-						.executeUpdate("INSERT INTO NOC_TOPOLOGY (NAME, SIZE) VALUES ('"
-								+ topologyName + "', '" + topologySize + "')");
+			if (connection != null) {
+				statement = connection.createStatement();
 				resultSet = statement
 						.executeQuery("SELECT ID FROM NOC_TOPOLOGY WHERE NAME = '"
-								+ topologyName
-								+ "' AND SIZE = '"
-								+ topologySize + "'");
+								+ topologyName + "' AND SIZE = '" + topologySize
+								+ "'");
 				while (resultSet.next()) {
 					if (id != null) {
 						throw new SQLException("Multiple IDs returned");
 					}
 					id = resultSet.getInt(1);
 				}
-				logger.assertLog(id != null, "No ID found");
+				if (id == null) {
+					logger.warn("No ID found. Inserting this topology into the database");
+					statement
+							.executeUpdate("INSERT INTO NOC_TOPOLOGY (NAME, SIZE) VALUES ('"
+									+ topologyName + "', '" + topologySize + "')");
+					resultSet = statement
+							.executeQuery("SELECT ID FROM NOC_TOPOLOGY WHERE NAME = '"
+									+ topologyName
+									+ "' AND SIZE = '"
+									+ topologySize + "'");
+					while (resultSet.next()) {
+						if (id != null) {
+							throw new SQLException("Multiple IDs returned");
+						}
+						id = resultSet.getInt(1);
+					}
+					logger.assertLog(id != null, "No ID found");
+				}
+			} else {
+				logger.warn("Calling this method is pointless because no database connection is used!");
 			}
 		} catch (SQLException e) {
 			logger.error(e);
@@ -437,18 +465,22 @@ public class MapperDatabase {
 		Statement statement = null;
 		try {
 			connection = getConnection();
-			statement = connection.createStatement();
-			for (int i = 0; i < outputs.length; i++) {
-				statement
-						.addBatch("INSERT INTO OUTPUT (ID, NAME, VALUE) VALUES ("
-								+ run
-								+ ", '"
-								+ outputs[i]
-								+ "', '"
-								+ values[i]
-								+ "')");
+			if (connection != null) {
+				statement = connection.createStatement();
+				for (int i = 0; i < outputs.length; i++) {
+					statement
+							.addBatch("INSERT INTO OUTPUT (ID, NAME, VALUE) VALUES ("
+									+ run
+									+ ", '"
+									+ outputs[i]
+									+ "', '"
+									+ values[i]
+									+ "')");
+				}
+				statement.executeBatch();
+			} else {
+				logger.warn("Calling this method is pointless because no database connection is used!");
 			}
-			statement.executeBatch();
 		} catch (SQLException e) {
 			logger.error(e);
 			System.exit(0);
@@ -468,7 +500,7 @@ public class MapperDatabase {
 	}
 
 	public void saveMapping(String mapperName, String mapperDescription,
-			int benchmarkId, String apcgId, int nocTopologyId,
+			Integer benchmarkId, String apcgId, Integer nocTopologyId,
 			String mappingXml, Date startTime, double realTime,
 			double userTime, double sysTime, double averageHeapMemory,
 			byte[] averageHeapMemoryChart) {
@@ -480,38 +512,42 @@ public class MapperDatabase {
 			String startTimeAsString = sdf.format(startTime);
 
 			connection = getConnection();
-			statement = connection
-					.prepareStatement(
-							"INSERT INTO MAPPER (" +
-							"NAME, " +
-							"DESCRIPTION, " +
-							"BENCHMARK, " +
-							"APCG_ID, " +
-							"NOC_TOPOLOGY, " +
-							"MAPPING_XML, " +
-							"START_DATETIME, " +
-							"REAL_TIME, " +
-							"USER_TIME, " +
-							"SYS_TIME, " +
-							"AVG_HEAP_MEMORY, " +
-							"AVG_HEAP_MEMORY_CHART, " +
-							"RUN" +
-							") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-			statement.setString(1, mapperName);
-			statement.setString(2, mapperDescription);
-			statement.setInt(3, benchmarkId);
-			statement.setString(4, apcgId);
-			statement.setInt(5, nocTopologyId);
-			statement.setString(6, mappingXml);
-			statement.setString(7, startTimeAsString);
-			statement.setDouble(8, realTime);
-			statement.setDouble(9, userTime);
-			statement.setDouble(10, sysTime);
-			statement.setDouble(11, averageHeapMemory);
-			statement.setBytes(12, averageHeapMemoryChart);
-			statement.setInt(13, run);
-			
-			statement.execute();
+			if (connection != null) {
+				statement = connection
+						.prepareStatement(
+								"INSERT INTO MAPPER (" +
+								"NAME, " +
+								"DESCRIPTION, " +
+								"BENCHMARK, " +
+								"APCG_ID, " +
+								"NOC_TOPOLOGY, " +
+								"MAPPING_XML, " +
+								"START_DATETIME, " +
+								"REAL_TIME, " +
+								"USER_TIME, " +
+								"SYS_TIME, " +
+								"AVG_HEAP_MEMORY, " +
+								"AVG_HEAP_MEMORY_CHART, " +
+								"RUN" +
+								") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+				statement.setString(1, mapperName);
+				statement.setString(2, mapperDescription);
+				statement.setInt(3, benchmarkId);
+				statement.setString(4, apcgId);
+				statement.setInt(5, nocTopologyId);
+				statement.setString(6, mappingXml);
+				statement.setString(7, startTimeAsString);
+				statement.setDouble(8, realTime);
+				statement.setDouble(9, userTime);
+				statement.setDouble(10, sysTime);
+				statement.setDouble(11, averageHeapMemory);
+				statement.setBytes(12, averageHeapMemoryChart);
+				statement.setInt(13, run);
+				
+				statement.execute();
+			} else {
+				logger.warn("Calling this method is pointless because no database connection is used!");
+			}
 		} catch (SQLException e) {
 			logger.error(e);
 			System.exit(0);

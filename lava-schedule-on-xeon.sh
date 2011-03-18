@@ -10,7 +10,7 @@ do
 	echo $i $2
 	# we are running only on (Intel XEON) compute nodes 0 and 1
 	# the last parameter (i) is the seed
-	bsub -o job-%J.out.log -e job-%J.err.log -J $1-$i -m "computenode-000 computenode-001" $1 $3 $4 $5 $6 $7 $8 $i
+	bsub -o job-%J.out.log -e job-%J.err.log -J $1-$i -m "computenode-000 computenode-001" $1 $3 $4 $5 $6 $7 $8 -s $i
 done
 
 echo "Job $1 has been submitted $2 times."
