@@ -16,7 +16,10 @@ import java.util.Set;
 
 import javax.xml.bind.JAXBException;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.PosixParser;
 import org.apache.log4j.Logger;
 
 import ro.ulbsibiu.acaps.ctg.xml.apcg.ApcgType;
@@ -53,7 +56,7 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 	private static final Logger logger = Logger
 			.getLogger(OptimizedSimulatedAnnealingWithoutClusteringMapper.class);
 	
-	private static final String MAPPER_ID = "osa_w/o_clustering";
+	private static final String MAPPER_ID = "osa_without_clustering";
 
 	/** the distinct nodes with which each node communicates directly (through a single link) */
 	protected Set<Integer>[] nodeNeighbors;
@@ -77,6 +80,9 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 
 	/** the seed for the random number generator of the initial population */
 	private Long seed;
+	
+	/** how many mappings are evaluated */
+	private long evaluations = 0;
 
 	/**
 	 * how many mapping attempts the algorithm tries per iteration. A mapping
@@ -85,6 +91,9 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 	private int numberOfIterationsPerTemperature;
 	
 	private double temperature;
+	
+	/** the initial temperature */
+	private Double initialTemperature = 1.0;
 
 	/** how many consecutive moves were rejected at a certain temperature level */
 	private int numberOfConsecutiveRejectedMoves;
@@ -140,10 +149,10 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 	public OptimizedSimulatedAnnealingWithoutClusteringMapper(String benchmarkName, String ctgId,
 			String apcgId, String topologyName, String topologySize,
 			File topologyDir, int coresNumber, double linkBandwidth,
-			float switchEBit, float linkEBit, Long seed) throws JAXBException {
+			float switchEBit, float linkEBit, Long seed, Double initialTemperature) throws JAXBException {
 		this(benchmarkName, ctgId, apcgId, topologyName, topologySize,
 				topologyDir, coresNumber, linkBandwidth, false,
-				LegalTurnSet.WEST_FIRST, 1.056f, 2.831f, switchEBit, linkEBit, seed);
+				LegalTurnSet.WEST_FIRST, 1.056f, 2.831f, switchEBit, linkEBit, seed, initialTemperature);
 	}
 
 	/**
@@ -186,18 +195,24 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 	 * @param seed
 	 *            the seed for the random number generator of the initial
 	 *            population (can be null)
+	 * @param initialTemperature
+	 *            the initial temperature (can be null, in which case it is considered to be 1)
 	 * @throws JAXBException
 	 */
 	public OptimizedSimulatedAnnealingWithoutClusteringMapper(String benchmarkName, String ctgId, String apcgId,
 			String topologyName, String topologySize, File topologyDir, int coresNumber,
 			double linkBandwidth, boolean buildRoutingTable,
 			LegalTurnSet legalTurnSet, float bufReadEBit, float bufWriteEBit,
-			float switchEBit, float linkEBit, Long seed) throws JAXBException {
+			float switchEBit, float linkEBit, Long seed, Double initialTemperature) throws JAXBException {
 		
 		super(benchmarkName, ctgId, apcgId, topologyName, topologySize,
 				topologyDir, coresNumber, linkBandwidth, buildRoutingTable,
 				legalTurnSet, bufReadEBit, bufWriteEBit, switchEBit, linkEBit);
 		
+		if (initialTemperature != null) {
+			this.initialTemperature = initialTemperature;
+		}
+		this.temperature = this.initialTemperature;
 		this.seed = seed;
 
 		nodeNeighbors = new LinkedHashSet[nodes.length];
@@ -415,6 +430,7 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 			int node2 = movedNodes[1];
 
 			double newCost = calculateTotalCost();
+			evaluations++;
 
 			double deltaCost = newCost - currentCost;
 			if (logger.isTraceEnabled()) {
@@ -488,11 +504,7 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 	}
 	
 	public double getInitialTemperature() {
-		return 1;
-	}
-	
-	public void setInitialTemperature() {
-		temperature = getInitialTemperature();
+		return initialTemperature;
 	}
 	
 	public double getFinalTemperature() {
@@ -525,11 +537,10 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 		// set up the global control parameters for this annealing run
 		mappingIteration = 0;
 		initialCost = calculateTotalCost();
+		evaluations++;
 		currentCost = initialCost;
 
 		setNumberOfIterationsPerTemperature();
-
-		setInitialTemperature();
 
 		/* here is the temperature cooling loop of the annealer */
 		while(!terminate()) {
@@ -1029,6 +1040,7 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 	protected void doBeforeSavingMapping() {
 		logger.info("Best mapping found at round " + bestSolutionIteration + 
 				", temperature " + bestSolutionTemperature + ", with cost " + bestCost);
+		logger.info("A number of " + evaluations + " mappings were evaluated");
 	}
 
 	private void parseTrafficConfig(String filePath, double linkBandwidth)
@@ -1103,6 +1115,8 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 		final float bufReadEBit = 1.056f;
 		final float bufWriteEBit = 2.831f;
 		
+		final String cliArgs[] = args;
+		
 		MapperInputProcessor mapperInputProcessor = new MapperInputProcessor() {
 			
 			@Override
@@ -1113,7 +1127,7 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 				logger.info("Using an Optimized Simulated Annealing without clustering mapper for "
 						+ benchmarkFilePath + "ctg-" + ctgId + " (APCG " + apcgId + ")");
 				
-				OptimizedSimulatedAnnealingWithoutClusteringMapper saMapper;
+				OptimizedSimulatedAnnealingWithoutClusteringMapper osaMapper;
 				int cores = 0;
 				for (int k = 0; k < apcgTypes.size(); k++) {
 					cores += apcgTypes.get(k).getCore().size();
@@ -1138,6 +1152,19 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 						+ File.separator + topologyName + File.separator
 						+ meshSize;
 				
+				CommandLineParser parser = new PosixParser();
+				Double initialTemperature = null;
+				try {
+					CommandLine cmd = parser.parse(getCliOptions(), cliArgs);
+					initialTemperature = Double.valueOf(cmd.getOptionValue("t", "1.0"));
+				} catch (NumberFormatException e) {
+					logger.fatal(e);
+					System.exit(0);
+				} catch (ParseException e) {
+					logger.fatal(e);
+					System.exit(0);
+				}
+				
 				String[] parameters = new String[] {
 						"applicationBandwithRequirement",
 						"linkBandwidth",
@@ -1146,7 +1173,9 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 						"bufReadEBit",
 						"bufWriteEBit",
 						"routing",
-						"seed"};
+						"seed",
+						"initialTemperature",
+						};
 				String values[] = new String[] {
 						Integer.toString(applicationBandwithRequirement),
 						Double.toString(linkBandwidth),
@@ -1154,45 +1183,47 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 						Float.toString(bufReadEBit),
 						Float.toString(bufWriteEBit),
 						null,
-						seed == null ? null : Long.toString(seed)};
+						seed == null ? null : Long.toString(seed),
+						initialTemperature == null ? null : Double.toString(initialTemperature),
+						};
 				if (doRouting) {
-					values[values.length - 2] = "true";
+					values[values.length - 3] = "true";
 					MapperDatabase.getInstance().setParameters(parameters, values);
 					
-					// SA with routing
-					saMapper = new OptimizedSimulatedAnnealingWithoutClusteringMapper(
+					// OSA with routing
+					osaMapper = new OptimizedSimulatedAnnealingWithoutClusteringMapper(
 							benchmarkName, ctgId, apcgId,
 							topologyName, meshSize, new File(
 									topologyDir), cores, linkBandwidth,
 							true, LegalTurnSet.ODD_EVEN, bufReadEBit,
-							bufWriteEBit, switchEBit, linkEBit, seed);
+							bufWriteEBit, switchEBit, linkEBit, seed, initialTemperature);
 				} else {
-					values[values.length - 2] = "false";
+					values[values.length - 3] = "false";
 					MapperDatabase.getInstance().setParameters(parameters, values);
 					
-					// SA without routing
-					saMapper = new OptimizedSimulatedAnnealingWithoutClusteringMapper(
+					// OSA without routing
+					osaMapper = new OptimizedSimulatedAnnealingWithoutClusteringMapper(
 							benchmarkName, ctgId, apcgId,
 							topologyName, meshSize, new File(
 									topologyDir), cores, linkBandwidth,
-							switchEBit, linkEBit, seed);
+							switchEBit, linkEBit, seed, initialTemperature);
 				}
 	
 	//			// read the input data from a traffic.config file (NoCmap style)
-	//			saMapper(
+	//			osaMapper(
 	//					"telecom-mocsyn-16tile-selectedpe.traffic.config",
 	//					linkBandwidth);
 				
 				for (int k = 0; k < apcgTypes.size(); k++) {
 					// read the input data using the Unified Framework's XML interface
-					saMapper.parseApcg(apcgTypes.get(k), ctgTypes.get(k), applicationBandwithRequirement);
+					osaMapper.parseApcg(apcgTypes.get(k), ctgTypes.get(k), applicationBandwithRequirement);
 				}
 				
 	//			// This is just for checking that bbMapper.parseTrafficConfig(...)
 	//			// and parseApcg(...) have the same effect
-	//			bbMapper.printCores();
+	//			osaMapper.printCores();
 	
-				String mappingXml = saMapper.map();
+				String mappingXml = osaMapper.map();
 				File dir = new File(benchmarkFilePath + "ctg-" + ctgId);
 				dir.mkdirs();
 				String routing = "";
@@ -1201,18 +1232,21 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 				}
 				String mappingXmlFilePath = benchmarkFilePath + "ctg-" + ctgId
 						+ File.separator + "mapping-" + apcgId + "_"
-						+ saMapper.getMapperId() + routing + ".xml";
+						+ osaMapper.getMapperId() + routing + ".xml";
 				PrintWriter pw = new PrintWriter(mappingXmlFilePath);
 				logger.info("Saving the mapping XML file" + mappingXmlFilePath);
 				pw.write(mappingXml);
 				pw.close();
 	
 				logger.info("The generated mapping is:");
-				saMapper.printCurrentMapping();
+				osaMapper.printCurrentMapping();
 				
-				saMapper.analyzeIt();
+				osaMapper.analyzeIt();
 			}
 		};
+		
+		mapperInputProcessor.getCliOptions().addOption("t", "temperature", true, "the initial temperature");
+		
 		mapperInputProcessor.processInput(args);
 	}
 }

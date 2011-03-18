@@ -42,6 +42,9 @@ public abstract class MapperInputProcessor {
 	private static final Logger logger = Logger
 			.getLogger(MapperInputProcessor.class);
 	
+	/** command line interface options */
+	private Options cliOptions;
+	
 	/**
 	 * Default constructor
 	 * 
@@ -49,7 +52,24 @@ public abstract class MapperInputProcessor {
 	 *            command line arguments
 	 */
 	public MapperInputProcessor() {
-		;
+		initCliOptions();
+	}
+	
+	private void initCliOptions() {
+		cliOptions = new Options();
+		cliOptions.addOption("b", "benchmarks", true, "the benchmarks file paths");
+		cliOptions.addOption("c", "ctg", true, "the file path to the Communication Task Graph");
+		cliOptions.addOption("a", "apcg", true, "the file path to the Application Characterization Graph");
+		cliOptions.addOption("r", "with-routing", false, "the algorithm generates routes");
+		cliOptions.addOption("s", "seed", true, "random generator seed");
+		cliOptions.addOption("h", "help", false, "print this message");
+	}
+
+	/**
+	 * @return the command line interface options
+	 */
+	public Options getCliOptions() {
+		return cliOptions;
 	}
 
 	/**
@@ -98,14 +118,6 @@ public abstract class MapperInputProcessor {
 	 * @throws ParseException
 	 */
 	public void processInput(String[] args) throws JAXBException, TooFewNocNodesException, FileNotFoundException, ParseException {
-		Options options = new Options();
-		options.addOption("b", "benchmarks", true, "the benchmarks file paths");
-		options.addOption("c", "ctg", true, "the file path to the Communication Task Graph");
-		options.addOption("a", "apcg", true, "the file path to the Application Characterization Graph");
-		options.addOption("r", "with-routing", false, "the algorithm generates routes");
-		options.addOption("s", "seed", true, "random generator seed");
-		options.addOption("h", "help", false, "print this message");
-		
 		HelpFormatter formatter = new HelpFormatter();
 		String helpMessage = "java <TheMapper>.class [-b E3S benchmarks] [-c ID] [-a ID] [-r] [-s seed]\n\n"
 				+ "If -b is not used, all E3S benchmarks are considered."
@@ -115,10 +127,10 @@ public abstract class MapperInputProcessor {
 				+ "Example 2 (map the entire E3S benchmark suite): java {TheMapper}.class";
 		
 		CommandLineParser parser = new PosixParser();
-		CommandLine cmd = parser.parse(options, args);
+		CommandLine cmd = parser.parse(cliOptions, args);
 		
 		if (args == null || args.length < 1) {
-			formatter.printHelp(helpMessage, options);
+			formatter.printHelp(helpMessage, cliOptions);
 		} else {
 			File[] tgffFiles = null;
 			String specifiedCtgId = null;

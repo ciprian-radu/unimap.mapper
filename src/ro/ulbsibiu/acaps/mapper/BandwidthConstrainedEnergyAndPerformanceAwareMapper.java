@@ -1368,8 +1368,8 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 			logger.error("JAXB encountered an error", e);
 		}
 		
-		int benchmarkId = MapperDatabase.getInstance().getBenchmarkId(benchmarkName, ctgId);
-		int nocTopologyId = MapperDatabase.getInstance().getNocTopologyId(topologyName, topologySize);
+		Integer benchmarkId = MapperDatabase.getInstance().getBenchmarkId(benchmarkName, ctgId);
+		Integer nocTopologyId = MapperDatabase.getInstance().getNocTopologyId(topologyName, topologySize);
 		// TODO add some mechanism to get a description for the algorithm (and insert it into the database)
 		MapperDatabase.getInstance().saveMapping(getMapperId(), getMapperId(),
 				benchmarkId, apcgId, nocTopologyId, stringWriter.toString(),

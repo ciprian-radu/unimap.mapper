@@ -1,6 +1,9 @@
 package ro.ulbsibiu.acaps.mapper.osa;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.PosixParser;
 import org.apache.log4j.Logger;
 
 import java.io.File;
@@ -43,19 +46,19 @@ public class OptimizedSimulatedAnnealingMapper extends
 			String topologySize, File topologyDir, int coresNumber,
 			double linkBandwidth, boolean buildRoutingTable,
 			LegalTurnSet legalTurnSet, float bufReadEBit, float bufWriteEBit,
-			float switchEBit, float linkEBit, Long seed) throws JAXBException {
+			float switchEBit, float linkEBit, Long seed, Double initialTemperature) throws JAXBException {
 		super(benchmarkName, ctgId, apcgId, topologyName, topologySize,
 				topologyDir, coresNumber, linkBandwidth, buildRoutingTable,
-				legalTurnSet, bufReadEBit, bufWriteEBit, switchEBit, linkEBit, seed);
+				legalTurnSet, bufReadEBit, bufWriteEBit, switchEBit, linkEBit, seed, initialTemperature);
 	}
 
 	public OptimizedSimulatedAnnealingMapper(String benchmarkName,
 			String ctgId, String apcgId, String topologyName,
 			String topologySize, File topologyDir, int coresNumber,
-			double linkBandwidth, float switchEBit, float linkEBit, Long seed)
+			double linkBandwidth, float switchEBit, float linkEBit, Long seed, Double initialTemperature)
 			throws JAXBException {
 		super(benchmarkName, ctgId, apcgId, topologyName, topologySize,
-				topologyDir, coresNumber, linkBandwidth, switchEBit, linkEBit, seed);
+				topologyDir, coresNumber, linkBandwidth, switchEBit, linkEBit, seed, initialTemperature);
 	}
 
 	@Override
@@ -194,6 +197,8 @@ public class OptimizedSimulatedAnnealingMapper extends
 		final float bufReadEBit = 1.056f;
 		final float bufWriteEBit = 2.831f;
 		
+		final String cliArgs[] = args;
+		
 		MapperInputProcessor mapperInputProcessor = new MapperInputProcessor() {
 			
 			@Override
@@ -229,6 +234,19 @@ public class OptimizedSimulatedAnnealingMapper extends
 						+ File.separator + topologyName + File.separator
 						+ meshSize;
 				
+				CommandLineParser parser = new PosixParser();
+				Double initialTemperature = null;
+				try {
+					CommandLine cmd = parser.parse(getCliOptions(), cliArgs);
+					initialTemperature = Double.valueOf(cmd.getOptionValue("t", "1.0"));
+				} catch (NumberFormatException e) {
+					logger.fatal(e);
+					System.exit(0);
+				} catch (ParseException e) {
+					logger.fatal(e);
+					System.exit(0);
+				}
+				
 				String[] parameters = new String[] {
 						"applicationBandwithRequirement",
 						"linkBandwidth",
@@ -237,7 +255,9 @@ public class OptimizedSimulatedAnnealingMapper extends
 						"bufReadEBit",
 						"bufWriteEBit",
 						"routing",
-						"seed"};
+						"seed",
+						"initialTemperature",
+						};
 				String values[] = new String[] {
 						Integer.toString(applicationBandwithRequirement),
 						Double.toString(linkBandwidth),
@@ -245,9 +265,11 @@ public class OptimizedSimulatedAnnealingMapper extends
 						Float.toString(bufReadEBit),
 						Float.toString(bufWriteEBit),
 						null,
-						seed == null ? null : Long.toString(seed)};
+						seed == null ? null : Long.toString(seed),
+						initialTemperature == null ? null : Double.toString(initialTemperature),
+						};
 				if (doRouting) {
-					values[values.length - 2] = "true";
+					values[values.length - 3] = "true";
 					MapperDatabase.getInstance().setParameters(parameters, values);
 					
 					// OSA with routing
@@ -256,9 +278,9 @@ public class OptimizedSimulatedAnnealingMapper extends
 							topologyName, meshSize, new File(
 									topologyDir), cores, linkBandwidth,
 							true, LegalTurnSet.ODD_EVEN, bufReadEBit,
-							bufWriteEBit, switchEBit, linkEBit, seed);
+							bufWriteEBit, switchEBit, linkEBit, seed, initialTemperature);
 				} else {
-					values[values.length - 2] = "false";
+					values[values.length - 3] = "false";
 					MapperDatabase.getInstance().setParameters(parameters, values);
 					
 					// OSA without routing
@@ -266,7 +288,7 @@ public class OptimizedSimulatedAnnealingMapper extends
 							benchmarkName, ctgId, apcgId,
 							topologyName, meshSize, new File(
 									topologyDir), cores, linkBandwidth,
-							switchEBit, linkEBit, seed);
+							switchEBit, linkEBit, seed, initialTemperature);
 				}
 		
 		//			// read the input data from a traffic.config file (NoCmap style)
@@ -304,6 +326,9 @@ public class OptimizedSimulatedAnnealingMapper extends
 				osaMapper.analyzeIt();
 			}
 		};
+		
+		mapperInputProcessor.getCliOptions().addOption("t", "temperature", true, "the initial temperature");
+		
 		mapperInputProcessor.processInput(args);
 	}
 

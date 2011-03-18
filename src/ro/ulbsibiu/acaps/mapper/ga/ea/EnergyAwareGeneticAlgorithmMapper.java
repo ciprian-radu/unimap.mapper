@@ -15,21 +15,31 @@ import javax.xml.bind.JAXBException;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.log4j.Logger;
 
 import ro.ulbsibiu.acaps.ctg.xml.apcg.ApcgType;
 import ro.ulbsibiu.acaps.ctg.xml.ctg.CtgType;
-import ro.ulbsibiu.acaps.ctg.xml.mapping.MapType;
 import ro.ulbsibiu.acaps.mapper.BandwidthConstrainedEnergyAndPerformanceAwareMapper;
 import ro.ulbsibiu.acaps.mapper.MapperDatabase;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
+import ro.ulbsibiu.acaps.mapper.ga.GeneticAlgorithmMapper;
 import ro.ulbsibiu.acaps.mapper.ga.GenticAlgorithmInputException;
 import ro.ulbsibiu.acaps.mapper.ga.Individual;
 import ro.ulbsibiu.acaps.mapper.util.MapperInputProcessor;
 
+/**
+ * The Energy Aware Genetic Algorithm (EAGA) combines
+ * {@link GeneticAlgorithmMapper} with
+ * {@link BandwidthConstrainedEnergyAndPerformanceAwareMapper}. Thus, EAGA
+ * generates mappings using a genetic algorithm, it evaluates them in terms of
+ * energy consumption and it can also consider bandwidth constraints.
+ * Additionally,a routing function can be computed.
+ * 
+ * @author cradu
+ * 
+ */
 public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnergyAndPerformanceAwareMapper {
 
 	/**
@@ -39,18 +49,23 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 			.getLogger(EnergyAwareGeneticAlgorithmMapper.class);
 
 	private static final String MAPPER_ID = "eaga";
+	
+	private static final int POPULATION_SIZE = 100;
 
-	private static int populationSize;
+	/** the population size (100 individuals by default) */
+	private int populationSize = POPULATION_SIZE;
 
-	private static int crossoverPr;
+	/** the number of generations */
+	private int generations = 100;
+	
+	/** the crossover probability (%) */
+	private int crossoverProbability = 90;
 
-	private static int mutationPr;
+	/** the mutation probability (%) */
+	private int mutationProbability = 5;
 
-	private static int noOfGenerationToRun;
-
-	private static int percentageOfOldPopuToNewPopu = 20;
-
-	private static int tournamentSize;
+	/** the tournament size */
+	private int tournamentSize;
 
 	private List<Individual> population;
 
@@ -60,10 +75,13 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 	
 	private int[] currentChild2;
 
-	private int currentNoOfGeneration;
+	private int currentGeneration = 1;
 	
 	/** the seed for the random number generator of the initial population */
 	private Long seed;
+	
+	/** how many mappings are evaluated */
+	private long evaluations = 0;
 
 	/**
 	 * Default constructor
@@ -93,14 +111,26 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 	 * @param seed
 	 *            the seed for the random number generator of the initial
 	 *            population
+	 * @param populationSize
+	 *            the population size (if <tt>null</tt>, a default value of 100 will be used)
+	 * @param generations
+	 *            the number of generations (if <tt>null</tt>, a default value of 100 will be used)
+	 * @param crossoverProbability
+	 *            the crossover probability (%) (if <tt>null</tt>, a default value of 90 will be used)
+	 * @param mutationProbability
+	 *            the mutation probability (%) (if <tt>null</tt>, a default value of 5 will be used)
 	 */
-	public EnergyAwareGeneticAlgorithmMapper(String benchmarkName, String ctgId,
-			String apcgId, String topologyName, String topologySize,
-			File topologyDir, int coresNumber, double linkBandwidth,
-			float switchEBit, float linkEBit, Long seed) throws JAXBException {
+	public EnergyAwareGeneticAlgorithmMapper(String benchmarkName,
+			String ctgId, String apcgId, String topologyName,
+			String topologySize, File topologyDir, int coresNumber,
+			double linkBandwidth, float switchEBit, float linkEBit, Long seed,
+			Integer populationSize, Integer generations, Integer crossoverProbability,
+			Integer mutationProbability) throws JAXBException {
 		this(benchmarkName, ctgId, apcgId, topologyName, topologySize,
 				topologyDir, coresNumber, linkBandwidth, false,
-				LegalTurnSet.WEST_FIRST, 1.056f, 2.831f, switchEBit, linkEBit, seed);
+				LegalTurnSet.WEST_FIRST, 1.056f, 2.831f, switchEBit, linkEBit,
+				seed, populationSize, generations, crossoverProbability,
+				mutationProbability);
 	}
 	
 	/**
@@ -143,6 +173,14 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 	 * @param seed
 	 *            the seed for the random number generator of the initial
 	 *            population (can be null)
+	 * @param populationSize
+	 *            the population size (if <tt>null</tt>, a default value of 100 will be used)
+	 * @param generations
+	 *            the number of generations (if <tt>null</tt>, a default value of 100 will be used)
+	 * @param crossoverProbability
+	 *            the crossover probability (%) (if <tt>null</tt>, a default value of 90 will be used)
+	 * @param mutationProbability
+	 *            the mutation probability (%) (if <tt>null</tt>, a default value of 5 will be used) 
 	 * @throws JAXBException
 	 */
 	public EnergyAwareGeneticAlgorithmMapper(String benchmarkName,
@@ -150,15 +188,40 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 			String topologySize, File topologyDir, int coresNumber,
 			double linkBandwidth, boolean buildRoutingTable,
 			LegalTurnSet legalTurnSet, float bufReadEBit, float bufWriteEBit,
-			float switchEBit, float linkEBit, Long seed) throws JAXBException {
+			float switchEBit, float linkEBit, Long seed, Integer populationSize,
+			Integer generations, Integer crossoverProbability, Integer mutationProbability)
+			throws JAXBException {
 		
 		super(benchmarkName, ctgId, apcgId, topologyName, topologySize,
 				topologyDir, coresNumber, linkBandwidth, buildRoutingTable,
 				legalTurnSet, bufReadEBit, bufWriteEBit, switchEBit, linkEBit);
 
-		this.currentNoOfGeneration = 0;
-		this.population = new ArrayList<Individual>(populationSize);
-		this.newPopulation = new ArrayList<Individual>(populationSize);
+		if (populationSize != null) {
+			this.populationSize = populationSize;
+			logger.assertLog(this.populationSize > 0, "The population size must be positive!");
+		}
+		if (generations != null) {
+			this.generations = generations;
+			logger.assertLog(this.generations > 0, "The number of generations must be positive!");
+		}
+		if (crossoverProbability != null) {
+			this.crossoverProbability = crossoverProbability;
+			logger.assertLog(this.crossoverProbability >= 0 && this.crossoverProbability <= 100, "The crossover probability must be a percent!");
+		}
+		if (mutationProbability != null) {
+			this.mutationProbability = mutationProbability;
+			logger.assertLog(this.mutationProbability >= 0 && this.mutationProbability <= 100, "The mutation probability must be a percent!");
+		}
+		this.tournamentSize = (this.populationSize * 10) / 100;
+		
+		logger.info("Working with a population of " + this.populationSize + " individuals");
+		logger.info("Creating " + this.generations + " generations of individuals");
+		logger.info("Crossover probability is set to " + this.crossoverProbability + " %");
+		logger.info("Mutation probability is set to " + this.mutationProbability + " %");
+		logger.info("Tournament size is " + this.tournamentSize + " (10% of population size)");
+		
+		this.population = new ArrayList<Individual>(this.populationSize);
+		this.newPopulation = new ArrayList<Individual>(this.populationSize);
 		this.currentChild1 = new int[nodes.length];
 		this.currentChild2 = new int[nodes.length];
 		this.seed = seed;
@@ -230,7 +293,7 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 			rand = new Random(seed);
 		};
 
-		if (rand.nextInt(100) <= crossoverPr) {
+		if (rand.nextInt(100) <= crossoverProbability) {
 			for (int i = 0; i < child1.length; i++) {
 				child1[i] = child2[i] = -1;
 			}
@@ -369,226 +432,226 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 
 	}
 
-	/**
-	 * do Cut and crossfill crossover between two parent
-	 * 
-	 * @param pr1
-	 *            position of the parent # 1 in the population
-	 * @param pr2
-	 *            position of the parent # 2 in the population
-	 */
-	private void doCutAndCrossfillCrossoverV1(int pr1, int pr2) {
-		Random rand;
-		if (seed == null) {
-			rand = new Random();
-		} else {
-			rand = new Random(seed);
-		}
+//	/**
+//	 * do Cut and crossfill crossover between two parent
+//	 * 
+//	 * @param pr1
+//	 *            position of the parent # 1 in the population
+//	 * @param pr2
+//	 *            position of the parent # 2 in the population
+//	 */
+//	private void doCutAndCrossfillCrossoverV1(int pr1, int pr2) {
+//		Random rand;
+//		if (seed == null) {
+//			rand = new Random();
+//		} else {
+//			rand = new Random(seed);
+//		}
+//
+//		// two parents that is used for crossover
+//		int parent1[] = new int[nodes.length];
+//		int parent2[] = new int[nodes.length];
+//
+//		// two children that is created after crossover
+//		int child1[] = new int[nodes.length];
+//		int child2[] = new int[nodes.length];
+//
+//		// copy parents from population
+//		parent1 = Arrays.copyOf(population.get(pr1).getGenes(),
+//				population.get(pr1).getGenes().length);
+//		parent2 = Arrays.copyOf(population.get(pr2).getGenes(),
+//				population.get(pr2).getGenes().length);
+//
+//		if (rand.nextInt(100) <= crossoverProbability) {
+//
+//			int cr_point;
+//			// find a crossover point within 1 to noOfNodes-1
+//			do {
+//				cr_point = rand.nextInt(nodes.length - 1);
+//			} while (cr_point == 0);
+//
+//			// copy first part from parent
+//			for (int i = 0; i < cr_point; i++) {
+//				child1[i] = parent1[i];
+//				child2[i] = parent2[i];
+//			}
+//
+//			// copy next part in the same order skipping values already in the
+//			// child
+//			int in_ch1, in_ch2;
+//			in_ch1 = in_ch2 = cr_point;
+//			boolean track_ch1, track_ch2;
+//			for (int i = cr_point; i < nodes.length; i++) {
+//				// for parent1
+//				track_ch2 = true;
+//				int temp = parent1[i];
+//				for (int j = 0; j < cr_point; j++) {
+//					if (temp == child2[j]) {
+//						track_ch2 = false;
+//						break;
+//
+//					}
+//				}
+//				if (track_ch2) {
+//					child2[in_ch2++] = temp;
+//				}
+//
+//				// for parent2
+//				track_ch1 = true;
+//				int temp2 = parent2[i];
+//				for (int j = 0; j < cr_point; j++) {
+//					if (temp2 == child1[j]) {
+//						track_ch1 = false;
+//						break;
+//					}
+//				}
+//				if (track_ch1) {
+//					child1[in_ch1++] = temp2;
+//
+//				}
+//			}
+//
+//			// copy last part from parent to child
+//			// for child 1 -> copy from parent2
+//			boolean track = true;
+//			for (int i = in_ch1; i < nodes.length; i++) {
+//				for (int j = 0; j < cr_point; j++) {
+//					track = true;
+//					int temp = parent2[j];
+//					for (int z = 0; z < i; z++) {
+//						if (temp == child1[z]) {
+//							track = false;
+//							break;
+//						}
+//					}
+//					if (track) {
+//						child1[i] = temp;
+//						break;
+//					}
+//				}
+//			}
+//
+//			// for child2-> copy from parent 1
+//			track = true;
+//			for (int i = in_ch2; i < nodes.length; i++) {
+//				for (int j = 0; j < cr_point; j++) {
+//					track = true;
+//					int temp = parent1[j];
+//					for (int z = 0; z < i; z++) {
+//						if (temp == child2[z]) {
+//							track = false;
+//							break;
+//						}
+//					}
+//					if (track) {
+//						child2[i] = temp;
+//						break;
+//					}
+//				}
+//			}
+//			currentChild1 = child1;
+//			currentChild2 = child2;
+//		}
+//		// the random number is greater that crossoverPr
+//		else {
+//			currentChild1 = parent1;
+//			currentChild2 = parent2;
+//
+//		}
+//
+//	}
 
-		// two parents that is used for crossover
-		int parent1[] = new int[nodes.length];
-		int parent2[] = new int[nodes.length];
-
-		// two children that is created after crossover
-		int child1[] = new int[nodes.length];
-		int child2[] = new int[nodes.length];
-
-		// copy parents from population
-		parent1 = Arrays.copyOf(population.get(pr1).getGenes(),
-				population.get(pr1).getGenes().length);
-		parent2 = Arrays.copyOf(population.get(pr2).getGenes(),
-				population.get(pr2).getGenes().length);
-
-		if (rand.nextInt(100) <= crossoverPr) {
-
-			int cr_point;
-			// find a crossover point within 1 to noOfNodes-1
-			do {
-				cr_point = rand.nextInt(nodes.length - 1);
-			} while (cr_point == 0);
-
-			// copy first part from parent
-			for (int i = 0; i < cr_point; i++) {
-				child1[i] = parent1[i];
-				child2[i] = parent2[i];
-			}
-
-			// copy next part in the same order skipping values already in the
-			// child
-			int in_ch1, in_ch2;
-			in_ch1 = in_ch2 = cr_point;
-			boolean track_ch1, track_ch2;
-			for (int i = cr_point; i < nodes.length; i++) {
-				// for parent1
-				track_ch2 = true;
-				int temp = parent1[i];
-				for (int j = 0; j < cr_point; j++) {
-					if (temp == child2[j]) {
-						track_ch2 = false;
-						break;
-
-					}
-				}
-				if (track_ch2) {
-					child2[in_ch2++] = temp;
-				}
-
-				// for parent2
-				track_ch1 = true;
-				int temp2 = parent2[i];
-				for (int j = 0; j < cr_point; j++) {
-					if (temp2 == child1[j]) {
-						track_ch1 = false;
-						break;
-					}
-				}
-				if (track_ch1) {
-					child1[in_ch1++] = temp2;
-
-				}
-			}
-
-			// copy last part from parent to child
-			// for child 1 -> copy from parent2
-			boolean track = true;
-			for (int i = in_ch1; i < nodes.length; i++) {
-				for (int j = 0; j < cr_point; j++) {
-					track = true;
-					int temp = parent2[j];
-					for (int z = 0; z < i; z++) {
-						if (temp == child1[z]) {
-							track = false;
-							break;
-						}
-					}
-					if (track) {
-						child1[i] = temp;
-						break;
-					}
-				}
-			}
-
-			// for child2-> copy from parent 1
-			track = true;
-			for (int i = in_ch2; i < nodes.length; i++) {
-				for (int j = 0; j < cr_point; j++) {
-					track = true;
-					int temp = parent1[j];
-					for (int z = 0; z < i; z++) {
-						if (temp == child2[z]) {
-							track = false;
-							break;
-						}
-					}
-					if (track) {
-						child2[i] = temp;
-						break;
-					}
-				}
-			}
-			currentChild1 = child1;
-			currentChild2 = child2;
-		}
-		// the random number is greater that crossoverPr
-		else {
-			currentChild1 = parent1;
-			currentChild2 = parent2;
-
-		}
-
-	}
-
-	private void doCutAndCrossfillCrossoverV2(int pr1, int pr2) {
-		Random rand;
-		if (seed == null) {
-			rand = new Random();
-		} else {
-			rand = new Random(seed);
-		}
-
-		// two parents that is used for crossover
-		int parent1[] = new int[nodes.length];
-		int parent2[] = new int[nodes.length];
-
-		// two children that is created after crossover
-		int child1[] = new int[nodes.length];
-		int child2[] = new int[nodes.length];
-
-		// copy parents from population
-		parent1 = Arrays.copyOf(population.get(pr1).getGenes(),
-				population.get(pr1).getGenes().length);
-		parent2 = Arrays.copyOf(population.get(pr2).getGenes(),
-				population.get(pr2).getGenes().length);
-
-		if (rand.nextInt(100) <= crossoverPr) {
-
-			int crPoint;
-			// find a crossover point within 1 to noOfNodes-1
-			do {
-				crPoint = rand.nextInt(nodes.length - 1);
-			} while (crPoint == 0);
-
-			// copy first part from parent
-			for (int i = 0; i < crPoint; i++) {
-				child1[i] = parent1[i];
-				child2[i] = parent2[i];
-			}
-
-			// copy next part in the same order skipping values already in the
-			// child
-			int indexChild1 = crPoint;
-			boolean trackChild1;
-			for (int i = 0; i < nodes.length; i++) {
-				// for parent1
-				trackChild1 = true;
-				int temp = parent2[i];
-				for (int j = 0; j < crPoint; j++) {
-					if (temp == child1[j]) {
-						trackChild1 = false;
-						break;
-
-					}
-				}
-				if (trackChild1) {
-					child1[indexChild1++] = temp;
-				}
-			}
-
-			// for child2
-			int indexChild2 = crPoint;
-			boolean trackChild2;
-			for (int i = 0; i < nodes.length; i++) {
-				// for parent1
-				trackChild2 = true;
-				int temp = parent1[i];
-				for (int j = 0; j < crPoint; j++) {
-					if (temp == child2[j]) {
-						trackChild2 = false;
-						break;
-
-					}
-				}
-				if (trackChild2) {
-					child2[indexChild2++] = temp;
-				}
-			}
-			currentChild1 = child1;
-			currentChild2 = child2;
-
-		} else {
-			currentChild1 = parent1;
-			currentChild2 = parent2;
-		}
-	}
+//	private void doCutAndCrossfillCrossoverV2(int pr1, int pr2) {
+//		Random rand;
+//		if (seed == null) {
+//			rand = new Random();
+//		} else {
+//			rand = new Random(seed);
+//		}
+//
+//		// two parents that is used for crossover
+//		int parent1[] = new int[nodes.length];
+//		int parent2[] = new int[nodes.length];
+//
+//		// two children that is created after crossover
+//		int child1[] = new int[nodes.length];
+//		int child2[] = new int[nodes.length];
+//
+//		// copy parents from population
+//		parent1 = Arrays.copyOf(population.get(pr1).getGenes(),
+//				population.get(pr1).getGenes().length);
+//		parent2 = Arrays.copyOf(population.get(pr2).getGenes(),
+//				population.get(pr2).getGenes().length);
+//
+//		if (rand.nextInt(100) <= crossoverProbability) {
+//
+//			int crPoint;
+//			// find a crossover point within 1 to noOfNodes-1
+//			do {
+//				crPoint = rand.nextInt(nodes.length - 1);
+//			} while (crPoint == 0);
+//
+//			// copy first part from parent
+//			for (int i = 0; i < crPoint; i++) {
+//				child1[i] = parent1[i];
+//				child2[i] = parent2[i];
+//			}
+//
+//			// copy next part in the same order skipping values already in the
+//			// child
+//			int indexChild1 = crPoint;
+//			boolean trackChild1;
+//			for (int i = 0; i < nodes.length; i++) {
+//				// for parent1
+//				trackChild1 = true;
+//				int temp = parent2[i];
+//				for (int j = 0; j < crPoint; j++) {
+//					if (temp == child1[j]) {
+//						trackChild1 = false;
+//						break;
+//
+//					}
+//				}
+//				if (trackChild1) {
+//					child1[indexChild1++] = temp;
+//				}
+//			}
+//
+//			// for child2
+//			int indexChild2 = crPoint;
+//			boolean trackChild2;
+//			for (int i = 0; i < nodes.length; i++) {
+//				// for parent1
+//				trackChild2 = true;
+//				int temp = parent1[i];
+//				for (int j = 0; j < crPoint; j++) {
+//					if (temp == child2[j]) {
+//						trackChild2 = false;
+//						break;
+//
+//					}
+//				}
+//				if (trackChild2) {
+//					child2[indexChild2++] = temp;
+//				}
+//			}
+//			currentChild1 = child1;
+//			currentChild2 = child2;
+//
+//		} else {
+//			currentChild1 = parent1;
+//			currentChild2 = parent2;
+//		}
+//	}
 
 	/**
 	 * this function do mutation of the two current children -> currentChild1
 	 * and currentChild2. Here we use only swapping two randomly selected number
 	 * in the array
 	 **/
-	private void doMutationv1() {
+	private void doMutation(int[] individual) {
 		if (logger.isDebugEnabled()) {
-			logger.debug("Applying swapping based mutation for the two individuals obtains through the previous crossover");
+			logger.debug("Applying swapping based mutation for individual " + Arrays.toString(individual));
 		}
 		
 		Random rand;
@@ -598,71 +661,33 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 			rand = new Random(seed);
 		}
 
-		int pos1Forchild1, pos2Forchild1, pos1Forchild2, pos2Forchild2, temp;
-
-		pos1Forchild1 = rand.nextInt(nodes.length);
-		pos2Forchild1 = rand.nextInt(nodes.length);
-
-		pos1Forchild2 = rand.nextInt(nodes.length);
-		pos2Forchild2 = rand.nextInt(nodes.length);
-
-		if (rand.nextInt(100) <= mutationPr) {
-			temp = currentChild1[pos1Forchild1];
-			currentChild1[pos1Forchild1] = currentChild1[pos2Forchild1];
-			currentChild1[pos2Forchild1] = temp;
-			if (logger.isDebugEnabled()) {
-				logger.debug("First individual mutated to " + Arrays.toString(currentChild1));
+		boolean mutationOccured = false;
+		for (int i = 0; i < individual.length; i++) {
+			int position = rand.nextInt(nodes.length);
+			if (rand.nextInt(100) <= mutationProbability) {
+				int temp = individual[i];
+				individual[i] = individual[position];
+				individual[position] = temp;
+				if (i != position) {
+					mutationOccured = true;
+					if (logger.isTraceEnabled()) {
+						logger.trace("Individual mutated gene number " + i + ", by swapping it with gene number " + position);
+					}
+				}
 			}
 		}
-		if (rand.nextInt(100) <= mutationPr) {
-			temp = currentChild2[pos1Forchild2];
-			currentChild2[pos1Forchild2] = currentChild2[pos2Forchild2];
-			currentChild2[pos2Forchild2] = temp;
+		
+		if (mutationOccured) {
 			if (logger.isDebugEnabled()) {
-				logger.debug("Second individual mutated to " + Arrays.toString(currentChild2));
+				logger.debug("Individual mutated to " + Arrays.toString(individual));
+			}
+		} else {
+			if (logger.isDebugEnabled()) {
+				logger.debug("Individual did not suffer any mutation");
 			}
 		}
+
 	}
-
-	/**
-	 * this method is used to swap two cores but within two one must be used in
-	 * current apcg
-	 **/
-	/*
-	 * private void doMutationv2() {
-	 * 
-	 * Random rm = new Random(); int pos1, pos2, temp;
-	 * 
-	 * if(Math.abs(rm.nextInt()) % 100 <= mutationPr){
-	 * 
-	 * boolean track = true; do { pos1 = Math.abs(rm.nextInt()) % noOfNodes;
-	 * //we try to find a position where we have a core that is in apcg for(int
-	 * i = 0; i < this.currentApcg.getCore().size(); i++)
-	 * if(this.currentApcg.getCore
-	 * ().get(i).getUid().equals(""+currentChild1[pos1])) { track = false;
-	 * break; } }while(track); pos2 = Math.abs(rm.nextInt()) % noOfNodes; temp =
-	 * currentChild1[pos1]; currentChild1[pos1] = currentChild1[pos2];
-	 * currentChild1[pos2] = temp;
-	 * 
-	 * }
-	 * 
-	 * if(Math.abs(rm.nextInt()) % 100 <= mutationPr) { boolean track = true; do
-	 * { pos1 = Math.abs(rm.nextInt()) % noOfNodes; //we try to find a position
-	 * where we have a core that is in apcg for(int i = 0; i <
-	 * this.currentApcg.getCore().size(); i++)
-	 * if(this.currentApcg.getCore().get(
-	 * i).getUid().equals(""+currentChild2[pos1])) { track = false; break; }
-	 * 
-	 * }while(track); pos2 = Math.abs(rm.nextInt()) % noOfNodes; temp =
-	 * currentChild2[pos1]; currentChild2[pos1] = currentChild2[pos2];
-	 * currentChild2[pos2]=temp;
-	 * 
-	 * }
-	 * 
-	 * 
-	 * 
-	 * }
-	 */
 
 	/**
 	 * @param individual
@@ -688,6 +713,8 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 			logger.debug("Computed a fitness of " + fitness + " for individual " + Arrays.toString(individual));
 		}
 		
+		evaluations++;
+		
 		return fitness;
 	}
 
@@ -697,7 +724,6 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 	 * 
 	 * This function is called each time after crossover and mutation have done.
 	 **/
-
 	private void insertCurrentChildrenIntoNewPopulation() {
 		if (logger.isDebugEnabled()) {
 			logger.debug("Inserting the two children into the new population");
@@ -772,7 +798,7 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 		return posOfParent;
 	}
 
-	private void createPopulationElitismV2() {
+	private void createPopulationElitism() {
 		if (logger.isDebugEnabled()) {
 			logger.debug("Applying ellitism to the population");
 		}
@@ -838,7 +864,7 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 
 		doInitPopulation();
 
-		while (currentNoOfGeneration < noOfGenerationToRun) {
+		while (currentGeneration < generations) {
 			// clear new population
 			newPopulation.clear();
 
@@ -847,18 +873,20 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 				posOfParent2 = tournamentSelection(tournamentSize);
 
 				doPositionBasedCrossOver(posOfParent1, posOfParent2);
-				doMutationv1();
+				
+				doMutation(currentChild1);
+				doMutation(currentChild2);
 				// doMutationv2();
 
 				insertCurrentChildrenIntoNewPopulation();
 			}
 
-			createPopulationElitismV2();
+			createPopulationElitism();
 
-			if (currentNoOfGeneration > 0 && currentNoOfGeneration % 10 == 0) {
-				logger.info("Finished " + currentNoOfGeneration + " generations");
+			if (currentGeneration > 0 && currentGeneration % 10 == 0) {
+				logger.info("Finished " + currentGeneration + " generations");
 			}
-			currentNoOfGeneration++;
+			currentGeneration++;
 		}
 
 	}
@@ -899,7 +927,7 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 
 	@Override
 	protected void doBeforeSavingMapping() {
-		;
+		logger.info("A number of " + evaluations + " mappings were evaluated");
 	}
 
 	public static void main(String args[]) throws TooFewNocNodesException,
@@ -911,32 +939,7 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 		final float bufReadEBit = 1.056f;
 		final float bufWriteEBit = 2.831f;
 		
-		final int defaultPopulationSize = 100;
-		final int defaultNoOfGeneration = 50;
-		final int defaultCrossoverPr = 85;
-		final int defaultMutationPr = 5;
-		
-		// FIXME make these parameters
-		populationSize = defaultPopulationSize;
-		noOfGenerationToRun = defaultNoOfGeneration;
-		crossoverPr = defaultCrossoverPr;
-		mutationPr = defaultMutationPr;
-		
-//		Options options = new Options();
-//		options.addOption("p", "population-size", true, "the population size");
-//		options.addOption("g", "generations", true, "the number of generations");
-//		options.addOption("x", "crossover-probability", true, "crossover probability (%)");
-//		options.addOption("m", "mutation-probability", true, "mutation probability (%)");
-//		
-//		CommandLineParser parser = new PosixParser();
-//		CommandLine cmd = parser.parse(options, args, true);
-//		
-//		populationSize = Integer.valueOf(cmd.getOptionValue("p", Integer.toString(defaultPopulationSize)));
-//		noOfGenerationToRun = Integer.valueOf(cmd.getOptionValue("g", Integer.toString(defaultNoOfGeneration)));
-//		crossoverPr = Integer.valueOf(cmd.getOptionValue("x", Integer.toString(defaultCrossoverPr)));
-//		mutationPr = Integer.valueOf(cmd.getOptionValue("m", Integer.toString(defaultMutationPr)));
-		// here 20 percent of the total population size is used as tournament size
-		tournamentSize = (populationSize * 20) / 100;
+		final String cliArgs[] = args; 
 		
 		MapperInputProcessor mapperInputProcessor = new MapperInputProcessor() {
 			
@@ -956,11 +959,14 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 				int hSize = (int) Math.ceil(Math.sqrt(cores));
 				hSize = Math.max(2, hSize); // using at least a 2x2 2D mesh
 				String meshSize;
+				int nodes;
 				// we allow rectangular 2D meshes as well
 				if (hSize * (hSize - 1) >= cores) {
 					meshSize = hSize + "x" + (hSize - 1);
+					nodes = hSize * (hSize - 1);
 				} else {
 					meshSize = hSize + "x" + hSize;
+					nodes = hSize * hSize;
 				}
 				logger.info("The algorithm has " + cores + " cores to map => working with a 2D mesh of size " + meshSize);
 				// working with a 2D mesh topology
@@ -973,6 +979,43 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 						+ File.separator + topologyName + File.separator
 						+ meshSize;
 				
+				CommandLineParser parser = new PosixParser();
+				Integer populationSize = null;
+				Integer generations = null;
+				Integer crossoverProbability = null;
+				Integer mutationProbability = null;
+				try {
+					CommandLine cmd = parser.parse(getCliOptions(), cliArgs);
+					if (cmd.hasOption("p")) {
+						populationSize = Integer.valueOf(cmd.getOptionValue("p"));
+					}
+					int defaultGenerationsNumber;
+					// Bellow is the number of evaluations made by OSA, by default (i.e., an initial temperature of 1)
+					double osaEvaluations = 33*cores*(2*nodes - cores - 1) + 1;
+					if (populationSize == null) {
+						defaultGenerationsNumber = (int) Math.ceil(osaEvaluations / POPULATION_SIZE);
+					} else {
+						defaultGenerationsNumber = (int) Math.ceil(osaEvaluations / populationSize);
+					}
+					generations = Integer.valueOf(cmd.getOptionValue("g", Integer.toString(defaultGenerationsNumber)));
+					if (cmd.hasOption("x")) {
+						crossoverProbability = Integer.valueOf(cmd.getOptionValue("x"));
+					}
+					if (cmd.hasOption("m")) {
+						mutationProbability = Integer.valueOf(cmd.getOptionValue("m"));
+					}
+					int defaultMutationProbability = (int) Math.floor(100.0 / nodes);
+					if (mutationProbability == null) {
+						mutationProbability = defaultMutationProbability;
+					}
+				} catch (NumberFormatException e) {
+					logger.fatal(e);
+					System.exit(0);
+				} catch (ParseException e) {
+					logger.fatal(e);
+					System.exit(0);
+				}
+				
 				String[] parameters = new String[] {
 						"applicationBandwithRequirement",
 						"linkBandwidth",
@@ -981,7 +1024,12 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 						"bufReadEBit",
 						"bufWriteEBit",
 						"routing",
-						"seed"};
+						"seed",
+						"populationSize",
+						"generations",
+						"crossoverProbability",
+						"mutationProbability",
+						};
 				String values[] = new String[] {
 						Integer.toString(applicationBandwithRequirement),
 						Double.toString(linkBandwidth),
@@ -989,28 +1037,35 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 						Float.toString(bufReadEBit),
 						Float.toString(bufWriteEBit),
 						null,
-						seed == null ? null : Long.toString(seed)};
+						seed == null ? null : Long.toString(seed),
+						populationSize == null ? null : Integer.toString(populationSize),
+						generations == null ? null : Integer.toString(generations),
+						crossoverProbability == null ? null : Integer.toString(crossoverProbability),
+						mutationProbability == null ? null : Integer.toString(mutationProbability),
+						};
 				if (doRouting) {
-					values[values.length - 2] = "true";
+					values[values.length - 6] = "true";
 					MapperDatabase.getInstance().setParameters(parameters, values);
 					
 					// with routing
 					eagaMapper = new EnergyAwareGeneticAlgorithmMapper(
-							benchmarkName, ctgId, apcgId,
-							topologyName, meshSize, new File(
-									topologyDir), cores, linkBandwidth,
-							true, LegalTurnSet.ODD_EVEN, bufReadEBit,
-							bufWriteEBit, switchEBit, linkEBit, seed);
+							benchmarkName, ctgId, apcgId, topologyName,
+							meshSize, new File(topologyDir), cores,
+							linkBandwidth, true, LegalTurnSet.ODD_EVEN,
+							bufReadEBit, bufWriteEBit, switchEBit, linkEBit,
+							seed, populationSize, generations,
+							crossoverProbability, mutationProbability);
 				} else {
-					values[values.length - 2] = "false";
+					values[values.length - 6] = "false";
 					MapperDatabase.getInstance().setParameters(parameters, values);
 					
 					// without routing
 					eagaMapper = new EnergyAwareGeneticAlgorithmMapper(
-							benchmarkName, ctgId, apcgId,
-							topologyName, meshSize, new File(
-									topologyDir), cores, linkBandwidth,
-							switchEBit, linkEBit, seed);
+							benchmarkName, ctgId, apcgId, topologyName,
+							meshSize, new File(topologyDir), cores,
+							linkBandwidth, switchEBit, linkEBit, seed,
+							populationSize, generations, crossoverProbability,
+							mutationProbability);
 				}
 	
 	//			// read the input data from a traffic.config file (NoCmap style)
@@ -1048,6 +1103,12 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 				eagaMapper.analyzeIt();
 			}
 		};
+		
+		mapperInputProcessor.getCliOptions().addOption("p", "population-size", true, "the population size");
+		mapperInputProcessor.getCliOptions().addOption("g", "generations", true, "the number of generations");
+		mapperInputProcessor.getCliOptions().addOption("x", "crossover-probability", true, "crossover probability (%)");
+		mapperInputProcessor.getCliOptions().addOption("m", "mutation-probability", true, "mutation probability (%)");
+		
 		mapperInputProcessor.processInput(args);
 	}
 

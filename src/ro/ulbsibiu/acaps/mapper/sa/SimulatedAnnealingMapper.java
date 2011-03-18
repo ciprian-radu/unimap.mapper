@@ -81,6 +81,9 @@ public class SimulatedAnnealingMapper extends BandwidthConstrainedEnergyAndPerfo
 
 	/** the seed for the random number generator of the initial population */
 	private Long seed;
+	
+	/** how many mappings are evaluated */
+	private long evaluations = 0;
 
 	/**
 	 * how many mapping attempts the algorithm tries per iteration. A mapping
@@ -372,6 +375,7 @@ public class SimulatedAnnealingMapper extends BandwidthConstrainedEnergyAndPerfo
 			int node1 = swappedNodes[0];
 			int node2 = swappedNodes[1];
 			double newCost = calculateTotalCost();
+			evaluations++;
 			double deltaCost = newCost - currentCost;
 			if (logger.isTraceEnabled()) {
 				logger.trace("deltaCost " + deltaCost + " newCost " + newCost
@@ -606,7 +610,7 @@ public class SimulatedAnnealingMapper extends BandwidthConstrainedEnergyAndPerfo
 
 	@Override
 	protected void doBeforeSavingMapping() {
-		;	
+		logger.info("A number of " + evaluations + " mappings were evaluated");
 	}
 
 	private void parseTrafficConfig(String filePath, double linkBandwidth)
