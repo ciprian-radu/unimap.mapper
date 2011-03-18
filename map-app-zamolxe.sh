@@ -3,10 +3,10 @@
 # Map a specified application using the following mapping algorithms:
 # Simulated Annealing (with different variants), Branch and Bound
 
-echo "usage:   ./map-app-zamolxe.sh {path to XML} --ctg {CTG ID} --apcg {APCG ID} {false|true} [seed]"
-echo "example: ./map-app-zamolxe.sh ../CTG-XML/xml/VOPD --ctg 0 --apcg m false 1234567"
+echo "usage:   ./map-app-zamolxe.sh -b {path to XML} --ctg {CTG ID} --apcg {APCG ID} [-r {true|false}] -s {seed}"
+echo "example: ./map-app-zamolxe.sh -b ../CTG-XML/xml/VOPD --ctg 0 --apcg m -s 1234567"
 
-if [ $# -eq 6 -o $# -eq 7 ]
+if [ $# -eq 8 -o $# -eq 10 ]
 then
 	if [ -z $MAPPER ]
 	then
@@ -20,7 +20,7 @@ then
 		java -classpath $CLASSPATH $mapper $@
 	done
 else
-	echo "Nothing to do (incorrect usage; specify 6 or 7 parameters for this script; see usage)"	
+	echo "Nothing to do (incorrect usage; specify 8 or 10 (if you use routing) parameters for this script; see usage)"	
 fi
 
 echo "Done"

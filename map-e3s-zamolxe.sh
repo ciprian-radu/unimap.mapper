@@ -20,63 +20,63 @@ for mapper in $MAPPER
 do
 	for routing in $ROUTING
 	do
-		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff --ctg 0 --apcg 2 $routing
-		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff --ctg 1 --apcg 2 $routing
-		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff --ctg 2 --apcg 2 $routing
-		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff --ctg 3 --apcg 2 $routing
-		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff --ctg 0+1+2+3 --apcg 2 $routing
+		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff --ctg 0 --apcg 2 -r $routing
+		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff --ctg 1 --apcg 2 -r $routing
+		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff --ctg 2 --apcg 2 -r $routing
+		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff --ctg 3 --apcg 2 -r $routing
+		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff --ctg 0+1+2+3 --apcg 2 -r $routing
 		
-		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/consumer-mocsyn.tgff --ctg 0 --apcg 2 $routing
-		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/consumer-mocsyn.tgff --ctg 1 --apcg 2 $routing
-		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/consumer-mocsyn.tgff --ctg 0+1 --apcg 2 $routing
+		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/consumer-mocsyn.tgff --ctg 0 --apcg 2 -r $routing
+		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/consumer-mocsyn.tgff --ctg 1 --apcg 2 -r $routing
+		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/consumer-mocsyn.tgff --ctg 0+1 --apcg 2 -r $routing
 		
-		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/networking-mocsyn.tgff --ctg 0 --apcg 2 $routing
-		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/networking-mocsyn.tgff --ctg 1 --apcg 2 $routing
-		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/networking-mocsyn.tgff --ctg 2 --apcg 2 $routing
-		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/networking-mocsyn.tgff --ctg 3 --apcg 2 $routing
-		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/networking-mocsyn.tgff --ctg 0+1+2+3 --apcg 2 $routing
+		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/networking-mocsyn.tgff --ctg 0 --apcg 2 -r $routing
+		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/networking-mocsyn.tgff --ctg 1 --apcg 2 -r $routing
+		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/networking-mocsyn.tgff --ctg 2 --apcg 2 -r $routing
+		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/networking-mocsyn.tgff --ctg 3 --apcg 2 -r $routing
+		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/networking-mocsyn.tgff --ctg 0+1+2+3 --apcg 2 -r $routing
 		
-		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/office-automation-mocsyn.tgff --ctg 0 --apcg 2 $routing
+		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/office-automation-mocsyn.tgff --ctg 0 --apcg 2 -r $routing
 		
-		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn.tgff --ctg 0 --apcg 2 $routing
-		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn.tgff --ctg 1 --apcg 2 $routing
-		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn.tgff --ctg 2 --apcg 2 $routing
-		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn.tgff --ctg 3 --apcg 2 $routing
-		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn.tgff --ctg 4 --apcg 2 $routing
-		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn.tgff --ctg 5 --apcg 2 $routing
-		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn.tgff --ctg 6 --apcg 2 $routing
-		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn.tgff --ctg 7 --apcg 2 $routing
-		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn.tgff --ctg 8 --apcg 2 $routing
-		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn.tgff --ctg 0+1+2+3+4+5+6+7+8 --apcg 2 $routing
+		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn.tgff --ctg 0 --apcg 2 -r $routing
+		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn.tgff --ctg 1 --apcg 2 -r $routing
+		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn.tgff --ctg 2 --apcg 2 -r $routing
+		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn.tgff --ctg 3 --apcg 2 -r $routing
+		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn.tgff --ctg 4 --apcg 2 -r $routing
+		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn.tgff --ctg 5 --apcg 2 -r $routing
+		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn.tgff --ctg 6 --apcg 2 -r $routing
+		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn.tgff --ctg 7 --apcg 2 -r $routing
+		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn.tgff --ctg 8 --apcg 2 -r $routing
+		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn.tgff --ctg 0+1+2+3+4+5+6+7+8 --apcg 2 -r $routing
 		
-#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/auto-indust-mocsyn-asic.tgff --ctg 0 --apcg 2 $routing
-#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/auto-indust-mocsyn-asic.tgff --ctg 1 --apcg 2 $routing
-#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/auto-indust-mocsyn-asic.tgff --ctg 2 --apcg 2 $routing
-#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/auto-indust-mocsyn-asic.tgff --ctg 3 --apcg 2 $routing
-#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/auto-indust-mocsyn-asic.tgff --ctg 0+1+2+3 --apcg 2 $routing
+#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/auto-indust-mocsyn-asic.tgff --ctg 0 --apcg 2 -r $routing
+#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/auto-indust-mocsyn-asic.tgff --ctg 1 --apcg 2 -r $routing
+#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/auto-indust-mocsyn-asic.tgff --ctg 2 --apcg 2 -r $routing
+#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/auto-indust-mocsyn-asic.tgff --ctg 3 --apcg 2 -r $routing
+#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/auto-indust-mocsyn-asic.tgff --ctg 0+1+2+3 --apcg 2 -r $routing
 		
-#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/consumer-mocsyn-asic.tgff --ctg 0 --apcg 2 $routing
-#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/consumer-mocsyn-asic.tgff --ctg 1 --apcg 2 $routing
-#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/consumer-mocsyn-asic.tgff --ctg 0+1 --apcg 2 $routing
+#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/consumer-mocsyn-asic.tgff --ctg 0 --apcg 2 -r $routing
+#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/consumer-mocsyn-asic.tgff --ctg 1 --apcg 2 -r $routing
+#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/consumer-mocsyn-asic.tgff --ctg 0+1 --apcg 2 -r $routing
 		
-#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/networking-mocsyn-asic.tgff --ctg 0 --apcg 2 $routing
-#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/networking-mocsyn-asic.tgff --ctg 1 --apcg 2 $routing
-#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/networking-mocsyn-asic.tgff --ctg 2 --apcg 2 $routing
-#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/networking-mocsyn-asic.tgff --ctg 3 --apcg 2 $routing
-#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/networking-mocsyn-asic.tgff --ctg 0+1+2+3 --apcg 2 $routing
+#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/networking-mocsyn-asic.tgff --ctg 0 --apcg 2 -r $routing
+#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/networking-mocsyn-asic.tgff --ctg 1 --apcg 2 -r $routing
+#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/networking-mocsyn-asic.tgff --ctg 2 --apcg 2 -r $routing
+#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/networking-mocsyn-asic.tgff --ctg 3 --apcg 2 -r $routing
+#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/networking-mocsyn-asic.tgff --ctg 0+1+2+3 --apcg 2 -r $routing
 		
-#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/office-automation-mocsyn-asic.tgff --ctg 0 --apcg 2 $routing
+#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/office-automation-mocsyn-asic.tgff --ctg 0 --apcg 2 -r $routing
 		
-#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn-asic.tgff --ctg 0 --apcg 2 $routing
-#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn-asic.tgff --ctg 1 --apcg 2 $routing
-#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn-asic.tgff --ctg 2 --apcg 2 $routing
-#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn-asic.tgff --ctg 3 --apcg 2 $routing
-#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn-asic.tgff --ctg 4 --apcg 2 $routing
-#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn-asic.tgff --ctg 5 --apcg 2 $routing
-#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn-asic.tgff --ctg 6 --apcg 2 $routing
-#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn-asic.tgff --ctg 7 --apcg 2 $routing
-#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn-asic.tgff --ctg 8 --apcg 2 $routing
-#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn-asic.tgff --ctg 0+1+2+3+4+5+6+7+8 --apcg 2 $routing
+#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn-asic.tgff --ctg 0 --apcg 2 -r $routing
+#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn-asic.tgff --ctg 1 --apcg 2 -r $routing
+#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn-asic.tgff --ctg 2 --apcg 2 -r $routing
+#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn-asic.tgff --ctg 3 --apcg 2 -r $routing
+#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn-asic.tgff --ctg 4 --apcg 2 -r $routing
+#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn-asic.tgff --ctg 5 --apcg 2 -r $routing
+#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn-asic.tgff --ctg 6 --apcg 2 -r $routing
+#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn-asic.tgff --ctg 7 --apcg 2 -r $routing
+#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn-asic.tgff --ctg 8 --apcg 2 -r $routing
+#		java -classpath $CLASSPATH $mapper ../CTG-XML/xml/e3s/telecom-mocsyn-asic.tgff --ctg 0+1+2+3+4+5+6+7+8 --apcg 2 -r $routing
 	done
 done
 
