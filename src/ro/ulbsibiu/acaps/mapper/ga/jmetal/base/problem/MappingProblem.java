@@ -1,27 +1,32 @@
-package ro.ulbsibiu.acaps.mapper.ga;
+package ro.ulbsibiu.acaps.mapper.ga.jmetal.base.problem;
 
 import java.util.ArrayList;
 
 import jmetal.base.Problem;
 import jmetal.base.Solution;
-import jmetal.base.SolutionType;
-
-import jmetal.base.Variable;
-import jmetal.base.variable.Binary;
-
-import jmetal.base.solutionType.BinaryRealSolutionType;
-import jmetal.base.solutionType.BinarySolutionType;
-import jmetal.base.solutionType.IntSolutionType;
 import jmetal.base.solutionType.PermutationSolutionType;
-import jmetal.base.solutionType.RealSolutionType;
 import jmetal.base.variable.Permutation;
 import jmetal.util.JMException;
+import ro.ulbsibiu.acaps.mapper.ga.Communication;
+import ro.ulbsibiu.acaps.mapper.ga.Core;
 
+/**
+ * Represents the Network-on-Chip application mapping problem as a single objective {@link Problem}
+ * 
+ * @author shaikat
+ *
+ */
 public class MappingProblem extends Problem {
 	
+	/** auto generated serial version UID */
+	private static final long serialVersionUID = 400243417177785170L;
+	
 	private ArrayList<Communication> communications;
+	
 	private Core[] cores;
+	
 	private int noOfNodes;
+	
 	public MappingProblem(Integer numberOfVariables, ArrayList<Communication> communications,
 						    Core[] cores, int noOfNodes	)  throws ClassNotFoundException {
 		this.communications = communications;
@@ -60,14 +65,6 @@ public class MappingProblem extends Problem {
 	    permutationLength = ((Permutation)solution.getDecisionVariables()[0]).getLength() ;
 	    permutation = ((Permutation)solution.getDecisionVariables()[0]).vector_;
 		
-		//individual whose fitness need to be measured
-		/*int indv[] = new int[noOfNodes];
-		
-		if(isInPopulation)
-			indv = population[posOfIndv];
-		else
-			indv = newPopulation[posOfIndv];
-*/
 		/*now I want to find where source and destination IP core
 		 * is placed in NOC node
 		 */
@@ -144,5 +141,6 @@ public class MappingProblem extends Problem {
 		solution.setObjective(0, fitOfIndv);
 
 	}
+	
 }
 
