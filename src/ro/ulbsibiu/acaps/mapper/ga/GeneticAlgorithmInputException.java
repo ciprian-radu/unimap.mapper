@@ -1,10 +1,10 @@
 package ro.ulbsibiu.acaps.mapper.ga;
 
-public class GenticAlgorithmInputException extends Exception {
+public class GeneticAlgorithmInputException extends Exception {
 
 	String exceptionString;
 
-	public GenticAlgorithmInputException(String exceptionString) {
+	public GeneticAlgorithmInputException(String exceptionString) {
 		this.exceptionString = exceptionString;
 	}
 

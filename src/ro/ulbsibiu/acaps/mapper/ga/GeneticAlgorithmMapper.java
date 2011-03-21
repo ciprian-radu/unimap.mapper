@@ -19,7 +19,11 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 
+import jmetal.util.PseudoRandom;
+
 import org.apache.log4j.Logger;
+
+import com.sun.xml.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
 
 import ro.ulbsibiu.acaps.ctg.xml.apcg.ApcgType;
 import ro.ulbsibiu.acaps.ctg.xml.apcg.TaskType;
@@ -29,6 +33,7 @@ import ro.ulbsibiu.acaps.ctg.xml.mapping.MapType;
 import ro.ulbsibiu.acaps.ctg.xml.mapping.MappingType;
 import ro.ulbsibiu.acaps.mapper.Mapper;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
+import ro.ulbsibiu.acaps.mapper.ga.jmetal.JMetalGeneticAlgorithmMapper;
 import ro.ulbsibiu.acaps.mapper.util.ApcgFilenameFilter;
 
 /**
@@ -43,7 +48,7 @@ public class GeneticAlgorithmMapper implements Mapper {
 	 * Logger for this class
 	 */
 	private static final Logger logger = Logger
-			.getLogger(GeneticAlgorithmMapper.class);
+			.getLogger(JMetalGeneticAlgorithmMapper.class);
 
 	private static final String MAPPER_ID = "ga";
 
@@ -54,15 +59,19 @@ public class GeneticAlgorithmMapper implements Mapper {
 	 * the number of processes (tasks). Note that each core has only one task
 	 * associated to it.
 	 */
+	private static Long seed = new Long(1425367891);
+	
 	private int noOfIpCores;
 
-	private static int populationSize;
+	private int populationSize; 
 
-	private static int crossoverPr;
+	private int crossoverPr;
 
-	private static int mutationPr;
+	private int mutationPr;
 
-	private static int noOfGenerationToRun;
+	private int noOfGenerationToRun;
+	
+	private int maxNoOfEvolutions;
 
 	private static int percentageOfOldPopuToNewPopu = 20;
 
@@ -76,6 +85,8 @@ public class GeneticAlgorithmMapper implements Mapper {
 	private int[] currentChild2;
 
 	private int currentNoOfGeneration;
+	
+	private int currentNoOfEvoltions;
 
 	private List<CtgType> currentCtg;
 
@@ -94,18 +105,25 @@ public class GeneticAlgorithmMapper implements Mapper {
 	private int previousCoreCount = 0;
 
 	public GeneticAlgorithmMapper(List<CtgType> ctg, List<ApcgType> apcg,
-			int noOfIpCores, int noOfNodes) {
+			int noOfIpCores, int noOfNodes, int populationSize, int maxNoOfEolutions, int crossoverPr, int mutationPr) {
 
 		this.noOfIpCores = noOfIpCores;
 		this.noOfNodes = noOfNodes;
-		this.currentNoOfGeneration = 0;
+		this.currentNoOfGeneration = 1;
+		this.currentNoOfEvoltions = 0;
 		this.currentCtg = ctg;
 		this.currentApcg = apcg;
+		this.populationSize = populationSize;
+		this.maxNoOfEvolutions = maxNoOfEolutions;
+		this.crossoverPr = crossoverPr;
+		this.mutationPr = mutationPr;
 		this.population = new ArrayList<Individual>(populationSize);
 		this.newPopulation = new ArrayList<Individual>(populationSize);
 		this.currentChild1 = new int[noOfNodes];
 		this.currentChild2 = new int[noOfNodes];
 
+		// tournament size
+		tournamentSize = (int) Math.ceil( (populationSize * 10) / 100 );
 		// initialize the cores in integer number
 		initializeCores();
 		getCommunicatios();
@@ -198,7 +216,11 @@ public class GeneticAlgorithmMapper implements Mapper {
 
 	private void doInitPopulation() {
 
-		Random rm = new Random();
+		Random rm;
+		//if(seed == null)
+			rm = new Random();
+		//else 
+			//rm = new Random(seed);
 
 		/* initialized in this way so that no number will be repeated */
 		for (int i = 0; i < populationSize; i++) {
@@ -209,7 +231,8 @@ public class GeneticAlgorithmMapper implements Mapper {
 
 			int noOfNode = 0;
 			while (noOfNode != noOfNodes) {
-				int aNum = rm.nextInt(noOfNodes);
+				//int aNum = rm.nextInt(noOfNodes);
+				int aNum = PseudoRandom.randInt(0, noOfNodes - 1);
 				int z = 0;
 				boolean track = true;
 				while (tempIndividual[z] != -1 && track) {
@@ -229,6 +252,7 @@ public class GeneticAlgorithmMapper implements Mapper {
 			// calculate the fitness here
 			double fitnessOfIndividual = fitnessCalculation(tempIndividual);
 			population.add(new Individual(tempIndividual, fitnessOfIndividual));
+			currentNoOfEvoltions++;
 
 		}
 	}
@@ -257,10 +281,14 @@ public class GeneticAlgorithmMapper implements Mapper {
 		parent2 = Arrays.copyOf(population.get(pr2).getGenes(),
 				population.get(pr2).getGenes().length);
 
-		Random rm = new Random();
+		Random rm;
+		//if(seed == null)
+			rm = new Random();
+		//else 
+			//rm = new Random(seed);
 
-		if (rm.nextInt(100) <= crossoverPr) {
-
+		//if (rm.nextInt(100) <= crossoverPr) {
+		if (PseudoRandom.randInt(0, 100) <= crossoverPr) {
 			for (int i = 0; i < child1.length; i++) {
 				child1[i] = child2[i] = -1;
 			}
@@ -278,7 +306,8 @@ public class GeneticAlgorithmMapper implements Mapper {
 				boolean track;
 				do {
 					track = false;
-					number = rm.nextInt(this.noOfNodes);
+					//number = rm.nextInt(this.noOfNodes);
+					number =  PseudoRandom.randInt(0, noOfNodes-1);
 					for (int k = 0; k < setOfPositions.length; k++)
 						if (number == setOfPositions[k]) {
 							track = true;
@@ -345,7 +374,8 @@ public class GeneticAlgorithmMapper implements Mapper {
 				boolean track;
 				do {
 					track = false;
-					number = rm.nextInt(this.noOfNodes);
+					//number = rm.nextInt(this.noOfNodes);
+					number =  PseudoRandom.randInt(0, noOfNodes-1);
 					for (int k = 0; k < setOfPositions.length; k++)
 						if (number == setOfPositions[k]) {
 							track = true;
@@ -413,7 +443,11 @@ public class GeneticAlgorithmMapper implements Mapper {
 
 	private void doCutandCrossfillCrossoverV1(int pr1, int pr2) {
 
-		Random rm = new Random();
+		Random rm;
+		if(seed == null)
+			rm = new Random();
+		else 
+			rm = new Random(seed);
 
 		// two parents that is used for crossover
 		int parent1[] = new int[noOfNodes];
@@ -530,7 +564,11 @@ public class GeneticAlgorithmMapper implements Mapper {
 
 	private void doCutAndCrossfillCrossoverV2(int pr1, int pr2) {
 
-		Random rm = new Random();
+		Random rm;
+		if(seed == null)
+			rm = new Random();
+		else 
+			rm = new Random(seed);
 
 		// two parents that is used for crossover
 		int parent1[] = new int[noOfNodes];
@@ -612,9 +650,13 @@ public class GeneticAlgorithmMapper implements Mapper {
 	 * and currentChild2. Here we use only swapping two randomly selected number
 	 * in the array
 	 **/
-	private void doMutationv1() {
+	private void doSwapMutation() {
 
-		Random rm = new Random();
+		Random rm;
+		//if(seed == null)
+			rm = new Random();
+		//else 
+			//rm = new Random(seed);
 
 		int pos1Forchild1, pos2Forchild1, pos1Forchild2, pos2Forchild2, temp;
 
@@ -638,6 +680,122 @@ public class GeneticAlgorithmMapper implements Mapper {
 		}
 	}
 
+	/*
+	 * insert mutation
+	 */
+	private void doInsertMutation(){
+		
+		Random rm;
+		if(seed == null)
+			rm = new Random();
+		else 
+			rm = new Random(seed);
+
+		int pos1Forchild1, pos2Forchild1, pos1Forchild2, pos2Forchild2, temp1, temp2;
+
+		pos1Forchild1 = rm.nextInt(noOfNodes);
+		pos2Forchild1 = rm.nextInt(noOfNodes);
+
+		pos1Forchild2 = rm.nextInt(noOfNodes);
+		pos2Forchild2 = rm.nextInt(noOfNodes);
+		
+		if (rm.nextInt(100) <= mutationPr) {
+			boolean isEqualTrack = false;
+			if( pos1Forchild1 > pos2Forchild1) {
+				int tempPosition = pos1Forchild1;
+				pos1Forchild1 = pos2Forchild1;
+				pos2Forchild1 = tempPosition;
+			
+			}
+			else if (pos1Forchild1 == pos2Forchild1)
+				isEqualTrack = true;
+			
+			if(isEqualTrack == false) {	
+				temp1 = currentChild1[pos1Forchild1 + 1];
+				currentChild1[pos1Forchild1 + 1] = currentChild1 [pos2Forchild1];
+				for(int i = pos1Forchild1 + 2; i<= pos2Forchild1; i++) {
+					temp2 = currentChild1[i];
+					currentChild1 [i] = temp1;
+					temp1 = temp2;
+				}
+				
+			}
+		
+		}
+		
+
+		
+		//for child 2 
+		temp1 = temp2 = -1;
+		if (rm.nextInt(100) <= mutationPr) {
+			boolean isEqualTrack = false;
+			if( pos1Forchild2 > pos2Forchild2) {
+				int tempPosition = pos1Forchild2;
+				pos1Forchild2 = pos2Forchild2;
+				pos2Forchild2 = tempPosition;
+			
+			}
+			else if (pos1Forchild2 == pos2Forchild2)
+				isEqualTrack = true;
+				
+			if(isEqualTrack == false) {	
+				temp1 = currentChild2[pos1Forchild2 + 1];
+				currentChild2[pos1Forchild2 + 1] = currentChild2 [pos2Forchild2];
+				for(int i = pos1Forchild2 + 2; i<= pos2Forchild2; i++) {
+					temp2 = currentChild2[i];
+					currentChild2 [i] = temp1;
+					temp1 = temp2;
+				}
+				
+			}
+		
+		}
+	}
+	
+	
+	private void doMutation(int[] individual) {
+		if (logger.isDebugEnabled()) {
+			logger.debug("Applying swapping based mutation for individual " + Arrays.toString(individual));
+		}
+		
+		Random rand;
+		//if (seed == null) {
+			rand = new Random();
+		//} else {
+		//	rand = new Random(seed);
+		//}
+
+		//rand = new Random();
+		boolean mutationOccured = false;
+		for (int i = 0; i < individual.length; i++) {
+			//int position = rand.nextInt(individual.length);
+			int position = PseudoRandom.randInt(0, individual.length - 1);
+			//if (rand.nextInt(100) <= mutationPr) {
+			if (PseudoRandom.randInt(0, 100) <= mutationPr) {
+				int temp = individual[i];
+				individual[i] = individual[position];
+				individual[position] = temp;
+				if (i != position) {
+					mutationOccured = true;
+					if (logger.isTraceEnabled()) {
+						logger.trace("Individual mutated gene number " + i + ", by swapping it with gene number " + position);
+					}
+				}
+			}
+		}
+		
+		if (mutationOccured) {
+			if (logger.isDebugEnabled()) {
+				logger.debug("Individual mutated to " + Arrays.toString(individual));
+			}
+		} else {
+			if (logger.isDebugEnabled()) {
+				logger.debug("Individual did not suffer any mutation");
+			}
+		}
+
+	}
+	
 	/**
 	 * this method is used to swap two cores but within two one must be used in
 	 * current apcg
@@ -807,7 +965,11 @@ public class GeneticAlgorithmMapper implements Mapper {
 
 	private int tournamentSelection(int tournamentSize) {
 
-		Random rm = new Random();
+		Random rm;
+		//if(seed == null)
+			//rm = new Random();
+		//else 
+			rm = new Random(seed);
 		// save the position of randomly selected potential parents
 		int posParent[] = new int[tournamentSize];
 
@@ -820,7 +982,8 @@ public class GeneticAlgorithmMapper implements Mapper {
 			// be sure that position is not repeated
 			do {
 				track = false;
-				position = rm.nextInt(populationSize);
+				//position = rm.nextInt(populationSize);
+				position = PseudoRandom.randInt(0, populationSize - 1);
 				for (int k = 0; k < posParent.length; k++)
 					if (position == posParent[k]) {
 						track = true;
@@ -921,26 +1084,39 @@ public class GeneticAlgorithmMapper implements Mapper {
 
 		// position of parent1 and parent2 in the population
 		int posOfParent1, posOfParent2;
-
+		int i;
+		
 		doInitPopulation();
-
+/*
 		while (currentNoOfGeneration < noOfGenerationToRun) {
 
 			// clear new population
 			newPopulation.clear();
 
-			for (int i = 0; i < populationSize / 2; i++) {
+			for (i = 0; i < populationSize / 2; i++) {
 				posOfParent1 = tournamentSelection(tournamentSize);
 				posOfParent2 = tournamentSelection(tournamentSize);
 
 				doPositionBasedCrossOver(posOfParent1, posOfParent2);
-				doMutationv1();
-				// doMutationv2();
-
+				doSwapMutation();
+				//doMutationv2();
+				//doInsertMutation();
 				insertCurrentChildrenInTonewPopulation();
 
 			}
 
+			//if population size id odd
+			if(i * 2 < populationSize){
+				posOfParent1 = tournamentSelection(tournamentSize);
+				posOfParent2 = tournamentSelection(tournamentSize);
+
+				doPositionBasedCrossOver(posOfParent1, posOfParent2);
+				doSwapMutation();
+				newPopulation.add(new Individual(currentChild1,
+						fitnessCalculation(currentChild1)));
+
+			}
+				
 			createPopulationElitismV2();
 
 			if (currentNoOfGeneration % 100 == 0)
@@ -948,7 +1124,56 @@ public class GeneticAlgorithmMapper implements Mapper {
 			currentNoOfGeneration++;
 
 		}
+*/
+		while (currentNoOfEvoltions < maxNoOfEvolutions) {
 
+			// clear new population
+			newPopulation.clear();
+
+			for (i = 0; i < populationSize / 2; i++) {
+				posOfParent1 = tournamentSelection(tournamentSize);
+				posOfParent2 = tournamentSelection(tournamentSize);
+
+				doPositionBasedCrossOver(posOfParent1, posOfParent2);
+				//currentChild1 =  Arrays.copyOf(population.get(posOfParent1).getGenes(), population.get(posOfParent1).getGenes().length);
+				//currentChild2 =  Arrays.copyOf(population.get(posOfParent2).getGenes(), population.get(posOfParent2).getGenes().length);
+				//mutationPr =(int) (((double) (maxNoOfEvolutions - currentNoOfEvoltions)/maxNoOfEvolutions) * 100) ;
+				doMutation(currentChild1);
+				//mutationPr =(int) (((double) (maxNoOfEvolutions - currentNoOfEvoltions)/maxNoOfEvolutions) * 100) ;
+				doMutation(currentChild2);
+				
+				//doSwapMutation();
+				//adaptive mutation probability 
+				
+				//doInsertMutation();
+				currentNoOfEvoltions+=2;
+				insertCurrentChildrenInTonewPopulation();
+
+			}
+
+			//if population size id odd
+			if(i * 2 < populationSize){
+				posOfParent1 = tournamentSelection(tournamentSize);
+				posOfParent2 = tournamentSelection(tournamentSize);
+
+				//doPositionBasedCrossOver(posOfParent1, posOfParent2);
+				mutationPr = ((maxNoOfEvolutions - currentNoOfEvoltions)/maxNoOfEvolutions)*100;
+				
+				doSwapMutation();
+				currentNoOfEvoltions++;
+				newPopulation.add(new Individual(currentChild1,
+						fitnessCalculation(currentChild1)));
+
+			}
+				
+			createPopulationElitismV2();
+			if (currentNoOfEvoltions > 0 && currentNoOfEvoltions % 100 == 0) {
+				logger.info("Finished " + currentNoOfEvoltions + " evoluations");
+			}
+		}
+		logger.info("Total number of evolutions: "+ currentNoOfEvoltions);
+
+		
 	}
 
 	public String map() throws TooFewNocNodesException {
@@ -1038,13 +1263,16 @@ public class GeneticAlgorithmMapper implements Mapper {
 			System.out.println("core " + cores[i].getCoreUid() + " (APCG "
 					+ cores[i].getApcgId() + ") is mapped to Noc Node " + j);
 		}
+		System.out.println("Total Communication cost " + 1/population.get(0).getFitness());
 
 		System.out.println();
 	}
 
 	public static void main(String args[]) throws TooFewNocNodesException,
-			IOException, JAXBException, GenticAlgorithmInputException {
+			IOException, JAXBException, GeneticAlgorithmInputException {
 
+		int argPopulationSize=0, argNoOfGenerationToRun=0, argMaxNoOfEvolutions=0, argCrossoverPr=100, argMutationPr=100;
+		
 		File[] tgffFiles = null;
 		String specifiedCtgId = null;
 		String specifiedApcgId = null;
@@ -1052,47 +1280,51 @@ public class GeneticAlgorithmMapper implements Mapper {
 
 		final int defaultPopulationSize = 1000;
 		final int defaultNoOfGeneration = 5000;
+		final int defaultNoOfEvolutions = 1000000;
 		final double defaultCrossoverPr = 0.85;
 		final double defaultMutationPr = 0.05;
 
 		if (args.length == 0) {
-			populationSize = defaultPopulationSize;
-			noOfGenerationToRun = defaultNoOfGeneration;
-			crossoverPr = (int) (defaultCrossoverPr * 100);
-			mutationPr = (int) (defaultMutationPr * 100);
+			
+			argPopulationSize = defaultPopulationSize;
+			//argNoOfGenerationToRun = defaultNoOfGeneration;
+			argMaxNoOfEvolutions = defaultNoOfEvolutions;
+			argCrossoverPr = (int) (defaultCrossoverPr * 100);
+			argMutationPr = (int) (defaultMutationPr * 100);
 		} else {
 			try {
-				populationSize = Integer.parseInt(args[0]);
+				argPopulationSize = Integer.parseInt(args[0]);
 			} catch (NumberFormatException e) {
 				is1stParameterString = true;
 
 			}
 			if (is1stParameterString == true) {
-				populationSize = defaultPopulationSize;
-				noOfGenerationToRun = defaultNoOfGeneration;
-				crossoverPr = (int) (defaultCrossoverPr * 100);
-				mutationPr = (int) (defaultMutationPr * 100);
+				argPopulationSize = defaultPopulationSize;
+				//noOfGenerationToRun = defaultNoOfGeneration;
+				argMaxNoOfEvolutions = defaultNoOfEvolutions;
+				argCrossoverPr = (int) (defaultCrossoverPr * 100);
+				argMutationPr = (int) (defaultMutationPr * 100);
 			} else {
 				try {
-					noOfGenerationToRun = Integer.parseInt(args[1]);
+					//noOfGenerationToRun = Integer.parseInt(args[1]);
+					argMaxNoOfEvolutions = Integer.parseInt(args[1]);
 					if (Double.parseDouble(args[2]) > 1.0)
-						throw new GenticAlgorithmInputException(
+						throw new GeneticAlgorithmInputException(
 								"Crossover Probability must be less than 1.0");
-					crossoverPr = (int) (Double.parseDouble(args[2]) * 100);
+					argCrossoverPr = (int) (Double.parseDouble(args[2]) * 100);
 					if (Double.parseDouble(args[3]) > 1.0)
-						throw new GenticAlgorithmInputException(
+						throw new GeneticAlgorithmInputException(
 								"Mutation Probability must be less than 1.0");
-					mutationPr = (int) (Double.parseDouble(args[3]) * 100);
+					argMutationPr = (int) (Double.parseDouble(args[3]) * 100);
 				} catch (NumberFormatException e) {
-					throw new GenticAlgorithmInputException(
+					throw new GeneticAlgorithmInputException(
 							"Please provide appropriate parameters");
 				}
 			}
 		}
 
-		// here 20 percent of the total population size is used as
-		// tournament size
-		tournamentSize = (populationSize * 20) / 100;
+		// here 1 percent of the total population size is used as
+		
 
 		if (args.length == 0
 				|| (args.length == 4 && is1stParameterString == false)) {
@@ -1248,7 +1480,7 @@ public class GeneticAlgorithmMapper implements Mapper {
 					logger.assertLog(apcgTypes.size() == ctgTypes.size(),
 							"An equal number of CTGs and APCGs is expected!");
 
-					logger.info("Using a Simulated annealing mapper for "
+					logger.info("Using a Genetic Algorithm mapper for "
 							+ path + "ctg-" + ctgId + " (APCG " + apcgId + ")");
 
 					// number of IP cores in the apcg
@@ -1287,7 +1519,8 @@ public class GeneticAlgorithmMapper implements Mapper {
 					logger.debug("Found " + nodeXmls.length + " nodes");
 
 					GeneticAlgorithmMapper gaMapper = new GeneticAlgorithmMapper(
-							ctgTypes, apcgTypes, noOfIpCores, nodeXmls.length);
+							ctgTypes, apcgTypes, noOfIpCores, nodeXmls.length, argPopulationSize, argMaxNoOfEvolutions,
+							argCrossoverPr, argMutationPr);
 
 					for (int k = 0; k < apcgTypes.size(); k++) {
 						gaMapper.parseApcg(apcgTypes.get(k));

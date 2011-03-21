@@ -24,14 +24,13 @@ import ro.ulbsibiu.acaps.ctg.xml.ctg.CtgType;
 import ro.ulbsibiu.acaps.mapper.BandwidthConstrainedEnergyAndPerformanceAwareMapper;
 import ro.ulbsibiu.acaps.mapper.MapperDatabase;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
-import ro.ulbsibiu.acaps.mapper.ga.GeneticAlgorithmMapper;
-import ro.ulbsibiu.acaps.mapper.ga.GenticAlgorithmInputException;
 import ro.ulbsibiu.acaps.mapper.ga.Individual;
+import ro.ulbsibiu.acaps.mapper.ga.jmetal.JMetalGeneticAlgorithmMapper;
 import ro.ulbsibiu.acaps.mapper.util.MapperInputProcessor;
 
 /**
  * The Energy Aware Genetic Algorithm (EAGA) combines
- * {@link GeneticAlgorithmMapper} with
+ * {@link JMetalGeneticAlgorithmMapper} with
  * {@link BandwidthConstrainedEnergyAndPerformanceAwareMapper}. Thus, EAGA
  * generates mappings using a genetic algorithm, it evaluates them in terms of
  * energy consumption and it can also consider bandwidth constraints.
@@ -77,8 +76,8 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 
 	private int currentGeneration = 1;
 	
-	/** the seed for the random number generator of the initial population */
-	private Long seed;
+	/** the random number generator */
+	private Random rand;
 	
 	/** how many mappings are evaluated */
 	private long evaluations = 0;
@@ -224,7 +223,12 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 		this.newPopulation = new ArrayList<Individual>(this.populationSize);
 		this.currentChild1 = new int[nodes.length];
 		this.currentChild2 = new int[nodes.length];
-		this.seed = seed;
+		
+		if (seed == null) {
+			rand = new Random();
+		} else {
+			rand = new Random(seed);
+		}
 	}
 
 	/**
@@ -233,12 +237,6 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 
 	private void doInitPopulation() {
 		logger.info("Randomly creating initial population");
-		Random rand;
-		if (seed == null) {
-			rand = new Random();
-		} else {
-			rand = new Random(seed);
-		}
 
 		/* initialized in this way so that no number will be repeated */
 		for (int i = 0; i < populationSize; i++) {
@@ -285,13 +283,6 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 				population.get(pr1).getGenes().length);
 		parent2 = Arrays.copyOf(population.get(pr2).getGenes(),
 				population.get(pr2).getGenes().length);
-
-		Random rand;
-		if (seed == null) {
-			rand = new Random();
-		} else {
-			rand = new Random(seed);
-		};
 
 		if (rand.nextInt(100) <= crossoverProbability) {
 			for (int i = 0; i < child1.length; i++) {
@@ -441,12 +432,6 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 //	 *            position of the parent # 2 in the population
 //	 */
 //	private void doCutAndCrossfillCrossoverV1(int pr1, int pr2) {
-//		Random rand;
-//		if (seed == null) {
-//			rand = new Random();
-//		} else {
-//			rand = new Random(seed);
-//		}
 //
 //		// two parents that is used for crossover
 //		int parent1[] = new int[nodes.length];
@@ -562,13 +547,6 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 //	}
 
 //	private void doCutAndCrossfillCrossoverV2(int pr1, int pr2) {
-//		Random rand;
-//		if (seed == null) {
-//			rand = new Random();
-//		} else {
-//			rand = new Random(seed);
-//		}
-//
 //		// two parents that is used for crossover
 //		int parent1[] = new int[nodes.length];
 //		int parent2[] = new int[nodes.length];
@@ -654,13 +632,6 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 			logger.debug("Applying swapping based mutation for individual " + Arrays.toString(individual));
 		}
 		
-		Random rand;
-		if (seed == null) {
-			rand = new Random();
-		} else {
-			rand = new Random(seed);
-		}
-
 		boolean mutationOccured = false;
 		for (int i = 0; i < individual.length; i++) {
 			int position = rand.nextInt(nodes.length);
@@ -751,12 +722,6 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 			logger.debug("(Deterministic) tournament selection");
 		}
 		
-		Random rand;
-		if (seed == null) {
-			rand = new Random();
-		} else {
-			rand = new Random(seed);
-		}
 		// save the position of randomly selected potential parents
 		int posParent[] = new int[tournamentSize];
 
@@ -931,7 +896,7 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 	}
 
 	public static void main(String args[]) throws TooFewNocNodesException,
-			IOException, JAXBException, GenticAlgorithmInputException, ParseException {
+			IOException, JAXBException, ParseException {
 		final int applicationBandwithRequirement = 3; // a multiple of the communication volume
 		final double linkBandwidth = 256E9;
 		final float switchEBit = 0.284f;
