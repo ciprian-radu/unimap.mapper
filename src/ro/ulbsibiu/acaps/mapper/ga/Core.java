@@ -1,6 +1,9 @@
 package ro.ulbsibiu.acaps.mapper.ga;
 
-
+/**
+ * @author shaikat
+ *
+ */
 public class Core {
 
 	/** the Number of this core  (1, 2, 3, ......, N)*/
@@ -16,7 +19,6 @@ public class Core {
 	/**the UId of the core*/
 	private String coreUid;
 	
-	
 	public Core(int coreNo, String apcgId, int nodeId) {
 		this.coreNo = coreNo;
 		this.apcgId = apcgId;
@@ -30,7 +32,6 @@ public class Core {
 	public void setCoreNo(int coreNo) {
 		this.coreNo = coreNo;
 	}
-	
 
 	public String getCoreUid() {
 		return coreUid;
@@ -39,7 +40,6 @@ public class Core {
 	public void setCoreUid(String coreUid) {
 		this.coreUid = coreUid;
 	}
-
 
 	public String getApcgId() {
 		return apcgId;

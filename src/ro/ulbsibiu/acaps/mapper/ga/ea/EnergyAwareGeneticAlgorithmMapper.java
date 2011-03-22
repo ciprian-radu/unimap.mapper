@@ -24,13 +24,13 @@ import ro.ulbsibiu.acaps.ctg.xml.ctg.CtgType;
 import ro.ulbsibiu.acaps.mapper.BandwidthConstrainedEnergyAndPerformanceAwareMapper;
 import ro.ulbsibiu.acaps.mapper.MapperDatabase;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
+import ro.ulbsibiu.acaps.mapper.ga.GeneticAlgorithmMapper;
 import ro.ulbsibiu.acaps.mapper.ga.Individual;
-import ro.ulbsibiu.acaps.mapper.ga.jmetal.JMetalGeneticAlgorithmMapper;
 import ro.ulbsibiu.acaps.mapper.util.MapperInputProcessor;
 
 /**
  * The Energy Aware Genetic Algorithm (EAGA) combines
- * {@link JMetalGeneticAlgorithmMapper} with
+ * {@link GeneticAlgorithmMapper} with
  * {@link BandwidthConstrainedEnergyAndPerformanceAwareMapper}. Thus, EAGA
  * generates mappings using a genetic algorithm, it evaluates them in terms of
  * energy consumption and it can also consider bandwidth constraints.
