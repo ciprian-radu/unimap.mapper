@@ -23,8 +23,6 @@ import jmetal.util.PseudoRandom;
 
 import org.apache.log4j.Logger;
 
-import com.sun.xml.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
-
 import ro.ulbsibiu.acaps.ctg.xml.apcg.ApcgType;
 import ro.ulbsibiu.acaps.ctg.xml.apcg.TaskType;
 import ro.ulbsibiu.acaps.ctg.xml.ctg.CommunicationType;
@@ -33,7 +31,6 @@ import ro.ulbsibiu.acaps.ctg.xml.mapping.MapType;
 import ro.ulbsibiu.acaps.ctg.xml.mapping.MappingType;
 import ro.ulbsibiu.acaps.mapper.Mapper;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
-import ro.ulbsibiu.acaps.mapper.ga.jmetal.JMetalGeneticAlgorithmMapper;
 import ro.ulbsibiu.acaps.mapper.util.ApcgFilenameFilter;
 
 /**
@@ -48,7 +45,7 @@ public class GeneticAlgorithmMapper implements Mapper {
 	 * Logger for this class
 	 */
 	private static final Logger logger = Logger
-			.getLogger(JMetalGeneticAlgorithmMapper.class);
+			.getLogger(GeneticAlgorithmMapper.class);
 
 	private static final String MAPPER_ID = "ga";
 

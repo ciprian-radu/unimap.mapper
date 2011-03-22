@@ -17,11 +17,13 @@ import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 
 import jmetal.base.Algorithm;
-import jmetal.base.Operator;
 import jmetal.base.Problem;
 import jmetal.base.Solution;
 import jmetal.base.SolutionSet;
+import jmetal.base.operator.crossover.Crossover;
+import jmetal.base.operator.mutation.Mutation;
 import jmetal.base.operator.mutation.MutationFactory;
+import jmetal.base.operator.selection.Selection;
 import jmetal.base.operator.selection.SelectionFactory;
 import jmetal.base.variable.Permutation;
 import jmetal.metaheuristics.singleObjective.evolutionStrategy.ElitistES;
@@ -45,7 +47,6 @@ import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
 import ro.ulbsibiu.acaps.mapper.ga.Communication;
 import ro.ulbsibiu.acaps.mapper.ga.Core;
 import ro.ulbsibiu.acaps.mapper.ga.GeneticAlgorithmInputException;
-import ro.ulbsibiu.acaps.mapper.ga.GeneticAlgorithmMapper;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.crossover.PositionBasedCrossover;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.problem.MappingProblem;
 import ro.ulbsibiu.acaps.mapper.util.ApcgFilenameFilter;
@@ -55,53 +56,128 @@ import ro.ulbsibiu.acaps.mapper.util.ApcgFilenameFilter;
  * 
  * @see Mapper
  * 
- * @author shaikat
  * @author cradu
+ * @author shaikat
  *
  */
-public class JMetalGeneticAlgorithmMapper implements Mapper {
-
-	private static int populationSize;
-
-	private static double crossoverPr;
-
-	private static double mutationPr;
-
-	//private static int noOfGenerationToRun;
-
-	private static int maxEvolutions;
-	
-	private static String algorithmName;
-	
-	private String mapperId = "";
-
-	Problem problem; // The problem to solve
-	Algorithm algorithm; // The algorithm to use
-	Operator crossover; // Crossover operator
-	Operator mutation; // Mutation operator
-	Operator selection; // Selection operator
+public class JMetalEvolutionaryAlgorithmMapper implements Mapper {
 
 	/**
 	 * Logger for this class
 	 */
-	private static final Logger logger = Logger
-			.getLogger(GeneticAlgorithmMapper.class);
+	private static final Logger logger = Logger.getLogger(JMetalEvolutionaryAlgorithmMapper.class);
+	
+	
+	/**
+	 * The jMetal single objective algorithms
+	 * 
+	 * @author cradu
+	 *
+	 */
+	public enum JMetalAlgorithm {
+		/**
+		 * Single State Genetic Algorithm
+		 */
+		SSGA,
+		
+		/**
+		 * Generational Genetic Algorithm
+		 */
+		GGA,
+		
+		/**
+		 * Asynchronous Cellular Genetic Algorithm
+		 */
+		ACGA,
+		
+		/**
+		 * Synchronous Cellular Genetic Algorithm
+		 */
+		SCGA,
+		
+		/**
+		 * Ellitist Evolutionary Strategy 
+		 */
+		EES,
+		
+		/**
+		 * Non-ellitist Evolutionary Strategy 
+		 */
+		NEES
+	}
+	
+	/**
+	 * the selected jMetal single objective algorithm
+	 */
+	private JMetalAlgorithm jMetalAlgorithm;
+	
+	/**
+	 * the size of the population 
+	 */
+	private int populationSize;
 
 	/**
-	 * the number of processes (tasks). Note that each core has only one task
-	 * associated to it.
+	 * crossover probability (a number in [0, 1] interval) 
 	 */
-	private int noOfNodes;
+	private double crossoverProbability;
 
-	private int noOfIpCores;
+	/**
+	 * mutation probability (a number in [0, 1] interval) 
+	 */
+	private double mutationProbability;
 
+	/**
+	 * the maximum number of evaluations allowed for the algorithm
+	 */
+	private int maxEvaluations;
+	
+	/**
+	 * jMetal {@link Problem} 
+	 */
+	private Problem problem;
+	
+	/**
+	 * jMetal {@link Algorithm}
+	 */
+	private Algorithm algorithm;
+	
+	/**
+	 * jMetal {@link Crossover} operator
+	 */
+	private Crossover crossover;
+	
+	/**
+	 * jMetal {@link Mutation} operator
+	 */
+	private Mutation mutation;
+	
+	/**
+	 * jMetal {@link Selection} operator
+	 */
+	private Selection selection;
+
+	/**
+	 * the number of Network-on-Chip nodes
+	 */
+	private int nodesNumber;
+
+	/**
+	 * the number of IP cores to be mapped
+	 */
+	private int coresNumber;
+
+	/**
+	 * the current Communication Task Graph
+	 */
 	private List<CtgType> currentCtg;
 
+	/**
+	 * the current Application Characterization Graph 
+	 */
 	private List<ApcgType> currentApcg;
 
 	/**
-	 * the processes of mapping of IPcores and cores in integer number ( the
-	 * cores in Noc are represented in integer number)
+	 * the {@link Core}s to be mapped
 	 */
 	private Core[] cores;
 
@@ -109,16 +185,43 @@ public class JMetalGeneticAlgorithmMapper implements Mapper {
 	private ArrayList<Communication> communications;
 
 	/** counts how many cores were parsed from the parsed APCGs */
-	int previousCoreCount = 0;
+	private int previousCoreCount = 0;
 	
-	public JMetalGeneticAlgorithmMapper(List<CtgType> ctg,
-			List<ApcgType> apcg, int noOfIpCores, int noOfNodes) {
-
-		this.noOfIpCores = noOfIpCores;
-		this.noOfNodes = noOfNodes;
-
+	/**
+	 * Constructor
+	 * 
+	 * @param ctg
+	 *            Communication Task Graph
+	 * @param apcg
+	 *            Application Characterization Graph
+	 * @param coresNumber
+	 *            the number of IP cores to be mapped
+	 * @param nodesNumber
+	 *            the number of Network-on-Chip nodes
+	 * @param jMetalAlgorithm
+	 *            the selected jMetal single objective algorithm
+	 * @param populationSize
+	 *            the size of the population
+	 * @param maxEvaluations
+	 *            the maximum number of evaluations allowed for the algorithm
+	 * @param crossoverProbability
+	 *            crossover probability (a number in [0, 1] interval)
+	 * @param mutationProbability
+	 *            mutation probability (a number in [0, 1] interval)
+	 */
+	public JMetalEvolutionaryAlgorithmMapper(List<CtgType> ctg, List<ApcgType> apcg,
+			int coresNumber, int nodesNumber, JMetalAlgorithm jMetalAlgorithm,
+			int populationSize, int maxEvaluations, double crossoverProbability,
+			double mutationProbability) {
 		this.currentCtg = ctg;
 		this.currentApcg = apcg;
+		this.coresNumber = coresNumber;
+		this.nodesNumber = nodesNumber;
+		this.jMetalAlgorithm = jMetalAlgorithm;
+		this.maxEvaluations = maxEvaluations;
+		this.populationSize = populationSize;
+		this.crossoverProbability = crossoverProbability;
+		this.mutationProbability = mutationProbability;
 
 		initializeCores();
 
@@ -131,180 +234,134 @@ public class JMetalGeneticAlgorithmMapper implements Mapper {
 
 	@Override
 	public String getMapperId() {
-		return mapperId;
+		return jMetalAlgorithm.toString();
 	}	
 	
 	public String map() {
 		StringWriter stringWriter = new StringWriter();
 		try {
+			problem = new MappingProblem(1, communications, cores, nodesNumber);
 
-			problem = new MappingProblem(1, communications, cores, noOfNodes);
-
-			if (algorithmName.equals("ssGA")){
+			switch (jMetalAlgorithm) {
+			case SSGA:
 				algorithm = new ssGA(problem);
-				mapperId = "ssGA";
-			}
-			else if (algorithmName.equals("gGA")){
+				break;
+			case GGA:
 				algorithm = new gGA(problem);
-				mapperId = "gGA";
-			}
-			else if (algorithmName.equals("acGA")){
+				break;
+			case ACGA:
 				algorithm = new acGA(problem);
-				mapperId = "acGA";
-			}
-			else if (algorithmName.equals("scGA")){
+				break;
+			case SCGA:
 				algorithm = new scGA(problem);
-				mapperId = "scGA";
-			}
-			else if (algorithmName.equals("ElitistES")) {
-				algorithm = new ElitistES(problem, populationSize,
-						populationSize * 2);
-				mapperId = "ElitisES";
-			}
-			else if (algorithmName.equals("NonElitistES")){
-				algorithm = new NonElitistES(problem, populationSize,
-						populationSize * 2);
-				mapperId = "NonElitisES";
-			}
-			else {
-				System.out.println("please check the algorithm name");
+				break;
+			case EES:
+				algorithm = new ElitistES(problem, populationSize, populationSize * 2);
+				break;
+			case NEES:
+				algorithm = new NonElitistES(problem, populationSize, populationSize * 2);
+				break;
+			default:
+				logger.fatal("Unknown jMetal algorithm: " + jMetalAlgorithm + "! Exiting...");
 				System.exit(-1);
+				break;
 			}
 
 			algorithm.setInputParameter("populationSize", populationSize);
-			algorithm.setInputParameter("maxEvaluations", maxEvolutions);
+			algorithm.setInputParameter("maxEvaluations", maxEvaluations);
 
-			 //crossover = CrossoverFactory
-			 //.getCrossoverOperator("PMXCrossover");
-
+			// crossover = CrossoverFactory.getCrossoverOperator("PMXCrossover");
 			crossover = new PositionBasedCrossover();
-			crossover.setParameter("probability", crossoverPr);
-			// /crossover.setParameter("distributionIndex", 20.0);
+			crossover.setParameter("probability", crossoverProbability);
+			// crossover.setParameter("distributionIndex", 20.0);
 
 			mutation = MutationFactory.getMutationOperator("SwapMutation");
-
-			mutation.setParameter("probability", mutationPr);
+			mutation.setParameter("probability", mutationProbability);
 			// mutation.setParameter("distributionIndex", 20.0);
 
-			selection = SelectionFactory
-					.getSelectionOperator("BinaryTournament");
+			selection = (Selection) SelectionFactory.getSelectionOperator("BinaryTournament");
+			// selection = SelectionFactory.getSelectionOperator("DifferentialEvolutionSelection");
 
-			// selection =
-			// SelectionFactory.getSelectionOperator("DifferentialEvolutionSelection")
-			// ;
-			/* Add the operators to the algorithm */
 			algorithm.addOperator("crossover", crossover);
 			algorithm.addOperator("mutation", mutation);
 			algorithm.addOperator("selection", selection);
 
-			/* Execute the Algorithm */
+			// Execute the Algorithm
 			long initTime = System.currentTimeMillis();
 			SolutionSet population = algorithm.execute();
 			long estimatedTime = System.currentTimeMillis() - initTime;
-			System.out.println("Total execution time: " + estimatedTime);
+			logger.info("Total execution time: " + estimatedTime / 1000.0 + " s");
 
-			/* Log messages */
-			System.out
-					.println("Objectives values have been writen to file FUN");
-			population.printObjectivesToFile("FUN");
-			System.out.println("Variables values have been writen to file VAR");
-			population.printVariablesToFile("VAR");
+//			population.printObjectivesToFile("FUN");
+//			logger.info("Objectives values have been writen to file FUN");
+//			population.printVariablesToFile("VAR");
+//			logger.info("Variables values have been writen to file VAR");
 
-			/*
-			 * int numberOfVariables =
-			 * population.get(0).getDecisionVariables().length ; for (int i = 0;
-			 * i < population.size(); i++) { for (int j = 0; j <
-			 * numberOfVariables; j++)
-			 * bw.write(solutionsList_.get(i).getDecisionVariables
-			 * ()[j].toString() + " ");
-			 */
-			int sol[];
 			Solution S = new Solution(population.get(0));
-			sol = ((Permutation) S.getDecisionVariables()[0]).vector_;
-			for (int i = 0; i < sol.length; i++)
-				System.out.print(sol[i] + " ");
-			System.out.println();
-			System.out.println();
+			int sol[] = ((Permutation) S.getDecisionVariables()[0]).vector_;
+//			for (int i = 0; i < sol.length; i++) {
+//				System.out.print(sol[i] + " ");
+//			}
 			printCurrentMapping(sol);
-			// System.out.println("Communication cost = "
-			// +mp.calculateCommunicationCost(S));
-			System.out.println("Communication cost = " + S.getObjective(0));
+			logger.info("Communication cost = " + S.getObjective(0));
 
 			MappingType mapping = new MappingType();
-			mapping.setId(mapperId);
+			mapping.setId(jMetalAlgorithm.toString());
 			mapping.setRuntime((double) estimatedTime);
 
 			for (int i = 0; i < cores.length; i++) {
-				int j;
 				int currentIpCore = cores[i].getCoreNo();
-				for (j = 0; j < this.noOfNodes; j++) {
+				for (int j = 0; j < this.nodesNumber; j++) {
 					if (currentIpCore == sol[j]) {
+						MapType map = new MapType();
+						map.setNode(Integer.toString(j));
+						map.setCore(cores[i].getCoreUid());
+						map.setApcg(cores[i].getApcgId());
+						mapping.getMap().add(map);
 						break;
 					}
 				}
-
-				MapType map = new MapType();
-				map.setNode("" + j);
-				map.setCore(cores[i].getCoreUid());
-				map.setApcg(cores[i].getApcgId());
-				mapping.getMap().add(map);
 			}
 
 			ro.ulbsibiu.acaps.ctg.xml.mapping.ObjectFactory mappingFactory = new ro.ulbsibiu.acaps.ctg.xml.mapping.ObjectFactory();
-			JAXBElement<MappingType> jaxbElement = mappingFactory
-					.createMapping(mapping);
-
-			try {
-				JAXBContext jaxbContext = JAXBContext
-						.newInstance(MappingType.class);
-				Marshaller marshaller = jaxbContext.createMarshaller();
-				marshaller.setProperty("jaxb.formatted.output", Boolean.TRUE);
-				marshaller.marshal(jaxbElement, stringWriter);
-			} catch (JAXBException e) {
-				logger.error("JAXB encountered an error", e);
-			}
-
-			// return stringWriter.toString();
-
+			JAXBElement<MappingType> jaxbElement = mappingFactory.createMapping(mapping);
+			JAXBContext jaxbContext = JAXBContext.newInstance(MappingType.class);
+			Marshaller marshaller = jaxbContext.createMarshaller();
+			marshaller.setProperty("jaxb.formatted.output", Boolean.TRUE);
+			marshaller.marshal(jaxbElement, stringWriter);
 		} catch (ClassNotFoundException e) {
-			System.out.print("Class not found");
+			logger.error(e);
 		} catch (JMException e) {
-			System.out.println("JMP Exception occured");
+			logger.error(e);
+		} catch (JAXBException e) {
+			logger.error("JAXB encountered an error", e);
 		}
+		
 		return stringWriter.toString();
-
 	}
 
 	private void printCurrentMapping(int sol[]) {
-
 		for (int i = 0; i < cores.length; i++) {
-			int j;
 			int currentIpCore = cores[i].getCoreNo();
-			for (j = 0; j < this.noOfNodes; j++) {
+			for (int j = 0; j < this.nodesNumber; j++) {
 				if (currentIpCore == sol[j]) {
+					logger.info("Core " + cores[i].getCoreUid() + " (APCG "
+							+ cores[i].getApcgId() + ") is mapped to NoC node " + j);
 					break;
 				}
 			}
-
-			System.out.println("core " + cores[i].getCoreUid() + " (APCG "
-					+ cores[i].getApcgId() + ") is mapped to Noc Node " + j);
 		}
-
-		System.out.println();
 	}
 
 	private void initializeCores() {
-		cores = new Core[noOfIpCores];
+		cores = new Core[coresNumber];
 		for (int i = 0; i < cores.length; i++) {
 			cores[i] = new Core(i, null, -1);
 		}
 	}
 
 	private void getCommunicatios() {
-
 		this.communications = new ArrayList<Communication>();
-
-		int communicationIndex = 0;
 		for (int k = 0; k < currentCtg.size(); k++) {
 
 			// communication is the list of all communication of the current ctg
@@ -378,23 +435,23 @@ public class JMetalGeneticAlgorithmMapper implements Mapper {
 	}
 
 	public static void printCommandLineArguments() {
-		System.err.println("usage:   java GeneticAlgorithmMapperV1.class [{populationSize} {maxEvolution} {crossoverPr} {mutationPr}] [--algo {algo name}] [E3S benchmarks]");
+		System.err.println("usage:   java JMetalEvolutionaryAlgorithmMapper.class [{populationSize} {maxEvolution} {crossoverPr} {mutationPr}] [--algo {algo name}] [E3S benchmarks]");
 		System.err.println("1st parameter is number of population (population size)");
 		System.err.println("2nd parameter is maximum number of evolution to run");
 		System.err.println("3rd parameter is crossover probability (in real number) crossover probability < 1.00");
 		System.err.println("4th parameter is mutation probability (in real number) mutation probability < 1.00");
-		System.err.println("algorithm names are {ssGA, gGA scGA acGA ElitistES NonElitistES}");
-		System.err.println("example 1 (specify the tgff file): java GeneticAlgorithmMapperV1.class 100 500000 0.8 0.005 --algo gGA ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff ../CTG-XML/xml/e3s/telecom-mocsyn.tgff");
-		System.err.println("example 2 (specify the tgff file with default parameter): java GeneticAlgorithmMapperV1.class ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff ../CTG-XML/xml/e3s/telecom-mocsyn.tgff");
-		System.err.println("example 3 (specify the tgff file with algo name): java GeneticAlgorithmMapperV1.class --algo gGA ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff ../CTG-XML/xml/e3s/telecom-mocsyn.tgff");
-		System.err.println("example 4 (specify the tgff file with GA parameters): java GeneticAlgorithmMapperV1.class 100 50000 0.08 0.05 ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff ../CTG-XML/xml/e3s/telecom-mocsyn.tgff");
-		System.err.println("example 5 (specify the ctg with all other parameters): java GeneticAlgorithmMapperV1.class 100 100000 0.8 0.05 --algo acGA ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff --ctg 0+1+2+3");
-		System.err.println("example 6 (specify the ctg and algo name): java GeneticAlgorithmMapperV1.class --algo scGA ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff --ctg 0+1+2+3");
-		System.err.println("example 7 (specify the ctg and apcg with all parameters): java GeneticAlgorithmMapperV1.class 100 100000 0.8 0.05 --algo scGA ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff --ctg 0+1+2+3 --apcg 2");
-		System.err.println("example 8 (specify the ctg, apcg and algo name): java GeneticAlgorithmMapperV1.class --algo scGA ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff --ctg 0+1+2+3 --apcg 2");
-		System.err.println("example 9 (map the entire E3S benchmark suite with all paremeters): java GeneticAlgorithmMapper.class 100 1000000 0.8 0.01 --algo gGA");
-		System.err.println("example 10 (map the entire E3S benchmark suite with specific algo): java GeneticAlgorithmMapper.class --algo gGA");
-		System.exit(-1);
+		System.err.println("algorithm names are: SSGA, GGA, SCGA, ACGA, EES, NEES");
+		System.err.println("example 1 (specify the tgff file): java JMetalEvolutionaryAlgorithmMapper.class 100 500000 0.8 0.005 --algo gGA ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff ../CTG-XML/xml/e3s/telecom-mocsyn.tgff");
+		System.err.println("example 2 (specify the tgff file with default parameter): java JMetalEvolutionaryAlgorithmMapper.class ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff ../CTG-XML/xml/e3s/telecom-mocsyn.tgff");
+		System.err.println("example 3 (specify the tgff file with algo name): java JMetalEvolutionaryAlgorithmMapper.class --algo gGA ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff ../CTG-XML/xml/e3s/telecom-mocsyn.tgff");
+		System.err.println("example 4 (specify the tgff file with GA parameters): java JMetalEvolutionaryAlgorithmMapper.class 100 50000 0.08 0.05 ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff ../CTG-XML/xml/e3s/telecom-mocsyn.tgff");
+		System.err.println("example 5 (specify the ctg with all other parameters): java JMetalEvolutionaryAlgorithmMapper.class 100 100000 0.8 0.05 --algo ACGA ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff --ctg 0+1+2+3");
+		System.err.println("example 6 (specify the ctg and algo name): java JMetalEvolutionaryAlgorithmMapper.class --algo scGA ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff --ctg 0+1+2+3");
+		System.err.println("example 7 (specify the ctg and apcg with all parameters): java JMetalEvolutionaryAlgorithmMapper.class 100 100000 0.8 0.05 --algo SCGA ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff --ctg 0+1+2+3 --apcg 2");
+		System.err.println("example 8 (specify the ctg, apcg and algo name): java JMetalEvolutionaryAlgorithmMapper.class --algo scGA ../CTG-XML/xml/e3s/auto-indust-mocsyn.tgff --ctg 0+1+2+3 --apcg 2");
+		System.err.println("example 9 (map the entire E3S benchmark suite with all paremeters): java JMetalEvolutionaryAlgorithmMapper.class 100 1000000 0.8 0.01 --algo GGA");
+		System.err.println("example 10 (map the entire E3S benchmark suite with specific algo): java JMetalEvolutionaryAlgorithmMapper.class --algo GGA");
+		System.exit(0);
 	}
 
 	public static void main(String args[]) throws TooFewNocNodesException,
@@ -406,53 +463,62 @@ public class JMetalGeneticAlgorithmMapper implements Mapper {
 		boolean is1stParameterString = false;
 
 		final int defaultPopulationSize = 400;
-		final int defaultMaxEvolutions = 5000000;
+		final int defaultMaxEvaluations = 5000000;
 		final double defaultCrossoverPr = 0.85;
 		final double defaultMutationPr = 0.05;
-		final String defaultAlgorithmName = "ssGA";
+		final JMetalAlgorithm defaultAlgorithmName = JMetalAlgorithm.SSGA;
+		
+		int populationSize = 0;
+		int maxEvaluations = 0;
+		double crossoverProbability = 0;
+		double mutationProbability = 0;
+		JMetalAlgorithm jMetalAlgorithm = null;
 
 		if (args.length == 0) {
 			populationSize = defaultPopulationSize;
-			maxEvolutions = defaultMaxEvolutions;
-			crossoverPr = defaultCrossoverPr;
-			mutationPr = defaultMutationPr;
-			algorithmName = defaultAlgorithmName;
+			maxEvaluations = defaultMaxEvaluations;
+			crossoverProbability = defaultCrossoverPr;
+			mutationProbability = defaultMutationPr;
+			jMetalAlgorithm = defaultAlgorithmName;
 		} else {
 			try {
 				populationSize = Integer.parseInt(args[0]);
 			} catch (NumberFormatException e) {
 				is1stParameterString = true;
-
 			}
 			if (is1stParameterString == true) {
 				populationSize = defaultPopulationSize;
-				maxEvolutions = defaultMaxEvolutions;
-				crossoverPr = defaultCrossoverPr;
-				mutationPr = defaultMutationPr;
+				maxEvaluations = defaultMaxEvaluations;
+				crossoverProbability = defaultCrossoverPr;
+				mutationProbability = defaultMutationPr;
 				if (args[0].startsWith("--algo")) {
-					algorithmName = args[1];
-				} else
-					algorithmName = defaultAlgorithmName;
-
+					jMetalAlgorithm = JMetalAlgorithm.valueOf(args[1]);
+				} else {
+					jMetalAlgorithm = defaultAlgorithmName;
+				}
 			} else {
 				try {
-					maxEvolutions = Integer.parseInt(args[1]);
+					maxEvaluations = Integer.parseInt(args[1]);
 					if (Double.parseDouble(args[2]) > 1.0)
 						throw new GeneticAlgorithmInputException(
 								"Crossover Probability must be less than 1.0");
-					crossoverPr = Double.parseDouble(args[2]);
+					crossoverProbability = Double.parseDouble(args[2]);
 					if (Double.parseDouble(args[3]) > 1.0)
 						throw new GeneticAlgorithmInputException(
 								"Mutation Probability must be less than 1.0");
-					mutationPr = Double.parseDouble(args[3]);
+					mutationProbability = Double.parseDouble(args[3]);
 					if (args.length <= 4)
-						algorithmName = defaultAlgorithmName;
+						jMetalAlgorithm = defaultAlgorithmName;
 					else if (args[4].startsWith("--algo")) {
-						algorithmName = args[5];
-					} else
-						algorithmName = defaultAlgorithmName;
-
+						jMetalAlgorithm = JMetalAlgorithm.valueOf(args[5]);
+					} else {
+						jMetalAlgorithm = defaultAlgorithmName;
+					}
 				} catch (NumberFormatException e) {
+					logger.error(e);
+					printCommandLineArguments();
+				} catch (IllegalArgumentException e) {
+					logger.error(e);
 					printCommandLineArguments();
 				}
 			}
@@ -621,8 +687,7 @@ public class JMetalGeneticAlgorithmMapper implements Mapper {
 					logger.assertLog(apcgTypes.size() == ctgTypes.size(),
 							"An equal number of CTGs and APCGs is expected!");
 
-					logger.info("Using " + algorithmName
-							+ " Genetic Algorithm mapper for " + path + "ctg-"
+					logger.info("Using " + jMetalAlgorithm + " for " + path + "ctg-"
 							+ ctgId + " (APCG " + apcgId + ")");
 
 					// number of IP cores in the apcg
@@ -660,8 +725,10 @@ public class JMetalGeneticAlgorithmMapper implements Mapper {
 
 					logger.debug("Found " + nodeXmls.length + " nodes");
 
-					JMetalGeneticAlgorithmMapper gaMapper = new JMetalGeneticAlgorithmMapper(
-							ctgTypes, apcgTypes, noOfIpCores, nodeXmls.length);
+					JMetalEvolutionaryAlgorithmMapper gaMapper = new JMetalEvolutionaryAlgorithmMapper(
+							ctgTypes, apcgTypes, noOfIpCores, nodeXmls.length,
+							jMetalAlgorithm, populationSize, maxEvaluations,
+							crossoverProbability, mutationProbability);
 
 					String mappingXml = gaMapper.map();
 
@@ -672,34 +739,13 @@ public class JMetalGeneticAlgorithmMapper implements Mapper {
 							+ File.separator + "mapping-" + apcgId + "_" + gaMapper.getMapperId()
 							+ ".xml";
 					PrintWriter pw = new PrintWriter(mappingXmlFilePath);
-					logger.info("Saving the mapping XML file"
-							+ mappingXmlFilePath);
-					logger.info("Saving the mapping XML file\n\n");
+					logger.info("Saving the mapping XML file " + mappingXmlFilePath);
 					pw.write(mappingXml);
 					pw.close();
-
-					// gaMapper.printCurrentMapping();
-					// String mappingXml = gaMapper.map();
-
-					/*
-					 * File dir = new File(path + "ctg-" + ctgId); dir.mkdirs();
-					 * 
-					 * String mappingXmlFilePath = path + "ctg-" + ctgId +
-					 * File.separator + "mapping-" + apcgId + "_" +
-					 * gaMapper.getMapperId() + ".xml"; PrintWriter pw = new
-					 * PrintWriter(mappingXmlFilePath);
-					 * logger.info("Saving the mapping XML file" +
-					 * mappingXmlFilePath);
-					 * logger.info("Saving the mapping XML file");
-					 * pw.write(mappingXml); pw.close();
-					 * 
-					 * gaMapper.printCurrentMapping();
-					 */
 				}
 
 			}
-
-			logger.info("Program End");
+			logger.info("Done");
 		}
 	}
 }
