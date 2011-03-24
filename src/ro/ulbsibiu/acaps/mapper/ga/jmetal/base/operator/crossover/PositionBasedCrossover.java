@@ -63,8 +63,8 @@ public class PositionBasedCrossover extends Crossover {
 		offspring[0] = new Solution(parent1);
 		offspring[1] = new Solution(parent2);
 
-		if ((parent1.getType().getClass() == PERMUTATION_SOLUTION)
-				&& (parent2.getType().getClass() == PERMUTATION_SOLUTION)) {
+		if (PERMUTATION_SOLUTION.isAssignableFrom(parent1.getType().getClass())
+				&& PERMUTATION_SOLUTION.isAssignableFrom(parent1.getType().getClass())) {
 
 			int permutationLength;
 
@@ -235,12 +235,13 @@ public class PositionBasedCrossover extends Crossover {
 		Solution[] parents = (Solution[]) object;
 		Double crossoverProbability = null;
 
-		if ((parents[0].getType().getClass() != PERMUTATION_SOLUTION)
-				|| (parents[1].getType().getClass() != PERMUTATION_SOLUTION)) {
+		if (!PERMUTATION_SOLUTION.isAssignableFrom(parents[0].getType().getClass())
+				|| !PERMUTATION_SOLUTION.isAssignableFrom(parents[1].getType().getClass())) {
 
 			Configuration.logger_
-					.severe("Point Based Crossover.execute: the solutions "
-							+ "are not of the right type. The type should be 'Permutation', but "
+					.severe("PositionBasedCrossover.execute: the solutions "
+							+ "are not of the right type. The type should be '"
+							+ PERMUTATION_SOLUTION + "', but "
 							+ parents[0].getType() + " and "
 							+ parents[1].getType() + " are obtained");
 		}

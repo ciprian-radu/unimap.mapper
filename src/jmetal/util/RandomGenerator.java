@@ -20,31 +20,39 @@ import java.util.Random;
 public class RandomGenerator {
     
   /* Definition of random number generation routines */
-  double seed;
-  double [] oldrand = new double[55];
-  int jrand;
+  private double seed;
+  private double [] oldrand = new double[55];
+  private int jrand;
 
-  /**
-   * Constructor
-   */
-  public RandomGenerator(){
-    this.seed = (new Random(System.nanoTime())).nextDouble();
-    this.randomize();
-  } // RandomGenerator
+	/**
+	 * Constructor
+	 * 
+	 * @param seed
+	 *            the random number generator seed (can be <tt>null</tt>, in
+	 *            which case the system time is used as a seed)
+	 */
+	public RandomGenerator(Long seed) {
+		if (seed == null) {
+			this.seed = (new Random(System.nanoTime())).nextDouble();
+		} else {
+			this.seed = seed;
+		}
+		this.randomize();
+	} // RandomGenerator
 
   /* Get seed number for random and start it up */
-  void randomize(){
-    int j1;
-    for(j1=0; j1<=54; j1++){
-      oldrand[j1] = 0.0;
-    }
-    jrand=0;
-    warmup_random (seed);
-    return;
-  } // randomize
+	private void randomize() {
+		int j1;
+		for (j1 = 0; j1 <= 54; j1++) {
+			oldrand[j1] = 0.0;
+		}
+		jrand = 0;
+		warmup_random(seed);
+		return;
+	} // randomize
 
   /* Get randomize off and running */
-  void warmup_random (double seed){
+  private void warmup_random (double seed){
     int j1, ii;
     double new_random, prev_random;
     oldrand[54] = seed;
@@ -67,7 +75,7 @@ public class RandomGenerator {
   } // warmup_random
 
   /* Create next batch of 55 random numbers */
-  void advance_random (){
+  private void advance_random (){
     int j1;
     double new_random;
     for(j1=0; j1<24; j1++){
@@ -87,7 +95,7 @@ public class RandomGenerator {
   } //advance_ramdom
 
   /* Fetch a single random number between 0.0 and 1.0 */
-  double randomperc(){
+  private double randomperc(){
     jrand++;
     if(jrand>=55){
       jrand = 1;
