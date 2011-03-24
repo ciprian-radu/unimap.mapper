@@ -49,19 +49,19 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 
 	private static final String MAPPER_ID = "eaga";
 	
-	private static final int POPULATION_SIZE = 100;
+	protected static final int POPULATION_SIZE = 100;
 
 	/** the population size (100 individuals by default) */
-	private int populationSize = POPULATION_SIZE;
+	protected int populationSize = POPULATION_SIZE;
 
 	/** the number of generations */
-	private int generations = 100;
+	protected int generations = 100;
 	
 	/** the crossover probability (%) */
-	private int crossoverProbability = 90;
+	protected int crossoverProbability = 90;
 
 	/** the mutation probability (%) */
-	private int mutationProbability = 5;
+	protected int mutationProbability = 5;
 
 	/** the tournament size */
 	private int tournamentSize;
@@ -77,7 +77,7 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 	private int currentGeneration = 1;
 	
 	/** the random number generator */
-	private Random rand;
+	protected Random rand;
 	
 	/** how many mappings are evaluated */
 	private long evaluations = 0;
@@ -666,7 +666,7 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 	 * 
 	 * @return the fitness of the individual
 	 */
-	private double fitnessCalculation(int[] individual) {
+	protected double fitnessCalculation(int[] individual) {
 		logger.assertLog(individual != null, "Attempting to compute fitness for a NULL individual!");
 		logger.assertLog(individual.length == nodes.length, "The individual doesn't contains " + nodes.length + " genes!");
 		
@@ -864,6 +864,11 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 	@Override
 	protected void doMapping() {
 		runGaSteps();
+	}
+
+	@Override
+	protected void doBeforeSavingMapping() {
+		logger.info("A number of " + evaluations + " mappings were evaluated");
 		
 		// return the best mapping found
 		for (int i = 0; i < nodes.length; i++) {
@@ -887,12 +892,6 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 		if (buildRoutingTable) {
 			programRouters();
 		}
-
-	}
-
-	@Override
-	protected void doBeforeSavingMapping() {
-		logger.info("A number of " + evaluations + " mappings were evaluated");
 	}
 
 	public static void main(String args[]) throws TooFewNocNodesException,

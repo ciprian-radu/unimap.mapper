@@ -29,10 +29,37 @@ public class PseudoRandom {
   private PseudoRandom() {
     if (random == null){
       //this.random = new java.util.Random((long)seed);
-      random = new RandomGenerator();
+      random = new RandomGenerator(null);
       randomJava = new java.util.Random();            
     }
   } // PseudoRandom
+  
+	/**
+	 * Constructor
+	 * 
+	 * @param seed
+	 *            the random number generator seed (can be <tt>null</tt>, in
+	 *            which case the system time is used as a seed)
+	 */
+	private PseudoRandom(Long seed) {
+		random = new RandomGenerator(seed);
+		if (seed == null) {
+			randomJava = new java.util.Random();
+		} else {
+			randomJava = new java.util.Random(seed);
+		}
+	}
+	
+	/**
+	 * Reinitializes the random generator and sets a new seed for it.
+	 * 
+	 * @param seed
+	 *            the seed (can be <tt>null</tt>, in which case the system time
+	 *            is used as a seed)
+	 */
+	public static void setSeed(Long seed) {
+		new PseudoRandom(seed);
+	}
     
   /** 
    * Returns a random int value using the Java random generator.

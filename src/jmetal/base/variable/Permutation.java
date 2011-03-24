@@ -7,6 +7,9 @@
 
 package jmetal.base.variable;
 
+import java.util.Collections;
+import java.util.Random;
+
 import jmetal.base.Variable;
 import jmetal.util.PseudoRandom;
 import jmetal.util.Configuration.*;
@@ -77,21 +80,37 @@ public class Permutation extends Variable {
   * This constructor has been contributed by Madan Sathe
   */
   public Permutation(int size) {
-		size_   = size;
-		vector_ = new int[size_];
-
-		java.util.ArrayList<Integer> randomSequence = new
-                                       java.util.ArrayList<Integer>(size_);
-
-		for(int i = 0; i < size_; i++)
-			randomSequence.add(i);
-
-		java.util.Collections.shuffle(randomSequence);
-
-		for(int j = 0; j < randomSequence.size(); j++)
-			vector_[j] = randomSequence.get(j);
+		this(size, null);
   } // Constructor
-    
+  
+	/**
+	 * Constructor
+	 * 
+	 * @param size
+	 *            Length of the permutation
+	 * @param random
+	 *            the random number generator to be used for generating
+	 *            permutations
+	 */
+	public Permutation(int size, Random random) {
+		size_ = size;
+		vector_ = new int[size_];
+		java.util.ArrayList<Integer> randomSequence = new java.util.ArrayList<Integer>(size_);
+
+		for (int i = 0; i < size_; i++) {
+			randomSequence.add(i);
+		}
+
+		if (random != null) {
+			Collections.shuffle(randomSequence, random);
+		} else {
+			Collections.shuffle(randomSequence);
+		}
+
+		for (int j = 0; j < randomSequence.size(); j++) {
+			vector_[j] = randomSequence.get(j);
+		}
+	} // Constructor
   
   /** 
    * Copy Constructor
