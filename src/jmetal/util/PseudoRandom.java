@@ -11,11 +11,13 @@ package jmetal.util;
  * Class representing some randoms facilities
  */
 public class PseudoRandom {
-    
-  /**
-   * generator used to obtain the random values
-   */
-  private static RandomGenerator random = null;    
+
+	// cradu: RandomGenerator is buggy: randomperc() method doesn't generate a number between 0.0 and 1.0 always
+	
+//  /**
+//   * generator used to obtain the random values
+//   */
+//  private static RandomGenerator random = null;
   
   /**
    * other generator used to obtain the random values
@@ -27,9 +29,9 @@ public class PseudoRandom {
    * Creates a new instance of PseudoRandom.
    */
   private PseudoRandom() {
-    if (random == null){
+    if (randomJava == null){
       //this.random = new java.util.Random((long)seed);
-      random = new RandomGenerator(null);
+//      random = new RandomGenerator(null);
       randomJava = new java.util.Random();            
     }
   } // PseudoRandom
@@ -42,7 +44,7 @@ public class PseudoRandom {
 	 *            which case the system time is used as a seed)
 	 */
 	private PseudoRandom(Long seed) {
-		random = new RandomGenerator(seed);
+//		random = new RandomGenerator(seed);
 		if (seed == null) {
 			randomJava = new java.util.Random();
 		} else {
@@ -66,7 +68,7 @@ public class PseudoRandom {
    * @return A random int value.
    */
   public static int randInt() {
-    if (random == null) {
+    if (randomJava == null) {
       new PseudoRandom();
     }
     return randomJava.nextInt();
@@ -77,11 +79,11 @@ public class PseudoRandom {
    * Returns A random double value.
    */
   public static double randDouble() {
-    if (random == null) {
+    if (randomJava == null) {
       new PseudoRandom();
     }
-    return random.rndreal(0.0,1.0);
-    //return randomJava.nextDouble();
+//    return random.rndreal(0.0,1.0);
+    return randomJava.nextDouble();
   } // randDouble
     
   /** 
@@ -92,11 +94,11 @@ public class PseudoRandom {
    * Return A pseudo random int value between minBound and maxBound.
    */
   public static int randInt(int minBound, int maxBound) {
-    if (random == null) {
+    if (randomJava == null) {
       new PseudoRandom();
     }
-    return random.rnd(minBound,maxBound);
-    //return minBound + randomJava.nextInt(maxBound-minBound+1);
+//    return random.rnd(minBound,maxBound);
+    return minBound + randomJava.nextInt(maxBound-minBound+1);
   } // randInt
     
   /** Returns a random double value between a minimum bound and a maximum bound
@@ -106,10 +108,10 @@ public class PseudoRandom {
    * @return A pseudo random double value between minBound and maxBound
    */
   public static double randDouble(double minBound, double maxBound) {
-    if (random == null) {
+    if (randomJava == null) {
       new PseudoRandom();
     }
-    return random.rndreal(minBound,maxBound);
-    //return minBound + (maxBound - minBound)*randomJava.nextDouble();
+//    return random.rndreal(minBound,maxBound);
+    return minBound + (maxBound - minBound)*randomJava.nextDouble();
   } // randDouble    
 } // PseudoRandom
