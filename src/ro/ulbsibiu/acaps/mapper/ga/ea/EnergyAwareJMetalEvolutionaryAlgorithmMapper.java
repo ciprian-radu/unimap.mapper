@@ -9,8 +9,10 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBElement;
@@ -26,6 +28,7 @@ import jmetal.base.Variable;
 import jmetal.base.operator.crossover.Crossover;
 import jmetal.base.operator.mutation.Mutation;
 import jmetal.base.operator.mutation.MutationFactory;
+import jmetal.base.operator.mutation.SwapMutation;
 import jmetal.base.operator.selection.Selection;
 import jmetal.base.operator.selection.SelectionFactory;
 import jmetal.base.solutionType.PermutationSolutionType;
@@ -63,6 +66,7 @@ import ro.ulbsibiu.acaps.mapper.ga.GeneticAlgorithmMapper;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.JMetalEvolutionaryAlgorithmMapper;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.JMetalEvolutionaryAlgorithmMapper.JMetalAlgorithm;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.crossover.PositionBasedCrossover;
+import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.mutation.OsaMutation;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.problem.MappingProblem;
 import ro.ulbsibiu.acaps.mapper.util.ApcgFilenameFilter;
 import ro.ulbsibiu.acaps.mapper.util.MapperInputProcessor;
@@ -122,6 +126,26 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 	private Selection selection;
 	
 	private int[] solution;
+	
+	/** the distinct nodes with which each node communicates directly (through a single link) */
+	private Set<Integer>[] nodeNeighbors;
+	
+	/** the maximum neighbors a node can have */
+	private int maxNodeNeighbors = 0;
+	
+	/** the distinct cores with which each core communicates directly */
+	private Set<Integer>[] coreNeighbors;
+	
+	/**
+	 * the total data communicated by the cores
+	 */
+	private double[] coreToCommunication;
+	
+	/** the total amount of data communicated by all cores*/
+	private long totalToCommunication;
+	
+	/** for every core, the (from and to) communication probability density function */
+	private double[][] coresCommunicationPDF;
 
 	/**
 	 * Default constructor
@@ -154,26 +178,32 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 	 * @param jMetalAlgorithm
 	 *            the jMetal evolutionary algorithm
 	 * @param populationSize
-	 *            the population size (if <tt>null</tt>, a default value of 100 will be used)
+	 *            the population size (if <tt>null</tt>, a default value of 100
+	 *            will be used)
 	 * @param generations
-	 *            the number of generations (if <tt>null</tt>, a default value of 100 will be used)
+	 *            the number of generations (if <tt>null</tt>, a default value
+	 *            of 100 will be used)
 	 * @param crossoverProbability
-	 *            the crossover probability (%) (if <tt>null</tt>, a default value of 90 will be used)
+	 *            the crossover probability (%) (if <tt>null</tt>, a default
+	 *            value of 90 will be used)
+	 * @param mutationClass
+	 *            the Java class for the mutation operator
 	 * @param mutationProbability
-	 *            the mutation probability (%) (if <tt>null</tt>, a default value of 5 will be used)
+	 *            the mutation probability (%) (if <tt>null</tt>, a default
+	 *            value of 5 will be used)
 	 */
 	public EnergyAwareJMetalEvolutionaryAlgorithmMapper(String benchmarkName,
 			String ctgId, String apcgId, String topologyName,
 			String topologySize, File topologyDir, int coresNumber,
 			double linkBandwidth, float switchEBit, float linkEBit, Long seed,
 			JMetalAlgorithm jMetalAlgorithm, Integer populationSize,
-			Integer generations, Integer crossoverProbability,
+			Integer generations, Integer crossoverProbability, Class<?> mutationClass,
 			Integer mutationProbability) throws JAXBException {
 		this(benchmarkName, ctgId, apcgId, topologyName, topologySize,
 				topologyDir, coresNumber, linkBandwidth, false,
 				LegalTurnSet.WEST_FIRST, 1.056f, 2.831f, switchEBit, linkEBit,
 				seed, jMetalAlgorithm, populationSize, generations,
-				crossoverProbability, mutationProbability);
+				crossoverProbability, mutationClass, mutationProbability);
 	}
 
 	/**
@@ -227,6 +257,8 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 	 * @param crossoverProbability
 	 *            the crossover probability (%) (if <tt>null</tt>, a default
 	 *            value of 90 will be used)
+	 * @param mutationClass
+	 *            the Java class for the mutation operator
 	 * @param mutationProbability
 	 *            the mutation probability (%) (if <tt>null</tt>, a default
 	 *            value of 5 will be used)
@@ -239,7 +271,7 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 			LegalTurnSet legalTurnSet, float bufReadEBit, float bufWriteEBit,
 			float switchEBit, float linkEBit, Long seed,
 			JMetalAlgorithm jMetalAlgorithm, Integer populationSize,
-			Integer generations, Integer crossoverProbability,
+			Integer generations, Integer crossoverProbability, Class<?> mutationClass,
 			Integer mutationProbability) throws JAXBException {
 		super(benchmarkName, ctgId, apcgId, topologyName, topologySize,
 				topologyDir, coresNumber, linkBandwidth, buildRoutingTable,
@@ -247,16 +279,150 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 				seed, populationSize, generations, crossoverProbability,
 				mutationProbability);
 		this.jMetalAlgorithm = jMetalAlgorithm;
+		
+		nodeNeighbors = new LinkedHashSet[nodes.length];
+		for (int i = 0; i < links.length; i++) {
+			if (nodeNeighbors[Integer.valueOf(links[i].getFirstNode())] == null) {
+				nodeNeighbors[Integer.valueOf(links[i].getFirstNode())] = new LinkedHashSet<Integer>();
+			}
+			if (nodeNeighbors[Integer.valueOf(links[i].getSecondNode())] == null) {
+				nodeNeighbors[Integer.valueOf(links[i].getSecondNode())] = new LinkedHashSet<Integer>();
+			}
+			nodeNeighbors[Integer.valueOf(links[i].getFirstNode())].add(Integer.valueOf(links[i].getSecondNode()));
+			nodeNeighbors[Integer.valueOf(links[i].getSecondNode())].add(Integer.valueOf(links[i].getFirstNode()));
+		}
+		for (int i = 0; i < nodeNeighbors.length; i++) {
+			if (nodeNeighbors[i].size() > maxNodeNeighbors) {
+				maxNodeNeighbors = nodeNeighbors[i].size();
+			}
+		}
+		if (logger.isDebugEnabled()) {
+			for (int i = 0; i < nodeNeighbors.length; i++) {
+				logger.debug("Node " + i + " communicates with " + nodeNeighbors[i].size() + " nodes");
+			}
+			logger.debug("The maximum nodes a node has is " + maxNodeNeighbors);
+		}
+		
+		if (mutationClass.equals(SwapMutation.class)
+				|| mutationClass.equals(OsaMutation.class)) {
+			try {
+				this.mutation = (Mutation) mutationClass.newInstance();
+			} catch (InstantiationException e) {
+				logger.error(e);
+			} catch (IllegalAccessException e) {
+				logger.error(e);
+			}
+		} else {
+			logger.fatal("Unknown mutation operator: " + mutationClass
+					+ "! Exiting...");
+			System.exit(0);
+		}
+		
 		PseudoRandom.setSeed(seed);
 	}
 
 	@Override
 	public String getMapperId() {
-		return MAPPER_ID_PREFIX + jMetalAlgorithm.toString();
+		String sufix = "";
+		if (mutation instanceof OsaMutation) {
+			sufix += "-OSA";
+		}
+		return MAPPER_ID_PREFIX + jMetalAlgorithm.toString() + sufix;
+	}
+	
+	private void computeCoreToCommunicationPDF() {
+		totalToCommunication = 0;
+		coreToCommunication = new double[cores.length];
+		
+		for (int i = 0; i < cores.length; i++) {
+			long[] toCommunication = cores[i].getToCommunication();
+			for (int j = 0; j < toCommunication.length; j++) {
+				if (toCommunication[j] > 0) {
+					coreToCommunication[i] += toCommunication[j];
+				}
+			}
+			totalToCommunication += coreToCommunication[i];
+		}
+		logger.assertLog(totalToCommunication > 0, "No core is communicating any data!");
+		double total = 0;
+		for (int i = 0; i < cores.length; i++) {
+			if (logger.isDebugEnabled()) {
+				logger.debug("Core " + cores[i].getCoreId() + " (APCG "
+						+ cores[i].getApcgId() + ") communicates "
+						+ coreToCommunication[i] + ", which is "
+						+ 100 * (coreToCommunication[i] / totalToCommunication)
+						+ "% of the total communication volume");
+			}
+			total += 100 * (coreToCommunication[i] / totalToCommunication);
+		}
+		if (logger.isDebugEnabled()) {
+			logger.debug("Total probability is " + total + "%");
+		}
+	}
+	
+	private void computeCoresCommunicationPDF() {
+		coresCommunicationPDF = new double[cores.length][cores.length];
+		
+		for (int i = 0; i < cores.length; i++) {
+			long totalCommunication = 0;
+			long[] toCommunication = cores[i].getToCommunication();
+			long[] fromCommunication = cores[i].getFromCommunication();
+			logger.assertLog(toCommunication.length == fromCommunication.length, null);
+			
+			for (int j = 0; j < cores.length; j++) {
+				coresCommunicationPDF[i][j] = toCommunication[j] + fromCommunication[j];
+				totalCommunication += toCommunication[j];
+				totalCommunication += fromCommunication[j];
+			}
+			for (int j = 0; j < cores.length; j++) {
+				if (totalCommunication > 0) {
+					coresCommunicationPDF[i][j] = coresCommunicationPDF[i][j] / totalCommunication;
+				}
+			}
+		}
+	}
+	
+	private void computeCoreNeighbors() {
+		coreNeighbors = new LinkedHashSet[cores.length];
+		for (int i = 0; i < cores.length; i++) {
+			coreNeighbors[i] = new LinkedHashSet<Integer>();
+			long[] fromCommunication = cores[i].getFromCommunication();
+			for (int j = 0; j < fromCommunication.length; j++) {
+				if (fromCommunication[j] > 0) {
+					coreNeighbors[i].add(j);
+				}
+			}
+			long[] toCommunication = cores[i].getToCommunication();
+			for (int j = 0; j < toCommunication.length; j++) {
+				if (toCommunication[j] > 0) {
+					coreNeighbors[i].add(j);
+				}
+			}
+			if (logger.isDebugEnabled()) {
+				logger.debug("Core " + cores[i].getCoreId() + "(APCG "
+						+ cores[i].getApcgId() + ") communicates with "
+						+ coreNeighbors[i].size() + " cores");
+			}
+		}
 	}
 	
 	@Override
 	protected void doBeforeMapping() {
+		computeCoreNeighbors();
+		computeCoreToCommunicationPDF();
+		computeCoresCommunicationPDF();
+		if (mutation instanceof OsaMutation) {
+			OsaMutation osaMutation = (OsaMutation) mutation;
+			osaMutation.setCores(cores);
+			osaMutation.setCoreNeighbors(coreNeighbors);
+			osaMutation.setNodes(nodes);
+			osaMutation.setNodeNeighbors(nodeNeighbors);
+			osaMutation.setInitialTemperature(1);
+			osaMutation.setCoreToCommunication(coreToCommunication);
+			osaMutation.setCoresCommunicationPDF(coresCommunicationPDF);
+			osaMutation.setTotalToCommunication(totalToCommunication);
+		}
+		
 		try {
 			problem = new EnergyAwareMappingProblem(this, nodes.length, cores.length, rand);
 
@@ -294,7 +460,7 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 			crossover.setParameter("probability", crossoverProbability / 100.0);
 			// crossover.setParameter("distributionIndex", 20.0);
 
-			mutation = MutationFactory.getMutationOperator("SwapMutation");
+			// mutation = MutationFactory.getMutationOperator("SwapMutation");
 			mutation.setParameter("probability", mutationProbability / 100.0);
 			// mutation.setParameter("distributionIndex", 20.0);
 
@@ -358,6 +524,9 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 		
 		MapperInputProcessor mapperInputProcessor = new MapperInputProcessor() {
 			
+			/* (non-Javadoc)
+			 * @see ro.ulbsibiu.acaps.mapper.util.MapperInputProcessor#useMapper(java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.util.List, java.util.List, boolean, java.lang.Long)
+			 */
 			@Override
 			public void useMapper(String benchmarkFilePath, String benchmarkName,
 					String ctgId, String apcgId, List<CtgType> ctgTypes,
@@ -406,6 +575,7 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 					Integer populationSize = null;
 					Integer generations = null;
 					Integer crossoverProbability = null;
+					Class<?> mutationClass = null;
 					Integer mutationProbability = null;
 					if (cmd.hasOption("p")) {
 						populationSize = Integer.valueOf(cmd.getOptionValue("p"));
@@ -422,6 +592,13 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 					if (cmd.hasOption("x")) {
 						crossoverProbability = Integer.valueOf(cmd.getOptionValue("x"));
 					}
+					try {
+						String mutationClassString = cmd.getOptionValue("mc", SwapMutation.class.getName());
+						mutationClass = Class.forName(mutationClassString);
+					} catch (ClassNotFoundException e) {
+						logger.error(e);
+					}
+					logger.info("Using a " + mutationClass.getName() + " mutation");
 					if (cmd.hasOption("m")) {
 						mutationProbability = Integer.valueOf(cmd.getOptionValue("m"));
 					}
@@ -442,6 +619,7 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 							"populationSize",
 							"generations",
 							"crossoverProbability",
+							"mutationClass",
 							"mutationProbability",
 							};
 					String values[] = new String[] {
@@ -455,10 +633,11 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 							populationSize == null ? null : Integer.toString(populationSize),
 							generations == null ? null : Integer.toString(generations),
 							crossoverProbability == null ? null : Integer.toString(crossoverProbability),
+							mutationClass == null ? null : mutationClass.getName(),
 							mutationProbability == null ? null : Integer.toString(mutationProbability),
 							};
 					if (doRouting) {
-						values[values.length - 6] = "true";
+						values[values.length - 7] = "true";
 						MapperDatabase.getInstance().setParameters(parameters, values);
 						
 						// with routing
@@ -468,9 +647,9 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 								linkBandwidth, true, LegalTurnSet.ODD_EVEN,
 								bufReadEBit, bufWriteEBit, switchEBit, linkEBit,
 								seed, jMetalAlgorithm, populationSize, generations,
-								crossoverProbability, mutationProbability);
+								crossoverProbability, mutationClass, mutationProbability);
 					} else {
-						values[values.length - 6] = "false";
+						values[values.length - 7] = "false";
 						MapperDatabase.getInstance().setParameters(parameters, values);
 						
 						// without routing
@@ -479,7 +658,7 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 								meshSize, new File(topologyDir), cores,
 								linkBandwidth, switchEBit, linkEBit, seed,
 								jMetalAlgorithm, populationSize, generations,
-								crossoverProbability, mutationProbability);
+								crossoverProbability, mutationClass, mutationProbability);
 					}
 
 //			// read the input data from a traffic.config file (NoCmap style)
@@ -533,6 +712,7 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 		mapperInputProcessor.getCliOptions().addOption("p", "population-size", true, "the population size");
 		mapperInputProcessor.getCliOptions().addOption("g", "generations", true, "the number of generations");
 		mapperInputProcessor.getCliOptions().addOption("x", "crossover-probability", true, "crossover probability (%)");
+		mapperInputProcessor.getCliOptions().addOption("mc", "mutation-class", true, "mutation Java class");
 		mapperInputProcessor.getCliOptions().addOption("m", "mutation-probability", true, "mutation probability (%)");
 		
 		mapperInputProcessor.processInput(args);

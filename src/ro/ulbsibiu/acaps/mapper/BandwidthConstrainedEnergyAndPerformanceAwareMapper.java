@@ -722,7 +722,11 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 			logger.trace("overload cost " + overloadCost);
 			logger.trace("total cost " + (energyCost + overloadCost));
 		}
-		return energyCost + overloadCost;
+		double cost = energyCost + overloadCost;
+		if (logger.isDebugEnabled()) {
+			logger.debug("Computed a total cost of " + cost);
+		}
+		return cost;
 	}
 
 	/**
