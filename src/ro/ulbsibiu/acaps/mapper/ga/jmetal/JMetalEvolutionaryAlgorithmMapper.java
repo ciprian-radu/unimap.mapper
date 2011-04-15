@@ -76,6 +76,10 @@ public class JMetalEvolutionaryAlgorithmMapper implements Mapper {
 	 */
 	public enum JMetalAlgorithm {
 		/**
+		 * Elitist version of Genetic Algorithm (its developed by us)
+		 */
+		EGA,
+		/**
 		 * Steady State Genetic Algorithm
 		 */
 		SSGA,
