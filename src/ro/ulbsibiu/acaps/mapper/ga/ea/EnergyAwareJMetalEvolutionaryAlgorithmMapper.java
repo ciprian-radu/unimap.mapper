@@ -465,6 +465,7 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 			SolutionSet population = algorithm.execute();
 			Solution S = new Solution(population.get(0));
 			solution = ((Permutation) S.getDecisionVariables()[0]).vector_;
+			logger.info("Best mapping has cost " + population.get(0).getObjective(0));
 		} catch (ClassNotFoundException e) {
 			logger.error(e);
 		} catch (JMException e) {
