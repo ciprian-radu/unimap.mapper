@@ -1,24 +1,16 @@
 package ro.ulbsibiu.acaps.mapper.ga.ea;
 
 import java.io.File;
-import java.io.FileFilter;
 import java.io.FileNotFoundException;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
 
 import jmetal.base.Algorithm;
 import jmetal.base.Problem;
@@ -27,7 +19,6 @@ import jmetal.base.SolutionSet;
 import jmetal.base.Variable;
 import jmetal.base.operator.crossover.Crossover;
 import jmetal.base.operator.mutation.Mutation;
-import jmetal.base.operator.mutation.MutationFactory;
 import jmetal.base.operator.mutation.SwapMutation;
 import jmetal.base.operator.selection.Selection;
 import jmetal.base.operator.selection.SelectionFactory;
@@ -49,26 +40,14 @@ import org.apache.commons.cli.PosixParser;
 import org.apache.log4j.Logger;
 
 import ro.ulbsibiu.acaps.ctg.xml.apcg.ApcgType;
-import ro.ulbsibiu.acaps.ctg.xml.apcg.TaskType;
-import ro.ulbsibiu.acaps.ctg.xml.ctg.CommunicationType;
 import ro.ulbsibiu.acaps.ctg.xml.ctg.CtgType;
-import ro.ulbsibiu.acaps.ctg.xml.mapping.MapType;
-import ro.ulbsibiu.acaps.ctg.xml.mapping.MappingType;
-import ro.ulbsibiu.acaps.mapper.BandwidthConstrainedEnergyAndPerformanceAwareMapper;
-import ro.ulbsibiu.acaps.mapper.Mapper;
 import ro.ulbsibiu.acaps.mapper.MapperDatabase;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
-import ro.ulbsibiu.acaps.mapper.BandwidthConstrainedEnergyAndPerformanceAwareMapper.LegalTurnSet;
-import ro.ulbsibiu.acaps.mapper.ga.Communication;
-import ro.ulbsibiu.acaps.mapper.ga.Core;
-import ro.ulbsibiu.acaps.mapper.ga.GeneticAlgorithmInputException;
-import ro.ulbsibiu.acaps.mapper.ga.GeneticAlgorithmMapper;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.JMetalEvolutionaryAlgorithmMapper;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.JMetalEvolutionaryAlgorithmMapper.JMetalAlgorithm;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.crossover.PositionBasedCrossover;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.mutation.OsaMutation;
-import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.problem.MappingProblem;
-import ro.ulbsibiu.acaps.mapper.util.ApcgFilenameFilter;
+import ro.ulbsibiu.acaps.mapper.ga.jmetal.metaheuristics.singleObjective.geneticAlgorithm.ElitistGA;
 import ro.ulbsibiu.acaps.mapper.util.MapperInputProcessor;
 
 /**
@@ -427,6 +406,9 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 			problem = new EnergyAwareMappingProblem(this, nodes.length, cores.length, rand);
 
 			switch (jMetalAlgorithm) {
+			case EGA:
+				algorithm = new ElitistGA(problem);
+				break;
 			case SSGA:
 				algorithm = new ssGA(problem);
 				break;
