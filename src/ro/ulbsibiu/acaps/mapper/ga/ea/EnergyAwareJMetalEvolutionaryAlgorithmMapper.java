@@ -18,6 +18,7 @@ import jmetal.base.Solution;
 import jmetal.base.SolutionSet;
 import jmetal.base.Variable;
 import jmetal.base.operator.crossover.Crossover;
+import jmetal.base.operator.crossover.PMXCrossover;
 import jmetal.base.operator.mutation.Mutation;
 import jmetal.base.operator.mutation.SwapMutation;
 import jmetal.base.operator.selection.Selection;
@@ -45,6 +46,7 @@ import ro.ulbsibiu.acaps.mapper.MapperDatabase;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.JMetalEvolutionaryAlgorithmMapper;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.JMetalEvolutionaryAlgorithmMapper.JMetalAlgorithm;
+import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.crossover.MappingSimilarityCrossover;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.crossover.PositionBasedCrossover;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.mutation.OsaMutation;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.metaheuristics.singleObjective.geneticAlgorithm.ElitistGA;
@@ -176,13 +178,15 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 			String topologySize, File topologyDir, int coresNumber,
 			double linkBandwidth, float switchEBit, float linkEBit, Long seed,
 			JMetalAlgorithm jMetalAlgorithm, Integer populationSize,
-			Integer generations, Integer crossoverProbability, Class<?> mutationClass,
+			Integer generations, Class<?> crossoverClass,
+			Integer crossoverProbability, Class<?> mutationClass,
 			Integer mutationProbability) throws JAXBException {
 		this(benchmarkName, ctgId, apcgId, topologyName, topologySize,
 				topologyDir, coresNumber, linkBandwidth, false,
 				LegalTurnSet.WEST_FIRST, 1.056f, 2.831f, switchEBit, linkEBit,
 				seed, jMetalAlgorithm, populationSize, generations,
-				crossoverProbability, mutationClass, mutationProbability);
+				crossoverClass, crossoverProbability, mutationClass,
+				mutationProbability);
 	}
 
 	/**
@@ -233,6 +237,8 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 	 * @param generations
 	 *            the number of generations (if <tt>null</tt>, a default value
 	 *            of 100 will be used)
+	 * @param crossoverClass
+	 *            the Java class for the crossover operator
 	 * @param crossoverProbability
 	 *            the crossover probability (%) (if <tt>null</tt>, a default
 	 *            value of 90 will be used)
@@ -250,7 +256,8 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 			LegalTurnSet legalTurnSet, float bufReadEBit, float bufWriteEBit,
 			float switchEBit, float linkEBit, Long seed,
 			JMetalAlgorithm jMetalAlgorithm, Integer populationSize,
-			Integer generations, Integer crossoverProbability, Class<?> mutationClass,
+			Integer generations, Class<?> crossoverClass,
+			Integer crossoverProbability, Class<?> mutationClass,
 			Integer mutationProbability) throws JAXBException {
 		super(benchmarkName, ctgId, apcgId, topologyName, topologySize,
 				topologyDir, coresNumber, linkBandwidth, buildRoutingTable,
@@ -282,6 +289,44 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 			logger.debug("The maximum nodes a node has is " + maxNodeNeighbors);
 		}
 		
+		if (crossoverClass.equals(PositionBasedCrossover.class)
+				|| crossoverClass.equals(PMXCrossover.class)) {
+			try {
+				this.crossover = (Crossover) crossoverClass.newInstance();
+			} catch (InstantiationException e) {
+				logger.error(e);
+			} catch (IllegalAccessException e) {
+				logger.error(e);
+			}
+		} else {
+			// TODO The mapping similarity crossover operator is topology dependent
+			if (crossoverClass.equals(MappingSimilarityCrossover.class)) {
+				this.crossover = new MappingSimilarityCrossover() {
+					
+					@Override
+					public int computeDistance(int node1, int node2) {
+						int node1Column = node1 % hSize;
+						int node1Row = node1 / hSize;
+						
+						int node2Column = node2 % hSize;
+						int node2Row = node2 / hSize;
+						
+						// Manhattan distance
+						int distance = Math.abs(node1Column - node2Column) + Math.abs(node1Row - node2Row);
+						if (logger.isTraceEnabled()) {
+							logger.trace("Manhattan distance between NoC nodes " + node1 + " and " + node2 + " is " + distance);
+						}
+						
+						return distance;
+					}
+				};
+			} else {
+				logger.fatal("Unknown crossover operator: " + crossoverClass
+						+ "! Exiting...");
+				System.exit(0);
+			}
+		}
+		
 		if (mutationClass.equals(SwapMutation.class)
 				|| mutationClass.equals(OsaMutation.class)) {
 			try {
@@ -303,6 +348,9 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 	@Override
 	public String getMapperId() {
 		String sufix = "";
+		if (crossover instanceof MappingSimilarityCrossover) {
+			sufix += "-MS";
+		}
 		if (mutation instanceof OsaMutation) {
 			sufix += "-OSA";
 		}
@@ -390,6 +438,13 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 		computeCoreNeighbors();
 		computeCoreToCommunicationPDF();
 		computeCoresCommunicationPDF();
+		if (crossover instanceof MappingSimilarityCrossover) {
+			MappingSimilarityCrossover msCrossover = (MappingSimilarityCrossover) crossover;
+			msCrossover.setCores(cores);
+			msCrossover.setCoreNeighbors(coreNeighbors);
+			msCrossover.setNodes(nodes);
+			msCrossover.setNodeNeighbors(nodeNeighbors);
+		}
 		if (mutation instanceof OsaMutation) {
 			OsaMutation osaMutation = (OsaMutation) mutation;
 			osaMutation.setCores(cores);
@@ -438,7 +493,6 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 			algorithm.setInputParameter("maxEvaluations", generations * populationSize);
 
 			// crossover = CrossoverFactory.getCrossoverOperator("PMXCrossover");
-			crossover = new PositionBasedCrossover();
 			crossover.setParameter("probability", crossoverProbability / 100.0);
 			// crossover.setParameter("distributionIndex", 20.0);
 
@@ -557,6 +611,7 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 					
 					Integer populationSize = null;
 					Integer generations = null;
+					Class<?> crossoverClass = null;
 					Integer crossoverProbability = null;
 					Class<?> mutationClass = null;
 					Integer mutationProbability = null;
@@ -572,6 +627,13 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 						defaultGenerationsNumber = (int) Math.ceil(osaEvaluations / populationSize);
 					}
 					generations = Integer.valueOf(cmd.getOptionValue("g", Integer.toString(defaultGenerationsNumber)));
+					try {
+						String crossoverClassString = cmd.getOptionValue("xc", PositionBasedCrossover.class.getName());
+						crossoverClass = Class.forName(crossoverClassString);
+					} catch (ClassNotFoundException e) {
+						logger.error(e);
+					}
+					logger.info("Using a " + crossoverClass.getName() + " crossover");
 					if (cmd.hasOption("x")) {
 						crossoverProbability = Integer.valueOf(cmd.getOptionValue("x"));
 					}
@@ -628,9 +690,11 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 								benchmarkName, ctgId, apcgId, topologyName,
 								meshSize, new File(topologyDir), cores,
 								linkBandwidth, true, LegalTurnSet.ODD_EVEN,
-								bufReadEBit, bufWriteEBit, switchEBit, linkEBit,
-								seed, jMetalAlgorithm, populationSize, generations,
-								crossoverProbability, mutationClass, mutationProbability);
+								bufReadEBit, bufWriteEBit, switchEBit,
+								linkEBit, seed, jMetalAlgorithm,
+								populationSize, generations, crossoverClass,
+								crossoverProbability, mutationClass,
+								mutationProbability);
 					} else {
 						values[values.length - 7] = "false";
 						MapperDatabase.getInstance().setParameters(parameters, values);
@@ -641,7 +705,8 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 								meshSize, new File(topologyDir), cores,
 								linkBandwidth, switchEBit, linkEBit, seed,
 								jMetalAlgorithm, populationSize, generations,
-								crossoverProbability, mutationClass, mutationProbability);
+								crossoverClass, crossoverProbability,
+								mutationClass, mutationProbability);
 					}
 
 //			// read the input data from a traffic.config file (NoCmap style)
@@ -694,6 +759,7 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 				+ Arrays.toString(JMetalAlgorithm.values()) + ")");
 		mapperInputProcessor.getCliOptions().addOption("p", "population-size", true, "the population size");
 		mapperInputProcessor.getCliOptions().addOption("g", "generations", true, "the number of generations");
+		mapperInputProcessor.getCliOptions().addOption("xc", "crossover-class", true, "crossover Java class");
 		mapperInputProcessor.getCliOptions().addOption("x", "crossover-probability", true, "crossover probability (%)");
 		mapperInputProcessor.getCliOptions().addOption("mc", "mutation-class", true, "mutation Java class");
 		mapperInputProcessor.getCliOptions().addOption("m", "mutation-probability", true, "mutation probability (%)");
