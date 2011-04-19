@@ -6,6 +6,7 @@ import jmetal.base.Algorithm;
 import java.util.Comparator;
 
 import ro.ulbsibiu.acaps.mapper.ga.GeneticAlgorithmMapper;
+import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.crossover.NocPositionBasedCrossover;
 import jmetal.util.*;
 
 /**
@@ -42,7 +43,7 @@ public class ElitistGA extends Algorithm {
 
 		comparator = new ObjectiveComparator(0); // Single objective comparator
 
-		// Read the params
+		// Read the parameter
 		maxEvaluations = ((Integer) this.getInputParameter("maxEvaluations"))
 				.intValue();
 		populationSize = ((Integer) this.getInputParameter("populationSize"))
@@ -78,19 +79,51 @@ public class ElitistGA extends Algorithm {
 				parents[0] = (Solution) selectionOperator.execute(population);
 				parents[1] = (Solution) selectionOperator.execute(population);
 
-				// crossover
-				Solution[] offsprings = (Solution[]) crossoverOperator
-						.execute(parents);
+				// if crossover operator is NocpositionBasedCrossover the
+				// crossover return one offspring in each call of the function
+				if (NocPositionBasedCrossover.class
+						.isAssignableFrom(crossoverOperator.getClass())) {
 
-				// Mutation
-				mutationOperator.execute(offsprings[0]);
-				mutationOperator.execute(offsprings[1]);
+					// crossover
+					Solution[] offsprings = (Solution[]) crossoverOperator
+							.execute(parents);
 
-				problem_.evaluate(offsprings[0]);
-				problem_.evaluate(offsprings[1]);
+					// Mutation
+					mutationOperator.execute(offsprings[0]);
+					
+					problem_.evaluate(offsprings[0]);
+					offspringPopulation.add(offsprings[0]);
 
-				offspringPopulation.add(offsprings[0]);
-				offspringPopulation.add(offsprings[1]);
+					//selection of next set of parents
+					parents[0] = (Solution) selectionOperator.execute(population);
+					parents[1] = (Solution) selectionOperator.execute(population);
+					// crossover
+					offsprings = (Solution[]) crossoverOperator
+							.execute(parents);
+
+					// Mutation
+					mutationOperator.execute(offsprings[0]);
+					
+					problem_.evaluate(offsprings[0]);
+					offspringPopulation.add(offsprings[0]);
+
+				} else {
+
+					// crossover
+					Solution[] offsprings = (Solution[]) crossoverOperator
+							.execute(parents);
+
+					// Mutation
+					mutationOperator.execute(offsprings[0]);
+					mutationOperator.execute(offsprings[1]);
+
+					problem_.evaluate(offsprings[0]);
+					problem_.evaluate(offsprings[1]);
+
+					offspringPopulation.add(offsprings[0]);
+					offspringPopulation.add(offsprings[1]);
+
+				}
 
 				evaluations += 2;
 

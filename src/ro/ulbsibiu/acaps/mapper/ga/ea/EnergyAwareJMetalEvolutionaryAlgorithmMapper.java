@@ -47,6 +47,7 @@ import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.JMetalEvolutionaryAlgorithmMapper;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.JMetalEvolutionaryAlgorithmMapper.JMetalAlgorithm;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.crossover.MappingSimilarityCrossover;
+import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.crossover.NocPositionBasedCrossover;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.crossover.PositionBasedCrossover;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.mutation.OsaMutation;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.metaheuristics.singleObjective.geneticAlgorithm.ElitistGA;
@@ -321,9 +322,32 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 					}
 				};
 			} else {
-				logger.fatal("Unknown crossover operator: " + crossoverClass
-						+ "! Exiting...");
-				System.exit(0);
+				if (crossoverClass.equals(NocPositionBasedCrossover.class)) {
+					this.crossover = new NocPositionBasedCrossover(cores) {
+
+						@Override
+						public int computeDistance(int node1, int node2) {
+							int node1Column = node1 % hSize;
+							int node1Row = node1 / hSize;
+							
+							int node2Column = node2 % hSize;
+							int node2Row = node2 / hSize;
+							
+							// Manhattan distance
+							int distance = Math.abs(node1Column - node2Column) + Math.abs(node1Row - node2Row);
+							if (logger.isTraceEnabled()) {
+								logger.trace("Manhattan distance between NoC nodes " + node1 + " and " + node2 + " is " + distance);
+							}
+							
+							return distance;
+						}
+						
+					};
+				} else {
+					logger.fatal("Unknown crossover operator: "
+							+ crossoverClass + "! Exiting...");
+					System.exit(0);
+				}
 			}
 		}
 		

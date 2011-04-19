@@ -79,6 +79,16 @@ public abstract class MappingSimilarityCrossover extends Crossover {
 		this.nodeNeighbors = nodeNeighbors;
 	}
 	
+	/**
+	 * Computes the number oh hops between two NoC nodes (requires NoC topology
+	 * knowledge)
+	 * 
+	 * @param node1
+	 *            the first NoC node
+	 * @param node2
+	 *            the second NoC node
+	 * @return the distance between the two NoC nodes
+	 */
 	public abstract int computeDistance(int node1, int node2);
 
 	private int[] computeDistanceVector(int[] chromosome) {
