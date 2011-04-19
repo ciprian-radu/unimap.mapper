@@ -81,7 +81,7 @@ public class PositionBasedCrossover extends Crossover {
 			if (PseudoRandom.randDouble() < probability) {
 
 				for (int i = 0; i < offspring1Vector.length; i++) {
-					offspring1Vector[i] = offspring2Vector[i] = -1;
+					offspring1Vector[i] = offspring2Vector[i] = Integer.MIN_VALUE;
 				}
 
 				// 25 percent of the gene is used as positions
@@ -93,7 +93,7 @@ public class PositionBasedCrossover extends Crossover {
 				int[] setOfPositions = new int[numberOfPositions];
 
 				for (int i = 0; i < setOfPositions.length; i++)
-					setOfPositions[i] = -1;
+					setOfPositions[i] = Integer.MIN_VALUE;
 
 				for (int i = 0; i < setOfPositions.length; i++) {
 					int number;
@@ -120,7 +120,7 @@ public class PositionBasedCrossover extends Crossover {
 
 				/*
 				 * copy the content of the specific position(setOfPosition) from
-				 * parent1 to child1. Also set -1 in position of parent2
+				 * parent1 to child1. Also set Integer.MIN_VALUE in position of parent2
 				 * (tempParent) where the content of the parent1 of the specific
 				 * position (setOfPosition) is matched
 				 */
@@ -129,7 +129,7 @@ public class PositionBasedCrossover extends Crossover {
 					int j;
 					for (j = 0; j < tempParent.length; j++) {
 						if (tempParent[j] == parent1Vector[setOfPositions[i]]) {
-							tempParent[j] = -1;
+							tempParent[j] = Integer.MIN_VALUE;
 							break;
 						}
 					}
@@ -138,15 +138,15 @@ public class PositionBasedCrossover extends Crossover {
 				/*
 				 * starting from left to right of parent2(tempParent), copy
 				 * content from parent2 to the rest of the position of child1 by
-				 * skipping -1
+				 * skipping Integer.MIN_VALUE
 				 */
 				for (int i = 0; i < tempParent.length; i++) {
 
-					if (tempParent[i] == -1)
+					if (tempParent[i] == Integer.MIN_VALUE)
 						continue;
 					else {
 						for (int j = 0; j < offspring1Vector.length; j++) {
-							if (offspring1Vector[j] != -1)
+							if (offspring1Vector[j] != Integer.MIN_VALUE)
 								continue;
 							else {
 								offspring1Vector[j] = tempParent[i];
@@ -161,7 +161,7 @@ public class PositionBasedCrossover extends Crossover {
 				// child2 start
 
 				for (int i = 0; i < setOfPositions.length; i++)
-					setOfPositions[i] = -1;
+					setOfPositions[i] = Integer.MIN_VALUE;
 
 				for (int i = 0; i < setOfPositions.length; i++) {
 					int number;
@@ -189,7 +189,7 @@ public class PositionBasedCrossover extends Crossover {
 					int j;
 					for (j = 0; j < tempParent.length; j++) {
 						if (tempParent[j] == parent2Vector[setOfPositions[i]]) {
-							tempParent[j] = -1;
+							tempParent[j] = Integer.MIN_VALUE;
 							break;
 						}
 					}
@@ -198,11 +198,11 @@ public class PositionBasedCrossover extends Crossover {
 
 				for (int i = 0; i < tempParent.length; i++) {
 
-					if (tempParent[i] == -1)
+					if (tempParent[i] == Integer.MIN_VALUE)
 						continue;
 					else {
 						for (int j = 0; j < offspring2Vector.length; j++) {
-							if (offspring2Vector[j] != -1)
+							if (offspring2Vector[j] != Integer.MIN_VALUE)
 								continue;
 							else {
 								offspring2Vector[j] = tempParent[i];
