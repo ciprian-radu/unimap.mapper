@@ -19,7 +19,7 @@ do
 	echo $i $2
 	# the last parameter (i) is the seed
 	#qsub -o job-${JOB_ID}.out.log -e job-${JOB_ID}.err.log -N $1-$i -b y $JOB_ARGS -s $i
-	qsub -N $1-$i -b y $JOB_ARGS -s $i
+	qsub -b y $JOB_ARGS -s $i
 done
 
 echo "Job $1 has been submitted $2 times."
