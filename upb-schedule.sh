@@ -7,6 +7,8 @@ echo ""
 echo "usage: ./upb-schedule.sh program n [program arguments]"
 echo "(where program is the file path to the program and n is the number of times the program will run)"
 
+
+
 args=("$@")
 JOB_ARGS="${args[0]}"
 for i in $(seq 2 ${#args[@]})
@@ -19,7 +21,7 @@ do
 	echo $i $2
 	# the last parameter (i) is the seed
 	#qsub -o job-${JOB_ID}.out.log -e job-${JOB_ID}.err.log -N $1-$i -b y $JOB_ARGS -s $i
-	qsub -b y $JOB_ARGS -s $i
+	qsub -q ibm-opteron.q -b y $JOB_ARGS -s $i
 done
 
 echo "Job $1 has been submitted $2 times."
