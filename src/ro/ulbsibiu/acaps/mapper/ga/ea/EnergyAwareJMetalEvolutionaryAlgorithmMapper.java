@@ -375,6 +375,9 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 		if (crossover instanceof MappingSimilarityCrossover) {
 			sufix += "-MS";
 		}
+		if (crossover instanceof NocPositionBasedCrossover) {
+			sufix += "-NPB";
+		}
 		if (mutation instanceof OsaMutation) {
 			sufix += "-OSA";
 		}
