@@ -1,0 +1,13 @@
+
+syntax: regexp
+^src/ro/ulbsibiu/acaps/mapper/bb/mapper-bb-no-routing\.txt$
+syntax: regexp
+^src/ro/ulbsibiu/acaps/mapper/bb/mapper-bb-routing-odd-even\.txt$
+syntax: regexp
+^src/ro/ulbsibiu/acaps/mapper/sa/mapper-sa-no-routing\.txt$
+syntax: regexp
+^src/ro/ulbsibiu/acaps/mapper/sa/mapper-sa-routing-odd-even\.txt$
+syntax: regexp
+^mysql\.properties$
+syntax: regexp
+^mysql\.properties$

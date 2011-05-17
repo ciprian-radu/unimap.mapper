@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry excluding="ro/ulbsibiu/acaps/mapper/sa/Node.java|ro/ulbsibiu/acaps/mapper/sa/Link.java|ro/ulbsibiu/acaps/mapper/sa/nodes/|ro/ulbsibiu/acaps/mapper/sa/input/|ro/ulbsibiu/acaps/mapper/sa/output/mesh2D/links/|ro/ulbsibiu/acaps/mapper/sa/output/mesh2D/nodes/|ro/ulbsibiu/acaps/mapper/sa/output/mesh2D/|ro/ulbsibiu/acaps/mapper/sa/output/|ro/ulbsibiu/acaps/mapper/bb/input/telecom_mocsyn_16tile_selectedpe/|ro/ulbsibiu/acaps/mapper/bb/output/mesh2D/links/|ro/ulbsibiu/acaps/mapper/bb/output/mesh2D/nodes/|ro/ulbsibiu/acaps/mapper/bb/input/|ro/ulbsibiu/acaps/mapper/bb/output/mesh2D/|ro/ulbsibiu/acaps/mapper/bb/output/|ro/ulbsibiu/acaps/mapper/bb/MappingNode.java|ro/ulbsibiu/acaps/mapper/bb/PriorityQueue.java|jmetal/util/RandomGenerator.java" kind="src" path="src"/>
+	<classpathentry kind="lib" path="lib/activation.jar"/>
+	<classpathentry kind="lib" path="lib/jaxb-api.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/Mapper/lib/jaxb-api-doc.zip!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/jaxb-impl.jar"/>
+	<classpathentry kind="lib" path="lib/jaxb-xjc.jar"/>
+	<classpathentry kind="lib" path="lib/jaxb1-impl.jar"/>
+	<classpathentry kind="lib" path="lib/jsr173_1.0_api.jar"/>
+	<classpathentry kind="lib" path="lib/log4j-1.2.16.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="http://logging.apache.org/log4j/1.2/apidocs"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/com-sun-tools-visualvm-charts.jar"/>
+	<classpathentry kind="lib" path="lib/org-netbeans-lib-profiler-charts.jar"/>
+	<classpathentry kind="lib" path="lib/org-netbeans-lib-profiler-ui.jar"/>
+	<classpathentry kind="lib" path="lib/org-openide-util-lookup.jar"/>
+	<classpathentry kind="lib" path="lib/org-openide-util.jar"/>
+	<classpathentry kind="lib" path="lib/mysql-connector-java-5.1.14-bin.jar"/>
+	<classpathentry kind="lib" path="lib/commons-dbcp-1.4.jar" sourcepath="/home/cipi/commons-dbcp-1.4-src/src/java">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/Mapper/lib/commons-dbcp-1.4-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/commons-pool-1.5.5.jar" sourcepath="/home/cipi/commons-pool-1.5.5-src/src/java">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/Mapper/lib/commons-pool-1.5.5-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="lib/commons-cli-1.2.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/Mapper/lib/commons-cli-1.2-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry combineaccessrules="false" kind="src" path="/CTG-XML"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/NoC-XML"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="output" path="classes"/>
+</classpath>
