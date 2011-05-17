@@ -10,23 +10,33 @@ M1.USER_TIME,
 -- M1.SYS_TIME, 
 M1.AVG_HEAP_MEMORY, 
 O1.VALUE
-FROM UniMap.MAPPER M1
-RIGHT JOIN UniMap.OUTPUT O1 ON M1.RUN = O1.ID AND O1.NAME = 'energy'
-RIGHT JOIN UniMap.PARAMETER P1 ON M1.RUN = P1.ID AND P1.NAME = 'routing' AND P1.VALUE = 'false'
-RIGHT JOIN UniMap.PARAMETER P2 ON M1.RUN = P2.ID AND P2.NAME = 'seed'
+-- ,P3.VALUE AS MUTATION_PROB
+-- ,P2.VALUE AS SEED
+-- ,M1.ID
+-- ,M1.START_DATETIME
+FROM unimap_sibiudb.MAPPER M1
+RIGHT JOIN unimap_sibiudb.OUTPUT O1 ON M1.RUN = O1.ID AND O1.NAME = 'energy'
+RIGHT JOIN unimap_sibiudb.PARAMETER P1 ON M1.RUN = P1.ID AND P1.NAME = 'routing' AND P1.VALUE = 'false'
+RIGHT JOIN unimap_sibiudb.PARAMETER P2 ON M1.RUN = P2.ID AND P2.NAME = 'seed'
+RIGHT JOIN unimap_sibiudb.PARAMETER P3 ON M1.RUN = P3.ID AND P3.NAME = 'mutationProbability' -- AND P3.VALUE = '60'
 WHERE
-	TIMEDIFF(M1.START_DATETIME, '2011-02-15 09:00:00') > 0
+	TIMEDIFF(M1.START_DATETIME, '2011-05-14 09:00:00') > 0
 	AND
 --	M1.NAME = 'sa'
 --	M1.NAME = 'sa_test'
-	M1.NAME = 'sa_test-attraction_move'
+--	M1.NAME = 'sa_test-attraction_move'
 --	M1.NAME = 'bb'
---	AND
---	M1.BENCHMARK = '14'
+--	M1.NAME = 'EA-EGA-MS'
+--	M1.NAME = 'EA-EGA-MS'
+	M1.NAME = 'EA-SSGA-MS'
+	AND
+	M1.BENCHMARK = '52'
 ORDER BY
+	CONVERT (P3.VALUE, signed),
 	CONVERT (P2.VALUE, signed)
 ;
 
+/*
 SELECT 
 -- M1.NAME, 
 -- M1.BENCHMARK, 
@@ -39,53 +49,12 @@ M1.USER_TIME,
 -- M1.SYS_TIME, 
 M1.AVG_HEAP_MEMORY, 
 O1.VALUE
-FROM UniMap.MAPPER M1
-RIGHT JOIN UniMap.OUTPUT O1 ON M1.RUN = O1.ID AND O1.NAME = 'energy'
-RIGHT JOIN UniMap.PARAMETER P1 ON M1.RUN = P1.ID AND P1.NAME = 'routing' AND P1.VALUE = 'false'
+FROM unimap_sibiudb.MAPPER M1
+RIGHT JOIN unimap_sibiudb.OUTPUT O1 ON M1.RUN = O1.ID AND O1.NAME = 'energy'
+RIGHT JOIN unimap_sibiudb.PARAMETER P1 ON M1.RUN = P1.ID AND P1.NAME = 'routing' AND P1.VALUE = 'false'
 WHERE
 	TIMEDIFF(M1.START_DATETIME, '2011-01-24 09:00:00') > 0
 	AND
 	M1.NAME = 'es'
 ;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+*/
