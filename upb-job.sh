@@ -17,7 +17,7 @@ do
 	JOB_ARGS="$JOB_ARGS ${args[$i]}"
 done
 
-let end=$3+$2
+let end=$3+$2-1
 for i in $(seq $3 $end)
 do
 	echo "Executing $JOB_ARGS -s $i"
