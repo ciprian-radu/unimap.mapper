@@ -29,7 +29,10 @@ import ro.ulbsibiu.acaps.noc.xml.node.NodeType;
  * rest of the cores are greedy mapped (starting with the cores that have the
  * highest value in the distance vector). Child 1 is formed from parent 1 and
  * child 2 is made from parent 2. Essentially, using the similarity function,
- * both children try to inherit what's common for both their parents.
+ * both children try to inherit what's common for both their parents.<br />
+ * How good the similarity is may be controlled through MAX_SIMILARITY_DISTANCE.
+ * This is a constant that says how distant away may the similar cores be from
+ * their communicating cores.
  * <p>
  * <b>NOTE</b>: the type of those variables must be VariableType_.Permutation.
  * </p>
@@ -38,6 +41,10 @@ import ro.ulbsibiu.acaps.noc.xml.node.NodeType;
  */
 public abstract class MappingSimilarityCrossover extends Crossover {
 
+//	private static final int MAX_SIMILARITY_DISTANCE = Integer.MAX_VALUE;
+//	private static final int MAX_SIMILARITY_DISTANCE = 2;
+	private static final int MAX_SIMILARITY_DISTANCE = 1;
+	
 	/**
 	 * Logger for this class
 	 */
@@ -60,7 +67,9 @@ public abstract class MappingSimilarityCrossover extends Crossover {
 	 * Constructor
 	 */
 	public MappingSimilarityCrossover() {
-		;
+		if (logger.isDebugEnabled()) {
+			logger.debug("Maximum similarity distance is set to " + MAX_SIMILARITY_DISTANCE);
+		}
 	}
 
 	public void setCores(Core[] cores) {
@@ -135,7 +144,22 @@ public abstract class MappingSimilarityCrossover extends Crossover {
 		int[] s = new int[d1.length];
 		
 		for (int i = 0; i < s.length; i++) {
-			s[i] = d1[i] == d2[i] ? 1 : 0;
+			if (d1[i] == d2[i]) {
+				if (logger.isDebugEnabled()) {
+					logger.debug("Found similarity for core " + i + "; distance = " + d1[i]);
+					logger.debug("This core communicates with " + coreNeighbors[i].size() + " cores");
+					logger.debug("With a maximum similarity distance of " + MAX_SIMILARITY_DISTANCE + 
+							", the maximum allowed distance is " + MAX_SIMILARITY_DISTANCE * coreNeighbors[i].size());
+				}
+				if (MAX_SIMILARITY_DISTANCE == Integer.MAX_VALUE 
+						|| d1[i] <= MAX_SIMILARITY_DISTANCE * coreNeighbors[i].size()) {
+					s[i] = 1;
+				} else {
+					s[i] = 0;
+				}
+			} else {
+				s[i] = 0;
+			}
 			if (logger.isDebugEnabled()) {
 				if (s[i] == 1) {
 					logger.debug("Similarity detected for core " + i);
