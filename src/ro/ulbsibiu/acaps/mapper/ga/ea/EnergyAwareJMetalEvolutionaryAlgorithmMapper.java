@@ -372,6 +372,12 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 	@Override
 	public String getMapperId() {
 		String sufix = "";
+		if (crossover instanceof PositionBasedCrossover) {
+			sufix += "-PB";
+		}
+		if (crossover instanceof PMXCrossover) {
+			sufix += "-PMX";
+		}
 		if (crossover instanceof MappingSimilarityCrossover) {
 			sufix += "-MS";
 		}
@@ -516,7 +522,6 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 			}
 
 			algorithm.setInputParameter("populationSize", populationSize);
-			// FIXME I don't know if the line below is correct
 			algorithm.setInputParameter("maxEvaluations", generations * populationSize);
 
 			// crossover = CrossoverFactory.getCrossoverOperator("PMXCrossover");

@@ -22,7 +22,7 @@ import jmetal.util.PseudoRandom;
  * the type of those variables must be VariableType_.Permutation.
  */
 public class PMXCrossover extends Crossover {
-	private static Class PERMUTATION_SOLUTION ; 
+	private static Class<?> PERMUTATION_SOLUTION ; 
 
 
 	/**
@@ -63,8 +63,8 @@ public class PMXCrossover extends Crossover {
 		offspring[0] = new Solution(parent1);
 		offspring[1] = new Solution(parent2);
 
-		if ((parent1.getType().getClass() == PERMUTATION_SOLUTION) &&
-				(parent2.getType().getClass() == PERMUTATION_SOLUTION)) {
+		if (PERMUTATION_SOLUTION.isAssignableFrom(parent1.getType().getClass())
+				&& PERMUTATION_SOLUTION.isAssignableFrom(parent1.getType().getClass())) {
 
 			int permutationLength ;
 
@@ -148,8 +148,8 @@ public class PMXCrossover extends Crossover {
 		Solution [] parents = (Solution [])object;
 		Double crossoverProbability = null ;
 
-		if ((parents[0].getType().getClass() != PERMUTATION_SOLUTION) ||
-				(parents[1].getType().getClass() != PERMUTATION_SOLUTION)) {
+		if (!PERMUTATION_SOLUTION.isAssignableFrom(parents[0].getType().getClass())
+				|| !PERMUTATION_SOLUTION.isAssignableFrom(parents[1].getType().getClass())) {
 
 			Configuration.logger_.severe("PMCCrossover.execute: the solutions " +
 					"are not of the right type. The type should be 'Permutation', but " +
