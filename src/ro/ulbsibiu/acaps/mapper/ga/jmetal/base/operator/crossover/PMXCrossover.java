@@ -2,28 +2,37 @@
  * PMXCrossover.java
  * Class representing a partially matched (PMX) crossover operator
  * @author Antonio J. Nebro
- * @version 1.0
+ * @author Ciprian Radu
+ * @version 1.1
  */
 
-package jmetal.base.operator.crossover;
+package ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.crossover;
 
 import java.util.Properties;
 import jmetal.base.*;    
+import jmetal.base.operator.crossover.Crossover;
 import jmetal.base.variable.*;
 import jmetal.util.Configuration;
 import jmetal.util.JMException;
 import jmetal.util.PseudoRandom;
 
-
 /**
  * This class allows to apply a PMX crossover operator using two parent
- * solutions.
- * NOTE: the operator is applied to the first variable of the solutions, and 
- * the type of those variables must be VariableType_.Permutation.
+ * solutions. NOTE: the operator is applied to the first variable of the
+ * solutions, and the type of those variables must be VariableType_.Permutation.
+ * <p>
+ * This jMetal {@link Crossover} operator was adapted for UniMap: multiple genes
+ * with value -1 are allowed (they code empty NoC nodes). This is solved by
+ * simply temporary assigning a unique number for each -1 (this allows the
+ * default PMX to work).
+ * </p>
  */
 public class PMXCrossover extends Crossover {
-	private static Class PERMUTATION_SOLUTION ; 
-
+	
+	/** automatically generated serial version UID*/
+	private static final long serialVersionUID = 3761083279498312308L;
+	
+	private static Class<?> PERMUTATION_SOLUTION ; 
 
 	/**
 	 * Constructor
@@ -63,8 +72,8 @@ public class PMXCrossover extends Crossover {
 		offspring[0] = new Solution(parent1);
 		offspring[1] = new Solution(parent2);
 
-		if ((parent1.getType().getClass() == PERMUTATION_SOLUTION) &&
-				(parent2.getType().getClass() == PERMUTATION_SOLUTION)) {
+		if (PERMUTATION_SOLUTION.isAssignableFrom(parent1.getType().getClass())
+				&& PERMUTATION_SOLUTION.isAssignableFrom(parent1.getType().getClass())) {
 
 			int permutationLength ;
 
@@ -79,6 +88,42 @@ public class PMXCrossover extends Crossover {
 				int cuttingPoint1 ;
 				int cuttingPoint2 ;
 
+				// 		STEP 0: Replace -1 values with consecutive values that continue from the maximum number
+				int max = Integer.MIN_VALUE;
+				for (int i = 0; i < parent1Vector.length; i++) {
+					if (parent1Vector[i] > max) {
+						max = parent1Vector[i];
+					}
+				}
+				int value = max + 1;
+				for (int i = 0; i < parent1Vector.length; i++) {
+					if (parent1Vector[i] == -1) {
+						parent1Vector[i] = value;
+						value++;
+					}
+				}
+				value = max + 1;
+				for (int i = 0; i < parent2Vector.length; i++) {
+					if (parent2Vector[i] == -1) {
+						parent2Vector[i] = value;
+						value++;
+					}
+				}
+				value = max + 1;
+				for (int i = 0; i < offspring1Vector.length; i++) {
+					if (offspring1Vector[i] == -1) {
+						offspring1Vector[i] = value;
+						value++;
+					}
+				}
+				value = max + 1;
+				for (int i = 0; i < offspring2Vector.length; i++) {
+					if (offspring2Vector[i] == -1) {
+						offspring2Vector[i] = value;
+						value++;
+					}
+				}
+				
 				//      STEP 1: Get two cutting points
 				cuttingPoint1 = PseudoRandom.randInt(0,permutationLength-1) ;
 				cuttingPoint2 = PseudoRandom.randInt(0,permutationLength-1) ;
@@ -128,6 +173,32 @@ public class PMXCrossover extends Crossover {
 						offspring1Vector[i] = n1 ;
 						offspring2Vector[i] = n2 ;
 				} // for
+				
+				// 		STEP 5: Re-add the -1 values
+				value = max + 1;
+				for (int i = 0; i < parent1Vector.length; i++) {
+					if (parent1Vector[i] >= value) {
+						parent1Vector[i] = -1;
+					}
+				}
+				value = max + 1;
+				for (int i = 0; i < parent2Vector.length; i++) {
+					if (parent2Vector[i] >= value) {
+						parent2Vector[i] = -1;
+					}
+				}
+				value = max + 1;
+				for (int i = 0; i < offspring1Vector.length; i++) {
+					if (offspring1Vector[i] >= value) {
+						offspring1Vector[i] = -1;
+					}
+				}
+				value = max + 1;
+				for (int i = 0; i < offspring2Vector.length; i++) {
+					if (offspring2Vector[i] >= value) {
+						offspring2Vector[i] = -1;
+					}
+				}				
 			} // if
 		} // if
 		else {	      	
@@ -148,8 +219,8 @@ public class PMXCrossover extends Crossover {
 		Solution [] parents = (Solution [])object;
 		Double crossoverProbability = null ;
 
-		if ((parents[0].getType().getClass() != PERMUTATION_SOLUTION) ||
-				(parents[1].getType().getClass() != PERMUTATION_SOLUTION)) {
+		if (!PERMUTATION_SOLUTION.isAssignableFrom(parents[0].getType().getClass())
+				|| !PERMUTATION_SOLUTION.isAssignableFrom(parents[1].getType().getClass())) {
 
 			Configuration.logger_.severe("PMCCrossover.execute: the solutions " +
 					"are not of the right type. The type should be 'Permutation', but " +
