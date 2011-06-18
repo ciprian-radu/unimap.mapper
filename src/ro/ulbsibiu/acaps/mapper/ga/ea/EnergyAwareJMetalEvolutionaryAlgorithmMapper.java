@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
@@ -43,8 +44,10 @@ import ro.ulbsibiu.acaps.ctg.xml.apcg.ApcgType;
 import ro.ulbsibiu.acaps.ctg.xml.ctg.CtgType;
 import ro.ulbsibiu.acaps.mapper.MapperDatabase;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
+import ro.ulbsibiu.acaps.mapper.ga.jmetal.AlgorithmTracker;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.JMetalEvolutionaryAlgorithmMapper;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.JMetalEvolutionaryAlgorithmMapper.JMetalAlgorithm;
+import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.TrackedAlgorithm;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.crossover.MappingSimilarityCrossover;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.crossover.NocPositionBasedCrossover;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.crossover.PMXCrossover;
@@ -68,7 +71,7 @@ import ro.ulbsibiu.acaps.mapper.util.MapperInputProcessor;
  * @author cradu
  * 
  */
-public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGeneticAlgorithmMapper {
+public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGeneticAlgorithmMapper implements AlgorithmTracker {
 
 	/**
 	 * Logger for this class
@@ -496,6 +499,7 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 			switch (jMetalAlgorithm) {
 			case EGA:
 				algorithm = new ElitistGA(problem);
+				((TrackedAlgorithm) algorithm).setAlgorithmTracker(this);
 				break;
 			case SSGA:
 				algorithm = new ssGA(problem);
@@ -578,6 +582,41 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 		if (buildRoutingTable) {
 			programRouters();
 		}
+	}
+
+	@Override
+	public void processIntermediateSolution(String parameterName, String parameterValue, Solution solution) {
+		int[] permutation = ((Permutation) solution.getDecisionVariables()[0]).vector_;
+		if (logger.isDebugEnabled()) {
+			logger.debug("Processing an intermediate solution");
+		}
+		
+		for (int i = 0; i < nodes.length; i++) {
+			nodes[i].setCore("-1");
+		}
+		for (int i = 0; i < cores.length; i++) {
+			cores[i].setNodeId(-1);
+		}
+		for (int i = 0; i < nodes.length; i++) {
+			String coreAsString = Integer.toString(permutation[i]);
+			nodes[i].setCore(coreAsString);
+			if (!"-1".equals(coreAsString)) {
+				cores[Integer.valueOf(coreAsString)].setNodeId(i);
+			}
+		}
+		
+		if (logger.isDebugEnabled()) {
+			logger.debug("Verify the communication load of each link...");
+		}
+
+	    double energy = calculateCommunicationEnergy();
+	    if (logger.isDebugEnabled()) {
+	    	logger.debug("Total communication energy consumption is " + energy);
+	    }
+	    
+		MapperDatabase.getInstance().setOutputs(
+				new String[] { parameterName + "-" + "energy" },
+				new String[] { parameterValue.toString() + "-" + Double.toString(energy) });
 	}
 
 	public static void main(String args[]) throws TooFewNocNodesException,

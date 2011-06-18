@@ -1,22 +1,26 @@
 package ro.ulbsibiu.acaps.mapper.ga.jmetal.metaheuristics.singleObjective.geneticAlgorithm;
 
-import jmetal.base.*;
-import jmetal.base.operator.comparator.*;
-import jmetal.base.Algorithm;
 import java.util.Comparator;
 
+import jmetal.base.Operator;
+import jmetal.base.Problem;
+import jmetal.base.Solution;
+import jmetal.base.SolutionSet;
+import jmetal.base.operator.comparator.ObjectiveComparator;
+import jmetal.util.JMException;
 import ro.ulbsibiu.acaps.mapper.ga.GeneticAlgorithmMapper;
+import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.TrackedAlgorithm;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.crossover.NocPositionBasedCrossover;
-import jmetal.util.*;
 
 /**
  * Elitist genetic algorithm. Actually this is the jMetal version of
  * {@link GeneticAlgorithmMapper}.
  * 
  * @author shaikat
+ * @author cipi
  * 
  */
-public class ElitistGA extends Algorithm {
+public class ElitistGA extends TrackedAlgorithm {
 	private Problem problem_;
 
 	public ElitistGA(Problem problem) {
@@ -67,6 +71,10 @@ public class ElitistGA extends Algorithm {
 			evaluations++;
 			population.add(newIndividual);
 		} // for
+		
+		algorithmTracker.processIntermediateSolution("generations",
+				Integer.toString(evaluations / populationSize),
+				population.get(0));
 
 		// main loop
 		while (evaluations < maxEvaluations) {
@@ -145,6 +153,10 @@ public class ElitistGA extends Algorithm {
 				population.add(offspringPopulation.get(i));
 
 			offspringPopulation.clear();
+			
+			algorithmTracker.processIntermediateSolution("generations",
+					Integer.toString(evaluations / populationSize),
+					population.get(0));
 		}
 
 		// Return a population with the best individual
