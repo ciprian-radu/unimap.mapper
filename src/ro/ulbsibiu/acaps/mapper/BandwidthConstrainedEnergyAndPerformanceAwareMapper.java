@@ -1048,7 +1048,7 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 		}
 	}
 	
-	private boolean verifyBandwidthRequirement() {
+	protected boolean verifyBandwidthRequirement() {
 		generateLinkUsageList();
 
 		int[] usedBandwidth = new int[links.length];
