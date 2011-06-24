@@ -25,7 +25,6 @@ import jmetal.base.operator.selection.Selection;
 import jmetal.base.operator.selection.SelectionFactory;
 import jmetal.base.solutionType.PermutationSolutionType;
 import jmetal.base.variable.Permutation;
-import jmetal.metaheuristics.singleObjective.evolutionStrategy.ElitistES;
 import jmetal.metaheuristics.singleObjective.evolutionStrategy.NonElitistES;
 import jmetal.metaheuristics.singleObjective.geneticAlgorithm.acGA;
 import jmetal.metaheuristics.singleObjective.geneticAlgorithm.gGA;
@@ -53,6 +52,7 @@ import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.crossover.NocPositionBas
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.crossover.PMXCrossover;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.crossover.PositionBasedCrossover;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.mutation.OsaMutation;
+import ro.ulbsibiu.acaps.mapper.ga.jmetal.metaheuristics.singleObjective.geneticAlgorithm.ElitistES;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.metaheuristics.singleObjective.geneticAlgorithm.ElitistGA;
 import ro.ulbsibiu.acaps.mapper.util.MapperInputProcessor;
 
@@ -515,6 +515,7 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 				break;
 			case EES:
 				algorithm = new ElitistES(problem, populationSize, populationSize * 2);
+				((TrackedAlgorithm) algorithm).setAlgorithmTracker(this);
 				break;
 			case NEES:
 				algorithm = new NonElitistES(problem, populationSize, populationSize * 2);

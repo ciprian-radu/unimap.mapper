@@ -26,7 +26,6 @@ import jmetal.base.operator.mutation.MutationFactory;
 import jmetal.base.operator.selection.Selection;
 import jmetal.base.operator.selection.SelectionFactory;
 import jmetal.base.variable.Permutation;
-import jmetal.metaheuristics.singleObjective.evolutionStrategy.ElitistES;
 import jmetal.metaheuristics.singleObjective.evolutionStrategy.NonElitistES;
 import jmetal.metaheuristics.singleObjective.geneticAlgorithm.acGA;
 import jmetal.metaheuristics.singleObjective.geneticAlgorithm.gGA;
@@ -49,6 +48,7 @@ import ro.ulbsibiu.acaps.mapper.ga.Core;
 import ro.ulbsibiu.acaps.mapper.ga.GeneticAlgorithmInputException;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.crossover.PositionBasedCrossover;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.problem.MappingProblem;
+import ro.ulbsibiu.acaps.mapper.ga.jmetal.metaheuristics.singleObjective.geneticAlgorithm.ElitistES;
 import ro.ulbsibiu.acaps.mapper.util.ApcgFilenameFilter;
 
 /**
