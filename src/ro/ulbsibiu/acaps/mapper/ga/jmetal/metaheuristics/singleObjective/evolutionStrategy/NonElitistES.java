@@ -1,47 +1,50 @@
 /**
- * Elitist.java
+ * NonElitist.java
  * @author Antonio J. Nebro
- * @author cradu the jMetal {@link ElitistES} is now a {@link TrackedAlgorithm}
+ * @author cradu the jMetal ElitistES algorithm is now a {@link TrackedAlgorithm}
  * @version 1.1
  */
-package ro.ulbsibiu.acaps.mapper.ga.jmetal.metaheuristics.singleObjective.geneticAlgorithm;
+package ro.ulbsibiu.acaps.mapper.ga.jmetal.metaheuristics.singleObjective.evolutionStrategy;
 
 import jmetal.base.*;
 import jmetal.base.operator.comparator.* ;
+import jmetal.base.Algorithm;
 import java.util.Comparator;
 
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.TrackedAlgorithm;
 import jmetal.util.*;
 
 /** 
- * Class implementing a (mu + lambda) ES. Lambda must be divisible by mu
+ * Class implementing a (mu,lambda) ES. Lambda must be divisible by mu.
  */
-public class ElitistES extends TrackedAlgorithm {
+public class NonElitistES extends TrackedAlgorithm {
   private Problem problem_; 
   private int     mu_     ;
   private int     lambda_ ;
   
  /**
   * Constructor
-  * Create a new ElitistES instance.
+  * Create a new NonElitistES instance.
   * @param problem Problem to solve.
   * @mu Mu
   * @lambda Lambda
   */
-  public ElitistES(Problem problem, int mu, int lambda){
+  public NonElitistES(Problem problem, int mu, int lambda){
     problem_ = problem;  
     mu_      = mu     ;
     lambda_  = lambda ;
-  } // ElitistES
+  } // NonElitistES
   
  /**
-  * Execute the ElitistES algorithm
+  * Execute the NonElitistES algorithm
  * @throws JMException 
   */
   public SolutionSet execute() throws JMException, ClassNotFoundException {
     int maxEvaluations ;
     int evaluations    ;
 
+    Solution bestIndividual ;
+    
     SolutionSet population          ;
     SolutionSet offspringPopulation ;  
 
@@ -54,34 +57,45 @@ public class ElitistES extends TrackedAlgorithm {
     maxEvaluations = ((Integer)this.getInputParameter("maxEvaluations")).intValue();                
    
     // Initialize the variables
-    population          = new SolutionSet(mu_) ;   
-    offspringPopulation = new SolutionSet(mu_ + lambda_) ;
+    population          = new SolutionSet(mu_ + 1) ;   
+    offspringPopulation = new SolutionSet(lambda_) ;
     
     evaluations  = 0;                
 
     // Read the operators
     mutationOperator  = this.operators_.get("mutation");
 
-    System.out.println("(" + mu_ + " + " + lambda_+")ES") ;
+    System.out.println("(" + mu_ + " , " + lambda_+")ES") ;
      
     // Create the parent population of mu solutions
     Solution newIndividual;
-    for (int i = 0; i < mu_; i++) {
+    newIndividual = new Solution(problem_) ;
+    problem_.evaluate(newIndividual);
+    evaluations ++ ;
+    population.add(newIndividual);
+    bestIndividual = new Solution(newIndividual) ;
+    
+    for (int i = 1; i < mu_; i++) {
+      System.out.println(i) ;
       newIndividual = new Solution(problem_);                    
       problem_.evaluate(newIndividual);            
       evaluations++;
       population.add(newIndividual);
+      
+      if (comparator.compare(bestIndividual, newIndividual) > 0 )
+        bestIndividual = new Solution(newIndividual) ;
     } //for       
-
-	algorithmTracker.processIntermediateSolution("generations",
-			Integer.toString(evaluations / mu_),
-			population.get(0));
-    
+     
     // Main loop
     int offsprings ;
-    offsprings = lambda_ / mu_ ; 
+    offsprings = lambda_ / mu_ ;
+    
+	algorithmTracker.processIntermediateSolution("generations",
+			Integer.toString((int) Math.ceil(evaluations / offsprings * 1.0 / mu_)),
+			population.get(0));
+    
     while (evaluations < maxEvaluations) {
-      // STEP 1. Generate the mu+lambda population
+      // STEP 1. Generate the lambda population
       for (int i = 0; i < mu_; i++) {
         for (int j = 0; j < offsprings; j++) {
           Solution offspring = new Solution(population.get(i)) ;
@@ -91,29 +105,29 @@ public class ElitistES extends TrackedAlgorithm {
           evaluations ++ ;
         } // for
       } // for
-      
-      // STEP 2. Add the mu individuals to the offspring population
-      for (int i = 0 ; i < mu_; i++) {
-        offspringPopulation.add(population.get(i)) ;
-      } // for
-      population.clear() ;
-
-      // STEP 3. Sort the mu+lambda population
+   
+      // STEP 2. Sort the lambda population
       offspringPopulation.sort(comparator) ;
             
+      // STEP 3. Update the best individual 
+      if (comparator.compare(bestIndividual, offspringPopulation.get(0)) > 0 )
+        bestIndividual = new Solution(offspringPopulation.get(0)) ;
+      
       // STEP 4. Create the new mu population
+      population.clear() ;
       for (int i = 0; i < mu_; i++)
         population.add(offspringPopulation.get(i)) ;
 
-      System.out.println("Evaluation: " + evaluations + " Fitness: " + 
-          population.get(0).getObjective(0)) ; 
+      System.out.println("Evaluation: " + evaluations + 
+          " Current best fitness: " +  population.get(0).getObjective(0) +
+          " Global best fitness: " + bestIndividual.getObjective(0)) ;
 
-      // STEP 6. Delete the mu+lambda population
+      // STEP 5. Delete the lambda population
       offspringPopulation.clear() ;
       
-		algorithmTracker.processIntermediateSolution("generations",
-				Integer.toString(evaluations / mu_),
-				population.get(0));
+  	algorithmTracker.processIntermediateSolution("generations",
+			Integer.toString((int) Math.ceil(evaluations / offsprings * 1.0 / mu_)),
+			population.get(0));
     } // while
     
     // Return a population with the best individual
