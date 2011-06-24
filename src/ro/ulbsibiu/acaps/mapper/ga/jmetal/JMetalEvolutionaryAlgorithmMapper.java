@@ -48,7 +48,7 @@ import ro.ulbsibiu.acaps.mapper.ga.Core;
 import ro.ulbsibiu.acaps.mapper.ga.GeneticAlgorithmInputException;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.crossover.PositionBasedCrossover;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.problem.MappingProblem;
-import ro.ulbsibiu.acaps.mapper.ga.jmetal.metaheuristics.singleObjective.geneticAlgorithm.ElitistES;
+import ro.ulbsibiu.acaps.mapper.ga.jmetal.metaheuristics.singleObjective.evolutionStrategy.ElitistES;
 import ro.ulbsibiu.acaps.mapper.util.ApcgFilenameFilter;
 
 /**

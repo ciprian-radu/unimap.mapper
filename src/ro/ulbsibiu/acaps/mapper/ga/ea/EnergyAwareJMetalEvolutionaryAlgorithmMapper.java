@@ -25,11 +25,6 @@ import jmetal.base.operator.selection.Selection;
 import jmetal.base.operator.selection.SelectionFactory;
 import jmetal.base.solutionType.PermutationSolutionType;
 import jmetal.base.variable.Permutation;
-import jmetal.metaheuristics.singleObjective.evolutionStrategy.NonElitistES;
-import jmetal.metaheuristics.singleObjective.geneticAlgorithm.acGA;
-import jmetal.metaheuristics.singleObjective.geneticAlgorithm.gGA;
-import jmetal.metaheuristics.singleObjective.geneticAlgorithm.scGA;
-import jmetal.metaheuristics.singleObjective.geneticAlgorithm.ssGA;
 import jmetal.util.JMException;
 import jmetal.util.PseudoRandom;
 
@@ -52,8 +47,13 @@ import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.crossover.NocPositionBas
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.crossover.PMXCrossover;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.crossover.PositionBasedCrossover;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.mutation.OsaMutation;
-import ro.ulbsibiu.acaps.mapper.ga.jmetal.metaheuristics.singleObjective.geneticAlgorithm.ElitistES;
+import ro.ulbsibiu.acaps.mapper.ga.jmetal.metaheuristics.singleObjective.evolutionStrategy.ElitistES;
+import ro.ulbsibiu.acaps.mapper.ga.jmetal.metaheuristics.singleObjective.evolutionStrategy.NonElitistES;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.metaheuristics.singleObjective.geneticAlgorithm.ElitistGA;
+import ro.ulbsibiu.acaps.mapper.ga.jmetal.metaheuristics.singleObjective.geneticAlgorithm.acGA;
+import ro.ulbsibiu.acaps.mapper.ga.jmetal.metaheuristics.singleObjective.geneticAlgorithm.gGA;
+import ro.ulbsibiu.acaps.mapper.ga.jmetal.metaheuristics.singleObjective.geneticAlgorithm.scGA;
+import ro.ulbsibiu.acaps.mapper.ga.jmetal.metaheuristics.singleObjective.geneticAlgorithm.ssGA;
 import ro.ulbsibiu.acaps.mapper.util.MapperInputProcessor;
 
 /**
@@ -499,7 +499,6 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 			switch (jMetalAlgorithm) {
 			case EGA:
 				algorithm = new ElitistGA(problem);
-				((TrackedAlgorithm) algorithm).setAlgorithmTracker(this);
 				break;
 			case SSGA:
 				algorithm = new ssGA(problem);
@@ -515,7 +514,6 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 				break;
 			case EES:
 				algorithm = new ElitistES(problem, populationSize, populationSize * 2);
-				((TrackedAlgorithm) algorithm).setAlgorithmTracker(this);
 				break;
 			case NEES:
 				algorithm = new NonElitistES(problem, populationSize, populationSize * 2);
@@ -528,6 +526,7 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 
 			algorithm.setInputParameter("populationSize", populationSize);
 			algorithm.setInputParameter("maxEvaluations", generations * populationSize);
+			((TrackedAlgorithm) algorithm).setAlgorithmTracker(this);
 
 			// crossover = CrossoverFactory.getCrossoverOperator("PMXCrossover");
 			crossover.setParameter("probability", crossoverProbability / 100.0);
@@ -588,6 +587,7 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 	@Override
 	public void processIntermediateSolution(String parameterName, String parameterValue, Solution solution) {
 		int[] permutation = ((Permutation) solution.getDecisionVariables()[0]).vector_;
+		logger.info(parameterName + " " + parameterValue);
 		if (logger.isDebugEnabled()) {
 			logger.debug("Processing an intermediate solution");
 		}
@@ -645,7 +645,7 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 					CommandLineParser parser = new PosixParser();
 					CommandLine cmd = parser.parse(getCliOptions(), cliArgs);
 					JMetalAlgorithm jMetalAlgorithm = null;
-					jMetalAlgorithm = JMetalAlgorithm.valueOf(cmd.getOptionValue("j", JMetalAlgorithm.SSGA.toString()));
+					jMetalAlgorithm = JMetalAlgorithm.valueOf(cmd.getOptionValue("j", JMetalAlgorithm.EGA.toString()));
 					
 					logger.info("Using "
 							+ jMetalAlgorithm
@@ -698,7 +698,16 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 					} else {
 						defaultGenerationsNumber = (int) Math.ceil(osaEvaluations / populationSize);
 					}
-					generations = Integer.valueOf(cmd.getOptionValue("g", Integer.toString(defaultGenerationsNumber)));
+					if (cmd.hasOption("g")) {
+						if (JMetalAlgorithm.EES.equals(jMetalAlgorithm)
+								|| JMetalAlgorithm.NEES.equals(jMetalAlgorithm)) {
+							generations = 2 * Integer.valueOf(cmd.getOptionValue("g")) - 1;
+						} else {
+							generations = Integer.valueOf(cmd.getOptionValue("g"));
+						}
+					} else {
+						generations = defaultGenerationsNumber;
+					}
 					try {
 						String crossoverClassString = cmd.getOptionValue("xc", PositionBasedCrossover.class.getName());
 						crossoverClass = Class.forName(crossoverClassString);
@@ -830,7 +839,8 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 		mapperInputProcessor.getCliOptions().addOption("j", "jmetal-algorithm", true, "the jMetal algorithm (" 
 				+ Arrays.toString(JMetalAlgorithm.values()) + ")");
 		mapperInputProcessor.getCliOptions().addOption("p", "population-size", true, "the population size");
-		mapperInputProcessor.getCliOptions().addOption("g", "generations", true, "the number of generations");
+		mapperInputProcessor.getCliOptions().addOption("g", "generations", true, 
+				"the number of generations (the number of evaluations equals g * p for all algorithms except EES ans NEES, where it is (2*g - 1) * p)");
 		mapperInputProcessor.getCliOptions().addOption("xc", "crossover-class", true, "crossover Java class");
 		mapperInputProcessor.getCliOptions().addOption("x", "crossover-probability", true, "crossover probability (%)");
 		mapperInputProcessor.getCliOptions().addOption("mc", "mutation-class", true, "mutation Java class");
