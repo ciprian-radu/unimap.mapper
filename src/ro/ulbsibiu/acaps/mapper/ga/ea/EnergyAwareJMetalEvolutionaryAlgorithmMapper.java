@@ -38,6 +38,7 @@ import ro.ulbsibiu.acaps.ctg.xml.apcg.ApcgType;
 import ro.ulbsibiu.acaps.ctg.xml.ctg.CtgType;
 import ro.ulbsibiu.acaps.mapper.MapperDatabase;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
+import ro.ulbsibiu.acaps.mapper.BandwidthConstrainedEnergyAndPerformanceAwareMapper.LegalTurnSet;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.AlgorithmTracker;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.JMetalEvolutionaryAlgorithmMapper;
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.JMetalEvolutionaryAlgorithmMapper.JMetalAlgorithm;
@@ -622,8 +623,6 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 
 	public static void main(String args[]) throws TooFewNocNodesException,
 			IOException, JAXBException, ParseException {
-		final int applicationBandwithRequirement = 3; // a multiple of the communication volume
-		final double linkBandwidth = 256E9;
 		final float switchEBit = 0.284f;
 		final float linkEBit = 0.449f;
 		final float bufReadEBit = 1.056f;
@@ -637,10 +636,12 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 			 * @see ro.ulbsibiu.acaps.mapper.util.MapperInputProcessor#useMapper(java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.util.List, java.util.List, boolean, java.lang.Long)
 			 */
 			@Override
-			public void useMapper(String benchmarkFilePath, String benchmarkName,
-					String ctgId, String apcgId, List<CtgType> ctgTypes,
-					List<ApcgType> apcgTypes, boolean doRouting, Long seed) throws JAXBException,
-					TooFewNocNodesException, FileNotFoundException {
+			public void useMapper(String benchmarkFilePath,
+					String benchmarkName, String ctgId, String apcgId,
+					List<CtgType> ctgTypes, List<ApcgType> apcgTypes,
+					boolean doRouting, LegalTurnSet lts, double linkBandwidth,
+					Long seed) throws JAXBException, TooFewNocNodesException,
+					FileNotFoundException {
 				try {
 					CommandLineParser parser = new PosixParser();
 					CommandLine cmd = parser.parse(getCliOptions(), cliArgs);
@@ -734,7 +735,6 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 					}
 					
 					String[] parameters = new String[] {
-							"applicationBandwithRequirement",
 							"linkBandwidth",
 							"switchEBit",
 							"linkEBit",
@@ -749,7 +749,6 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 							"mutationProbability",
 							};
 					String values[] = new String[] {
-							Integer.toString(applicationBandwithRequirement),
 							Double.toString(linkBandwidth),
 							Float.toString(switchEBit), Float.toString(linkEBit),
 							Float.toString(bufReadEBit),
@@ -763,14 +762,14 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 							mutationProbability == null ? null : Integer.toString(mutationProbability),
 							};
 					if (doRouting) {
-						values[values.length - 7] = "true";
+						values[values.length - 7] = "true" + "-" + lts.toString();
 						MapperDatabase.getInstance().setParameters(parameters, values);
 						
 						// with routing
 						eaJMetalMapper = new EnergyAwareJMetalEvolutionaryAlgorithmMapper(
 								benchmarkName, ctgId, apcgId, topologyName,
 								meshSize, new File(topologyDir), cores,
-								linkBandwidth, true, LegalTurnSet.ODD_EVEN,
+								linkBandwidth, true, lts,
 								bufReadEBit, bufWriteEBit, switchEBit,
 								linkEBit, seed, jMetalAlgorithm,
 								populationSize, generations, crossoverClass,
@@ -797,7 +796,7 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 					
 					for (int k = 0; k < apcgTypes.size(); k++) {
 						// read the input data using the Unified Framework's XML interface
-						eaJMetalMapper.parseApcg(apcgTypes.get(k), ctgTypes.get(k), applicationBandwithRequirement);
+						eaJMetalMapper.parseApcg(apcgTypes.get(k), ctgTypes.get(k));
 					}
 					
 //			// This is just for checking that bbMapper.parseTrafficConfig(...)

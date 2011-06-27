@@ -20,6 +20,7 @@ import ro.ulbsibiu.acaps.mapper.BandwidthConstrainedEnergyAndPerformanceAwareMap
 import ro.ulbsibiu.acaps.mapper.Mapper;
 import ro.ulbsibiu.acaps.mapper.MapperDatabase;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
+import ro.ulbsibiu.acaps.mapper.BandwidthConstrainedEnergyAndPerformanceAwareMapper.LegalTurnSet;
 import ro.ulbsibiu.acaps.mapper.sa.Core;
 import ro.ulbsibiu.acaps.mapper.sa.SimulatedAnnealingMapper;
 import ro.ulbsibiu.acaps.mapper.util.MapperInputProcessor;
@@ -456,7 +457,6 @@ public class ExhaustiveSearchMapper extends BandwidthConstrainedEnergyAndPerform
 
 	public static void main(String[] args) throws TooFewNocNodesException,
 			IOException, JAXBException, ParseException {
-		final int applicationBandwithRequirement = 3; // a multiple of the communication volume
 		final double linkBandwidth = 256E9;
 		final float switchEBit = 0.284f;
 		final float linkEBit = 0.449f;
@@ -466,10 +466,12 @@ public class ExhaustiveSearchMapper extends BandwidthConstrainedEnergyAndPerform
 		MapperInputProcessor mapperInputProcessor = new MapperInputProcessor() {
 			
 			@Override
-			public void useMapper(String benchmarkFilePath, String benchmarkName,
-					String ctgId, String apcgId, List<CtgType> ctgTypes,
-					List<ApcgType> apcgTypes, boolean doRouting, Long seed) throws JAXBException,
-					TooFewNocNodesException, FileNotFoundException {
+			public void useMapper(String benchmarkFilePath,
+					String benchmarkName, String ctgId, String apcgId,
+					List<CtgType> ctgTypes, List<ApcgType> apcgTypes,
+					boolean doRouting, LegalTurnSet lts, double linkBandwidth,
+					Long seed) throws JAXBException, TooFewNocNodesException,
+					FileNotFoundException {
 				logger.info("Using an Exhaustive search mapper for "
 						+ benchmarkFilePath + "ctg-" + ctgId + " (APCG " + apcgId + ")");
 				
@@ -499,7 +501,6 @@ public class ExhaustiveSearchMapper extends BandwidthConstrainedEnergyAndPerform
 						+ meshSize;
 				
 				String[] parameters = new String[] {
-						"applicationBandwithRequirement",
 						"linkBandwidth",
 						"switchEBit",
 						"linkEBit",
@@ -507,14 +508,13 @@ public class ExhaustiveSearchMapper extends BandwidthConstrainedEnergyAndPerform
 						"bufWriteEBit",
 						"routing"};
 				String values[] = new String[] {
-						Integer.toString(applicationBandwithRequirement),
 						Double.toString(linkBandwidth),
 						Float.toString(switchEBit), Float.toString(linkEBit),
 						Float.toString(bufReadEBit),
 						Float.toString(bufWriteEBit),
 						null};
 				if (doRouting) {
-					values[values.length - 1] = "true";
+					values[values.length - 1] = "true" + "-" + lts.toString();
 					MapperDatabase.getInstance().setParameters(parameters, values);
 					
 					// with routing
@@ -522,7 +522,7 @@ public class ExhaustiveSearchMapper extends BandwidthConstrainedEnergyAndPerform
 							benchmarkName, ctgId, apcgId,
 							topologyName, meshSize, new File(
 									topologyDir), cores, linkBandwidth,
-							true, LegalTurnSet.ODD_EVEN, bufReadEBit,
+							true, lts, bufReadEBit,
 							bufWriteEBit, switchEBit, linkEBit);
 				} else {
 					values[values.length - 1] = "false";
@@ -543,7 +543,7 @@ public class ExhaustiveSearchMapper extends BandwidthConstrainedEnergyAndPerform
 				
 				for (int k = 0; k < apcgTypes.size(); k++) {
 					// read the input data using the Unified Framework's XML interface
-					esMapper.parseApcg(apcgTypes.get(k), ctgTypes.get(k), applicationBandwithRequirement);
+					esMapper.parseApcg(apcgTypes.get(k), ctgTypes.get(k));
 				}
 				
 	//			// This is just for checking that bbMapper.parseTrafficConfig(...)

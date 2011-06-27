@@ -27,6 +27,7 @@ import ro.ulbsibiu.acaps.ctg.xml.mapping.MapType;
 import ro.ulbsibiu.acaps.ctg.xml.mapping.MappingType;
 import ro.ulbsibiu.acaps.mapper.sa.Core;
 import ro.ulbsibiu.acaps.mapper.util.HeapUsageMonitor;
+import ro.ulbsibiu.acaps.mapper.util.MathUtils;
 import ro.ulbsibiu.acaps.mapper.util.TimeUtils;
 import ro.ulbsibiu.acaps.noc.xml.link.LinkType;
 import ro.ulbsibiu.acaps.noc.xml.node.NodeType;
@@ -294,8 +295,14 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 		this.topologyDir = topologyDir;
 		this.cores = new Core[coresNumber];
 		this.linkBandwidth = linkBandwidth;
+		logger.info("NoC links' bandwidth is " + this.linkBandwidth);
 		this.buildRoutingTable = buildRoutingTable;
 		this.legalTurnSet = legalTurnSet;
+		if (this.buildRoutingTable) {
+			logger.info("Generating routing function using " + legalTurnSet + " legal turn set");
+		} else {
+			logger.info("Assuming XY routing function");
+		}
 		this.bufReadEBit = bufReadEBit;
 		this.bufWriteEBit = bufWriteEBit;
 
@@ -1048,10 +1055,19 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 		}
 	}
 	
-	protected boolean verifyBandwidthRequirement() {
+	/**
+	 * Performs an analysis of the mapping. It verifies if bandwidth
+	 * requirements are met and computes the link, switch and buffer energy.
+	 * The communication energy is also computed (as a sum of the three energy
+	 * components).
+	 */
+	public void analyzeIt() {
+	    logger.info("Verify the communication load of each link...");
+	    String bandwidthRequirements;
+	    
 		generateLinkUsageList();
 
-		int[] usedBandwidth = new int[links.length];
+		long[] usedBandwidth = new long[links.length];
 		
 		for (int i = 0; i < links.length; i++) {
 			usedBandwidth[i] = 0;
@@ -1090,26 +1106,21 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 	    }
 	    //check for the overloaded links
 	    int violations = 0;
+	    long maxBandwidthRequirement = Long.MIN_VALUE;
 		for (int i = 0; i < links.length; i++) {
+			logger.info("Link " + i + " has " + links[i].getBandwidth() + " b/s bandwidth");
+			logger.info("The application requires link " + i + " " + usedBandwidth[i] + " b/s bandwidth");
 	        if (usedBandwidth[i] > links[i].getBandwidth()) {
-	        	System.out.println("Link " + i + " is overloaded: " + usedBandwidth[i] + " > "
-	                 + links[i].getBandwidth());
+	        	logger.info("Link " + i + " is overloaded: " + usedBandwidth[i] + " b/s > "
+	                 + links[i].getBandwidth() + " b/s");
 	            violations ++;
 	        }
+	        if (usedBandwidth[i] > maxBandwidthRequirement) {
+	        	maxBandwidthRequirement = usedBandwidth[i];
+	        }
 	    }
-		return violations == 0;
-	}
-	
-	/**
-	 * Performs an analysis of the mapping. It verifies if bandwidth
-	 * requirements are met and computes the link, switch and buffer energy.
-	 * The communication energy is also computed (as a sum of the three energy
-	 * components).
-	 */
-	public void analyzeIt() {
-	    logger.info("Verify the communication load of each link...");
-	    String bandwidthRequirements;
-	    if (verifyBandwidthRequirement()) {
+	    
+	    if (violations == 0) {
 	    	logger.info("Succes");
 	    	bandwidthRequirements = "Succes";
 	    }
@@ -1117,9 +1128,12 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 	    	logger.info("Fail");
 	    	bandwidthRequirements = "Fail";
 	    }
+	    
+	    logger.info("Maximum bandwidth requirement is " + maxBandwidthRequirement + " b/s");
+	    
 	    if (logger.isDebugEnabled()) {
 		    logger.debug("Energy consumption estimation ");
-		    logger.debug("(note that this is not exact numbers, but serve as a relative energy indication) ");
+		    logger.debug("(note this are not exact numbers, but serve as a relative energy indication) ");
 		    logger.debug("Energy consumed in link is " + calculateLinkEnergy());
 		    logger.debug("Energy consumed in switch is " + calculateSwitchEnergy());
 		    logger.debug("Energy consumed in buffer is " + calculateBufferEnergy());
@@ -1128,8 +1142,8 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 	    logger.info("Total communication energy consumption is " + energy);
 	    
 		MapperDatabase.getInstance().setOutputs(
-				new String[] { "bandwidthRequirements", "energy" },
-				new String[] { bandwidthRequirements, Double.toString(energy) });
+				new String[] { "bandwidthRequirements", "maxBandwidthRequirement", "energy" },
+				new String[] { bandwidthRequirements, Long.toString(maxBandwidthRequirement), Double.toString(energy) });
 	}
 	
 	private List<CommunicationType> getCommunications(CtgType ctg, String sourceTaskId) {
@@ -1172,20 +1186,16 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 	/**
 	 * Reads the information from the (Application Characterization Graph) APCG
 	 * and its corresponding (Communication Task Graph) CTG. Additionally, it
-	 * informs the algorithm about the application's bandwidth requirement. The
-	 * bandwidth requirements of the application are expressed as a multiple of
-	 * the communication volume. For example, a value of 2 means that each two
-	 * communicating IP cores require a bandwidth twice their communication
-	 * volume.
+	 * informs the algorithm about the application's bandwidth requirement. For
+	 * each two communicating IP cores, the bandwidth requirement is obtained by
+	 * multiplying the CTG period with their communication volume.
 	 * 
 	 * @param apcg
 	 *            the APCG XML
 	 * @param ctg
 	 *            the CTG XML
-	 * @param applicationBandwithRequirement
-	 *            the bandwidth requirement of the application
 	 */
-	public void parseApcg(ApcgType apcg, CtgType ctg, int applicationBandwithRequirement) {
+	public void parseApcg(ApcgType apcg, CtgType ctg) {
 		logger.assertLog(apcg != null, "The APCG cannot be null");
 		logger.assertLog(ctg != null, "The CTG cannot be null");
 		
@@ -1227,14 +1237,18 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 								+ " because they are on the same core ("
 								+ sourceCoreId + ")");
 					} else {
+						double ctgPeriod = ctg.getPeriod();
+						long bandwidthRequirement = 0;
+						if (MathUtils.definitelyGreaterThan((float) ctgPeriod, 0)) {
+							bandwidthRequirement = (long) (communicationType.getVolume() / ctgPeriod);
+						}
 						cores[previousCoreCount + Integer.valueOf(sourceCoreId)]
 								.getToCommunication()[previousCoreCount
 								+ Integer.valueOf(destinationCoreId)] = (long) communicationType
 								.getVolume();
 						cores[previousCoreCount + Integer.valueOf(sourceCoreId)]
 								.getToBandwidthRequirement()[previousCoreCount
-								+ Integer.valueOf(destinationCoreId)] = (long) (applicationBandwithRequirement * communicationType
-								.getVolume());
+								+ Integer.valueOf(destinationCoreId)] = bandwidthRequirement;
 						cores[previousCoreCount
 								+ Integer.valueOf(destinationCoreId)]
 								.getFromCommunication()[previousCoreCount
@@ -1243,8 +1257,7 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 						cores[previousCoreCount
 								+ Integer.valueOf(destinationCoreId)]
 								.getFromBandwidthRequirement()[previousCoreCount
-								+ Integer.valueOf(sourceCoreId)] = (long) (applicationBandwithRequirement * communicationType
-								.getVolume());
+								+ Integer.valueOf(sourceCoreId)] = bandwidthRequirement;
 					}
 				}
 			}
