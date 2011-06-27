@@ -27,6 +27,7 @@ import ro.ulbsibiu.acaps.ctg.xml.ctg.CtgType;
 import ro.ulbsibiu.acaps.mapper.Mapper;
 import ro.ulbsibiu.acaps.mapper.MapperDatabase;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
+import ro.ulbsibiu.acaps.mapper.BandwidthConstrainedEnergyAndPerformanceAwareMapper.LegalTurnSet;
 
 /**
  * Helper class capable of processing the {@link Mapper} user input.
@@ -60,7 +61,8 @@ public abstract class MapperInputProcessor {
 		cliOptions.addOption("b", "benchmarks", true, "the benchmarks file paths");
 		cliOptions.addOption("c", "ctg", true, "the file path to the Communication Task Graph");
 		cliOptions.addOption("a", "apcg", true, "the file path to the Application Characterization Graph");
-		cliOptions.addOption("r", "with-routing", false, "the algorithm generates routes");
+		cliOptions.addOption("r", "with-routing", true, "the algorithm generates routes using West First (WEST_FIRST) or Odd Even (ODD_EVEN) legat turn set");
+		cliOptions.addOption("l", "link-bandwidth", true, "the NoC links' bandwidth, in bits per second");
 		cliOptions.addOption("s", "seed", true, "random generator seed");
 		cliOptions.addOption("h", "help", false, "print this message");
 	}
@@ -94,6 +96,10 @@ public abstract class MapperInputProcessor {
 	 * @param doRouting
 	 *            whether or not the user requested the {@link Mapper} to do
 	 *            routing
+	 * @param lts
+	 *            the {@link LegalTurnSet} (useful only when doRouting is true)
+	 * @param linkBandwidth
+	 *            the NoC links' bandwidth, in bits per second
 	 * @param seed
 	 *            the seed for the random number generator of the initial
 	 *            population
@@ -104,7 +110,8 @@ public abstract class MapperInputProcessor {
 	public abstract void useMapper(String benchmarkFilePath,
 			String benchmarkName, String ctgId, String apcgId,
 			List<CtgType> ctgTypes, List<ApcgType> apcgTypes,
-			boolean doRouting, Long seed) throws JAXBException,
+			boolean doRouting, LegalTurnSet lts, double linkBandwidth, Long seed)
+			throws JAXBException,
 			TooFewNocNodesException, FileNotFoundException;
 	
 	/**
@@ -247,9 +254,38 @@ public abstract class MapperInputProcessor {
 								System.exit(0);
 							}
 						}
-						useMapper(path, tgffFiles[i].getName(), ctgId, apcgId,
-								ctgTypes, apcgTypes, Boolean.parseBoolean(cmd
-										.getOptionValue("r", "false")), seed);
+						boolean routing = cmd.hasOption("r");
+						if (routing) {
+							String lts = cmd.getOptionValue("r");
+							if (LegalTurnSet.ODD_EVEN.toString().equals(lts)) {
+								useMapper(path, tgffFiles[i].getName(), ctgId,
+										apcgId, ctgTypes, apcgTypes, routing,
+										LegalTurnSet.ODD_EVEN,
+										Double.valueOf(cmd.getOptionValue("l",
+												Double.toString(256E9))), seed);
+							} else {
+								if (LegalTurnSet.WEST_FIRST.toString().equals(lts)) {
+									useMapper(path, tgffFiles[i].getName(), ctgId,
+											apcgId, ctgTypes, apcgTypes, routing,
+											LegalTurnSet.WEST_FIRST,
+											Double.valueOf(cmd.getOptionValue("l",
+													Double.toString(256E9))), seed);
+								} else {
+									logger.warn("Unknown legal turn set. Using ODD_EVEN!");
+									useMapper(path, tgffFiles[i].getName(), ctgId,
+											apcgId, ctgTypes, apcgTypes, routing,
+											LegalTurnSet.ODD_EVEN,
+											Double.valueOf(cmd.getOptionValue("l",
+													Double.toString(256E9))), seed);
+								}
+							}
+						} else {
+							useMapper(path, tgffFiles[i].getName(), ctgId,
+									apcgId, ctgTypes, apcgTypes, routing,
+									LegalTurnSet.ODD_EVEN,
+									Double.valueOf(cmd.getOptionValue("l",
+											Double.toString(256E9))), seed);
+						}
 						
 						// increment the mapper database run ID after each
 						// mapped CTG, except the last one (no need to do this

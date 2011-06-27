@@ -35,6 +35,7 @@ import ro.ulbsibiu.acaps.mapper.BandwidthConstrainedEnergyAndPerformanceAwareMap
 import ro.ulbsibiu.acaps.mapper.Mapper;
 import ro.ulbsibiu.acaps.mapper.MapperDatabase;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
+import ro.ulbsibiu.acaps.mapper.BandwidthConstrainedEnergyAndPerformanceAwareMapper.LegalTurnSet;
 import ro.ulbsibiu.acaps.mapper.util.HeapUsageMonitor;
 import ro.ulbsibiu.acaps.mapper.util.MapperInputProcessor;
 import ro.ulbsibiu.acaps.mapper.util.MathUtils;
@@ -678,8 +679,6 @@ public class SimulatedAnnealingMapper extends BandwidthConstrainedEnergyAndPerfo
 
 	public static void main(String[] args) throws TooFewNocNodesException,
 			IOException, JAXBException, ParseException {
-		final int applicationBandwithRequirement = 3; // a multiple of the communication volume
-		final double linkBandwidth = 256E9;
 		final float switchEBit = 0.284f;
 		final float linkEBit = 0.449f;
 		final float bufReadEBit = 1.056f;
@@ -688,10 +687,12 @@ public class SimulatedAnnealingMapper extends BandwidthConstrainedEnergyAndPerfo
 		MapperInputProcessor mapperInputProcessor = new MapperInputProcessor() {
 			
 			@Override
-			public void useMapper(String benchmarkFilePath, String benchmarkName,
-					String ctgId, String apcgId, List<CtgType> ctgTypes,
-					List<ApcgType> apcgTypes, boolean doRouting, Long seed) throws JAXBException,
-					TooFewNocNodesException, FileNotFoundException {
+			public void useMapper(String benchmarkFilePath,
+					String benchmarkName, String ctgId, String apcgId,
+					List<CtgType> ctgTypes, List<ApcgType> apcgTypes,
+					boolean doRouting, LegalTurnSet lts, double linkBandwidth,
+					Long seed) throws JAXBException, TooFewNocNodesException,
+					FileNotFoundException {
 				logger.info("Using a Simulated annealing mapper for "
 						+ benchmarkFilePath + "ctg-" + ctgId + " (APCG " + apcgId + ")");
 				
@@ -721,7 +722,6 @@ public class SimulatedAnnealingMapper extends BandwidthConstrainedEnergyAndPerfo
 						+ meshSize;
 				
 				String[] parameters = new String[] {
-						"applicationBandwithRequirement",
 						"linkBandwidth",
 						"switchEBit",
 						"linkEBit",
@@ -730,7 +730,6 @@ public class SimulatedAnnealingMapper extends BandwidthConstrainedEnergyAndPerfo
 						"routing",
 						"seed"};
 				String values[] = new String[] {
-						Integer.toString(applicationBandwithRequirement),
 						Double.toString(linkBandwidth),
 						Float.toString(switchEBit), Float.toString(linkEBit),
 						Float.toString(bufReadEBit),
@@ -738,7 +737,7 @@ public class SimulatedAnnealingMapper extends BandwidthConstrainedEnergyAndPerfo
 						null,
 						seed == null ? null : Long.toString(seed)};
 				if (doRouting) {
-					values[values.length - 2] = "true";
+					values[values.length - 2] = "true" + "-" + lts.toString();
 					MapperDatabase.getInstance().setParameters(parameters, values);
 					
 					// SA with routing
@@ -746,7 +745,7 @@ public class SimulatedAnnealingMapper extends BandwidthConstrainedEnergyAndPerfo
 							benchmarkName, ctgId, apcgId,
 							topologyName, meshSize, new File(
 									topologyDir), cores, linkBandwidth,
-							true, LegalTurnSet.ODD_EVEN, bufReadEBit,
+							true, lts, bufReadEBit,
 							bufWriteEBit, switchEBit, linkEBit, seed);
 				} else {
 					values[values.length - 2] = "false";
@@ -767,7 +766,7 @@ public class SimulatedAnnealingMapper extends BandwidthConstrainedEnergyAndPerfo
 				
 				for (int k = 0; k < apcgTypes.size(); k++) {
 					// read the input data using the Unified Framework's XML interface
-					saMapper.parseApcg(apcgTypes.get(k), ctgTypes.get(k), applicationBandwithRequirement);
+					saMapper.parseApcg(apcgTypes.get(k), ctgTypes.get(k));
 				}
 				
 	//			// This is just for checking that bbMapper.parseTrafficConfig(...)

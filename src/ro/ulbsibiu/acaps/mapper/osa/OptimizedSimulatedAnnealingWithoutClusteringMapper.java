@@ -27,6 +27,7 @@ import ro.ulbsibiu.acaps.ctg.xml.ctg.CtgType;
 import ro.ulbsibiu.acaps.mapper.BandwidthConstrainedEnergyAndPerformanceAwareMapper;
 import ro.ulbsibiu.acaps.mapper.MapperDatabase;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
+import ro.ulbsibiu.acaps.mapper.BandwidthConstrainedEnergyAndPerformanceAwareMapper.LegalTurnSet;
 import ro.ulbsibiu.acaps.mapper.sa.Core;
 import ro.ulbsibiu.acaps.mapper.sa.SimulatedAnnealingMapper;
 import ro.ulbsibiu.acaps.mapper.util.MapperInputProcessor;
@@ -1108,8 +1109,6 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 
 	public static void main(String[] args) throws TooFewNocNodesException,
 			IOException, JAXBException, ParseException {
-		final int applicationBandwithRequirement = 3; // a multiple of the communication volume
-		final double linkBandwidth = 256E9;
 		final float switchEBit = 0.284f;
 		final float linkEBit = 0.449f;
 		final float bufReadEBit = 1.056f;
@@ -1120,10 +1119,12 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 		MapperInputProcessor mapperInputProcessor = new MapperInputProcessor() {
 			
 			@Override
-			public void useMapper(String benchmarkFilePath, String benchmarkName,
-					String ctgId, String apcgId, List<CtgType> ctgTypes,
-					List<ApcgType> apcgTypes, boolean doRouting, Long seed) throws JAXBException,
-					TooFewNocNodesException, FileNotFoundException {
+			public void useMapper(String benchmarkFilePath,
+					String benchmarkName, String ctgId, String apcgId,
+					List<CtgType> ctgTypes, List<ApcgType> apcgTypes,
+					boolean doRouting, LegalTurnSet lts, double linkBandwidth,
+					Long seed) throws JAXBException, TooFewNocNodesException,
+					FileNotFoundException {
 				logger.info("Using an Optimized Simulated Annealing without clustering mapper for "
 						+ benchmarkFilePath + "ctg-" + ctgId + " (APCG " + apcgId + ")");
 				
@@ -1166,7 +1167,6 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 				}
 				
 				String[] parameters = new String[] {
-						"applicationBandwithRequirement",
 						"linkBandwidth",
 						"switchEBit",
 						"linkEBit",
@@ -1177,7 +1177,6 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 						"initialTemperature",
 						};
 				String values[] = new String[] {
-						Integer.toString(applicationBandwithRequirement),
 						Double.toString(linkBandwidth),
 						Float.toString(switchEBit), Float.toString(linkEBit),
 						Float.toString(bufReadEBit),
@@ -1187,7 +1186,7 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 						initialTemperature == null ? null : Double.toString(initialTemperature),
 						};
 				if (doRouting) {
-					values[values.length - 3] = "true";
+					values[values.length - 3] = "true" + "-" + lts.toString();
 					MapperDatabase.getInstance().setParameters(parameters, values);
 					
 					// OSA with routing
@@ -1195,7 +1194,7 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 							benchmarkName, ctgId, apcgId,
 							topologyName, meshSize, new File(
 									topologyDir), cores, linkBandwidth,
-							true, LegalTurnSet.ODD_EVEN, bufReadEBit,
+							true, lts, bufReadEBit,
 							bufWriteEBit, switchEBit, linkEBit, seed, initialTemperature);
 				} else {
 					values[values.length - 3] = "false";
@@ -1216,7 +1215,7 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 				
 				for (int k = 0; k < apcgTypes.size(); k++) {
 					// read the input data using the Unified Framework's XML interface
-					osaMapper.parseApcg(apcgTypes.get(k), ctgTypes.get(k), applicationBandwithRequirement);
+					osaMapper.parseApcg(apcgTypes.get(k), ctgTypes.get(k));
 				}
 				
 	//			// This is just for checking that bbMapper.parseTrafficConfig(...)

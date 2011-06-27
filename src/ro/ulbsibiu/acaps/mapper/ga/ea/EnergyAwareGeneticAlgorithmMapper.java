@@ -24,6 +24,7 @@ import ro.ulbsibiu.acaps.ctg.xml.ctg.CtgType;
 import ro.ulbsibiu.acaps.mapper.BandwidthConstrainedEnergyAndPerformanceAwareMapper;
 import ro.ulbsibiu.acaps.mapper.MapperDatabase;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
+import ro.ulbsibiu.acaps.mapper.BandwidthConstrainedEnergyAndPerformanceAwareMapper.LegalTurnSet;
 import ro.ulbsibiu.acaps.mapper.ga.GeneticAlgorithmMapper;
 import ro.ulbsibiu.acaps.mapper.ga.Individual;
 import ro.ulbsibiu.acaps.mapper.util.MapperInputProcessor;
@@ -37,6 +38,8 @@ import ro.ulbsibiu.acaps.mapper.util.MapperInputProcessor;
  * Additionally,a routing function can be computed.
  * 
  * @author cradu
+ * 
+ * @deprecated use {@link EnergyAwareJMetalEvolutionaryAlgorithmMapper} instead
  * 
  */
 public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnergyAndPerformanceAwareMapper {
@@ -896,8 +899,6 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 
 	public static void main(String args[]) throws TooFewNocNodesException,
 			IOException, JAXBException, ParseException {
-		final int applicationBandwithRequirement = 3; // a multiple of the communication volume
-		final double linkBandwidth = 256E9;
 		final float switchEBit = 0.284f;
 		final float linkEBit = 0.449f;
 		final float bufReadEBit = 1.056f;
@@ -908,10 +909,12 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 		MapperInputProcessor mapperInputProcessor = new MapperInputProcessor() {
 			
 			@Override
-			public void useMapper(String benchmarkFilePath, String benchmarkName,
-					String ctgId, String apcgId, List<CtgType> ctgTypes,
-					List<ApcgType> apcgTypes, boolean doRouting, Long seed) throws JAXBException,
-					TooFewNocNodesException, FileNotFoundException {
+			public void useMapper(String benchmarkFilePath,
+					String benchmarkName, String ctgId, String apcgId,
+					List<CtgType> ctgTypes, List<ApcgType> apcgTypes,
+					boolean doRouting, LegalTurnSet lts, double linkBandwidth,
+					Long seed) throws JAXBException, TooFewNocNodesException,
+					FileNotFoundException {
 				logger.info("Using an energy aware genetic algorithm mapper for "
 						+ benchmarkFilePath + "ctg-" + ctgId + " (APCG " + apcgId + ")");
 				
@@ -981,7 +984,6 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 				}
 				
 				String[] parameters = new String[] {
-						"applicationBandwithRequirement",
 						"linkBandwidth",
 						"switchEBit",
 						"linkEBit",
@@ -995,7 +997,6 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 						"mutationProbability",
 						};
 				String values[] = new String[] {
-						Integer.toString(applicationBandwithRequirement),
 						Double.toString(linkBandwidth),
 						Float.toString(switchEBit), Float.toString(linkEBit),
 						Float.toString(bufReadEBit),
@@ -1008,14 +1009,14 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 						mutationProbability == null ? null : Integer.toString(mutationProbability),
 						};
 				if (doRouting) {
-					values[values.length - 6] = "true";
+					values[values.length - 6] = "true" + "-" + lts.toString();
 					MapperDatabase.getInstance().setParameters(parameters, values);
 					
 					// with routing
 					eagaMapper = new EnergyAwareGeneticAlgorithmMapper(
 							benchmarkName, ctgId, apcgId, topologyName,
 							meshSize, new File(topologyDir), cores,
-							linkBandwidth, true, LegalTurnSet.ODD_EVEN,
+							linkBandwidth, true, lts,
 							bufReadEBit, bufWriteEBit, switchEBit, linkEBit,
 							seed, populationSize, generations,
 							crossoverProbability, mutationProbability);
@@ -1039,7 +1040,7 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 				
 				for (int k = 0; k < apcgTypes.size(); k++) {
 					// read the input data using the Unified Framework's XML interface
-					eagaMapper.parseApcg(apcgTypes.get(k), ctgTypes.get(k), applicationBandwithRequirement);
+					eagaMapper.parseApcg(apcgTypes.get(k), ctgTypes.get(k));
 				}
 				
 	//			// This is just for checking that bbMapper.parseTrafficConfig(...)

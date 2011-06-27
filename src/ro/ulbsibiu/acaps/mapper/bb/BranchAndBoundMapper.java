@@ -36,6 +36,7 @@ import ro.ulbsibiu.acaps.mapper.BandwidthConstrainedEnergyAndPerformanceAwareMap
 import ro.ulbsibiu.acaps.mapper.Mapper;
 import ro.ulbsibiu.acaps.mapper.MapperDatabase;
 import ro.ulbsibiu.acaps.mapper.TooFewNocNodesException;
+import ro.ulbsibiu.acaps.mapper.BandwidthConstrainedEnergyAndPerformanceAwareMapper.LegalTurnSet;
 import ro.ulbsibiu.acaps.mapper.sa.Core;
 import ro.ulbsibiu.acaps.mapper.util.HeapUsageMonitor;
 import ro.ulbsibiu.acaps.mapper.util.MapperInputProcessor;
@@ -853,8 +854,6 @@ public class BranchAndBoundMapper extends BandwidthConstrainedEnergyAndPerforman
 
 	public static void main(String[] args) throws TooFewNocNodesException,
 			IOException, JAXBException, ParseException {
-		final int applicationBandwithRequirement = 3; // a multiple of the communication volume
-		final double linkBandwidth = 256E9;
 		final int priorityQueueSize = 2000;
 		final float switchEBit = 0.284f;
 		final float linkEBit = 0.449f;
@@ -867,8 +866,9 @@ public class BranchAndBoundMapper extends BandwidthConstrainedEnergyAndPerforman
 			public void useMapper(String benchmarkFilePath,
 					String benchmarkName, String ctgId, String apcgId,
 					List<CtgType> ctgTypes, List<ApcgType> apcgTypes,
-					boolean doRouting, Long seed) throws JAXBException,
-					TooFewNocNodesException, FileNotFoundException {
+					boolean doRouting, LegalTurnSet lts, double linkBandwidth,
+					Long seed) throws JAXBException, TooFewNocNodesException,
+					FileNotFoundException {
 				logger.info("Using a Branch and Bound mapper for "
 						+ benchmarkFilePath + "ctg-" + ctgId + " (APCG " + apcgId + ")");
 				
@@ -898,7 +898,6 @@ public class BranchAndBoundMapper extends BandwidthConstrainedEnergyAndPerforman
 						+ meshSize;
 				
 				String[] parameters = new String[] {
-						"applicationBandwithRequirement",
 						"linkBandwidth",
 						"priorityQueueSize",
 						"switchEBit",
@@ -908,7 +907,6 @@ public class BranchAndBoundMapper extends BandwidthConstrainedEnergyAndPerforman
 						"routing",
 						"seed"};
 				String values[] = new String[] {
-						Integer.toString(applicationBandwithRequirement),
 						Double.toString(linkBandwidth),
 						Integer.toString(priorityQueueSize),
 						Float.toString(switchEBit), Float.toString(linkEBit),
@@ -917,7 +915,7 @@ public class BranchAndBoundMapper extends BandwidthConstrainedEnergyAndPerforman
 						null,
 						seed == null ? null : Long.toString(seed)};
 				if (doRouting) {
-					values[values.length - 2] = "true";
+					values[values.length - 2] = "true" + "-" + lts.toString();
 					MapperDatabase.getInstance().setParameters(parameters, values);
 					
 					// Branch and Bound with routing
@@ -926,7 +924,7 @@ public class BranchAndBoundMapper extends BandwidthConstrainedEnergyAndPerforman
 							topologyName, meshSize, new File(
 									topologyDir), cores, linkBandwidth,
 							priorityQueueSize, true,
-							LegalTurnSet.ODD_EVEN, bufReadEBit,
+							lts, bufReadEBit,
 							bufWriteEBit, switchEBit, linkEBit, seed);
 				} else {
 					values[values.length - 2] = "false";
@@ -948,7 +946,7 @@ public class BranchAndBoundMapper extends BandwidthConstrainedEnergyAndPerforman
 				
 				for (int k = 0; k < apcgTypes.size(); k++) {
 					// read the input data using the Unified Framework's XML interface
-					bbMapper.parseApcg(apcgTypes.get(k), ctgTypes.get(k), applicationBandwithRequirement);
+					bbMapper.parseApcg(apcgTypes.get(k), ctgTypes.get(k));
 				}
 				
 	//			// This is just for checking that bbMapper.parseTrafficConfig(...)
