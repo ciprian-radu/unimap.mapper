@@ -39,8 +39,6 @@ import ro.ulbsibiu.acaps.mapper.util.MapperInputProcessor;
  * 
  * @author cradu
  * 
- * @deprecated use {@link EnergyAwareJMetalEvolutionaryAlgorithmMapper} instead
- * 
  */
 public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnergyAndPerformanceAwareMapper {
 
@@ -669,7 +667,7 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 	 * 
 	 * @return the fitness of the individual
 	 */
-	protected double fitnessCalculation(int[] individual) {
+	public double fitnessCalculation(int[] individual) {
 		logger.assertLog(individual != null, "Attempting to compute fitness for a NULL individual!");
 		logger.assertLog(individual.length == nodes.length, "The individual doesn't contains " + nodes.length + " genes!");
 		
@@ -826,7 +824,7 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 		return MAPPER_ID;
 	}
 
-	private void runGaSteps() {
+	private int runGaSteps() {
 		// position of parent1 and parent2 in the population
 		int posOfParent1, posOfParent2;
 
@@ -856,7 +854,7 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 			}
 			currentGeneration++;
 		}
-
+		return 1;
 	}
 
 	@Override
@@ -865,8 +863,9 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 	}
 
 	@Override
-	protected void doMapping() {
+	protected int doMapping() {
 		runGaSteps();
+		return 1;
 	}
 
 	@Override
@@ -1047,7 +1046,7 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 	//			// and parseApcg(...) have the same effect
 	//			eagaMapper.printCores();
 	
-				String mappingXml = eagaMapper.map();
+				String[] mappingXml = eagaMapper.map();
 				File dir = new File(benchmarkFilePath + "ctg-" + ctgId);
 				dir.mkdirs();
 				String routing = "";
@@ -1059,7 +1058,7 @@ public class EnergyAwareGeneticAlgorithmMapper extends BandwidthConstrainedEnerg
 						+ eagaMapper.getMapperId() + routing + ".xml";
 				PrintWriter pw = new PrintWriter(mappingXmlFilePath);
 				logger.info("Saving the mapping XML file" + mappingXmlFilePath);
-				pw.write(mappingXml);
+				pw.write(mappingXml[0]);
 				pw.close();
 	
 				logger.info("The generated mapping is:");

@@ -399,7 +399,7 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 		generateLinkUsageList();
 	}
 	
-	private void generateLinkUsageList() {
+	protected void generateLinkUsageList() {
 		if (this.buildRoutingTable == true) {
 			linkUsageList = null;
 		} else {
@@ -1146,7 +1146,7 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 				new String[] { bandwidthRequirements, Long.toString(maxBandwidthRequirement), Double.toString(energy) });
 	}
 	
-	private List<CommunicationType> getCommunications(CtgType ctg, String sourceTaskId) {
+	public List<CommunicationType> getCommunications(CtgType ctg, String sourceTaskId) {
 		logger.assertLog(ctg != null, null);
 		logger.assertLog(sourceTaskId != null, null);
 		
@@ -1163,7 +1163,7 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 		return communications;
 	}
 
-	private String getCoreUid(ApcgType apcg, String sourceTaskId) {
+	public String getCoreUid(ApcgType apcg, String sourceTaskId) {
 		logger.assertLog(apcg != null, null);
 		logger.assertLog(sourceTaskId != null, null);
 		
@@ -1293,8 +1293,10 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 	 * obtained mapping in the {@link #nodes} and {@link #cores} data structures
 	 * and to set the routing tables ({@link #programRouters()}), if routing is
 	 * enabled ({@link #buildRoutingTable}).
+	 * 
+	 * @return the number of mappings from the solution (1 for single objective, > 1 for multi-objective)
 	 */
-	protected abstract void doMapping ();
+	protected abstract int doMapping ();
 
 	/**
 	 * Allows executing some code, right after the mapping is done (and some
@@ -1304,7 +1306,7 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 	protected abstract void doBeforeSavingMapping ();
 	
 	@Override
-	public String map() throws TooFewNocNodesException {
+	public String[] map() throws TooFewNocNodesException {
 		if (nodes.length < cores.length) {
 			throw new TooFewNocNodesException(cores.length, nodes.length);
 		}
@@ -1342,8 +1344,9 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 		long sysStart = TimeUtils.getSystemTime();
 		long realStart = System.nanoTime();
 		
+		int totalNumberOfMappings=0;
 		if (cores.length > 1) {
-			doMapping();
+			totalNumberOfMappings = doMapping();
 		}
 		
 		long userEnd = TimeUtils.getUserTime();
@@ -1355,46 +1358,57 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 		logger.info("Memory: " + monitor.getAverageUsedHeap()
 				/ (1024 * 1024 * 1.0) + " MB");
 		
-		doBeforeSavingMapping();
+		StringWriter[] stringWriter = new StringWriter[totalNumberOfMappings];
+		for (int i = 0; i < totalNumberOfMappings; i++) {
+			stringWriter[i] = new StringWriter();
+		}
 		
-		saveRoutingTables();
-		
-		saveTopology();
-
-		MappingType mapping = new MappingType();
-		mapping.setId(getMapperId());
-		mapping.setRuntime(new Double(realEnd - realStart));
-		for (int i = 0; i < nodes.length; i++) {
-			if (!"-1".equals(nodes[i].getCore())) {
-				MapType map = new MapType();
-				map.setNode(nodes[i].getId());
-				map.setCore(Integer.toString(cores[Integer.parseInt(nodes[i].getCore())].getCoreId()));
-				map.setApcg(cores[Integer.parseInt(nodes[i].getCore())].getApcgId());
-				mapping.getMap().add(map);
+		for (int j = 0; j < totalNumberOfMappings; j++) {
+			doBeforeSavingMapping();
+			
+			saveRoutingTables();
+			
+			saveTopology();
+	
+			MappingType mapping = new MappingType();
+			mapping.setId(getMapperId());
+			mapping.setRuntime(new Double(realEnd - realStart));
+			for (int i = 0; i < nodes.length; i++) {
+				if (!"-1".equals(nodes[i].getCore())) {
+					MapType map = new MapType();
+					map.setNode(nodes[i].getId());
+					map.setCore(Integer.toString(cores[Integer.parseInt(nodes[i].getCore())].getCoreId()));
+					map.setApcg(cores[Integer.parseInt(nodes[i].getCore())].getApcgId());
+					mapping.getMap().add(map);
+				}
 			}
+			
+			ro.ulbsibiu.acaps.ctg.xml.mapping.ObjectFactory mappingFactory = new ro.ulbsibiu.acaps.ctg.xml.mapping.ObjectFactory();
+			JAXBElement<MappingType> jaxbElement = mappingFactory.createMapping(mapping);
+			try {
+				JAXBContext jaxbContext = JAXBContext.newInstance(MappingType.class);
+				Marshaller marshaller = jaxbContext.createMarshaller();
+				marshaller.setProperty("jaxb.formatted.output", Boolean.TRUE);
+				marshaller.marshal(jaxbElement, stringWriter[j]);
+			} catch (JAXBException e) {
+				logger.error("JAXB encountered an error", e);
+			}
+			
+			Integer benchmarkId = MapperDatabase.getInstance().getBenchmarkId(benchmarkName, ctgId);
+			Integer nocTopologyId = MapperDatabase.getInstance().getNocTopologyId(topologyName, topologySize);
+			// TODO add some mechanism to get a description for the algorithm (and insert it into the database)
+			MapperDatabase.getInstance().saveMapping(getMapperId(), getMapperId(),
+					benchmarkId, apcgId, nocTopologyId, stringWriter[j].toString(),
+					startDate, (realEnd - realStart) / 1e9,
+					(userEnd - userStart) / 1e9, (sysEnd - sysStart) / 1e9,
+					monitor.getAverageUsedHeap(), null);
 		}
-		StringWriter stringWriter = new StringWriter();
-		ro.ulbsibiu.acaps.ctg.xml.mapping.ObjectFactory mappingFactory = new ro.ulbsibiu.acaps.ctg.xml.mapping.ObjectFactory();
-		JAXBElement<MappingType> jaxbElement = mappingFactory.createMapping(mapping);
-		try {
-			JAXBContext jaxbContext = JAXBContext.newInstance(MappingType.class);
-			Marshaller marshaller = jaxbContext.createMarshaller();
-			marshaller.setProperty("jaxb.formatted.output", Boolean.TRUE);
-			marshaller.marshal(jaxbElement, stringWriter);
-		} catch (JAXBException e) {
-			logger.error("JAXB encountered an error", e);
+		String[] returnString = new String [totalNumberOfMappings];
+		for (int i = 0; i < totalNumberOfMappings; i++) {
+			returnString[i] = stringWriter[i].toString();
 		}
 		
-		Integer benchmarkId = MapperDatabase.getInstance().getBenchmarkId(benchmarkName, ctgId);
-		Integer nocTopologyId = MapperDatabase.getInstance().getNocTopologyId(topologyName, topologySize);
-		// TODO add some mechanism to get a description for the algorithm (and insert it into the database)
-		MapperDatabase.getInstance().saveMapping(getMapperId(), getMapperId(),
-				benchmarkId, apcgId, nocTopologyId, stringWriter.toString(),
-				startDate, (realEnd - realStart) / 1e9,
-				(userEnd - userStart) / 1e9, (sysEnd - sysStart) / 1e9,
-				monitor.getAverageUsedHeap(), null);
-
-		return stringWriter.toString();
+		return returnString;
 	}
 	
 	private void saveTopology() {

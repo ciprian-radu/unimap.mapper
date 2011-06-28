@@ -1173,7 +1173,7 @@ public class GeneticAlgorithmMapper implements Mapper {
 		
 	}
 
-	public String map() throws TooFewNocNodesException {
+	public String[] map() throws TooFewNocNodesException {
 
 		if (noOfNodes < noOfIpCores) {
 			throw new TooFewNocNodesException(noOfIpCores, noOfNodes);
@@ -1208,7 +1208,9 @@ public class GeneticAlgorithmMapper implements Mapper {
 			mapping.getMap().add(map);
 		}
 
-		StringWriter stringWriter = new StringWriter();
+		StringWriter []stringWriter = new StringWriter[1];
+		stringWriter[0]= new StringWriter();
+		
 		ro.ulbsibiu.acaps.ctg.xml.mapping.ObjectFactory mappingFactory = new ro.ulbsibiu.acaps.ctg.xml.mapping.ObjectFactory();
 		JAXBElement<MappingType> jaxbElement = mappingFactory
 				.createMapping(mapping);
@@ -1217,12 +1219,15 @@ public class GeneticAlgorithmMapper implements Mapper {
 					.newInstance(MappingType.class);
 			Marshaller marshaller = jaxbContext.createMarshaller();
 			marshaller.setProperty("jaxb.formatted.output", Boolean.TRUE);
-			marshaller.marshal(jaxbElement, stringWriter);
+			marshaller.marshal(jaxbElement, stringWriter[0]);
 		} catch (JAXBException e) {
 			logger.error("JAXB encountered an error", e);
 		}
 
-		return stringWriter.toString();
+		String[] returnString = new String [1];
+		returnString[0]=stringWriter[0].toString();
+		
+		return returnString;
 
 	}
 
@@ -1523,7 +1528,7 @@ public class GeneticAlgorithmMapper implements Mapper {
 						gaMapper.parseApcg(apcgTypes.get(k));
 					}
 
-					String mappingXml = gaMapper.map();
+					String[] mappingXml = gaMapper.map();
 
 					File dir = new File(path + "ctg-" + ctgId);
 					dir.mkdirs();
@@ -1535,7 +1540,7 @@ public class GeneticAlgorithmMapper implements Mapper {
 					logger.info("Saving the mapping XML file"
 							+ mappingXmlFilePath);
 					logger.info("Saving the mapping XML file");
-					pw.write(mappingXml);
+					pw.write(mappingXml[0]);
 					pw.close();
 
 					gaMapper.printCurrentMapping();

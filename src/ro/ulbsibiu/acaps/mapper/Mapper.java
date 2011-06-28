@@ -26,10 +26,10 @@ public interface Mapper {
 	 * 
 	 * @see MappingType
 	 * 
-	 * @return a String containing the mapping XML
+	 * @return a array of Strings containing the mappings (specially for multi-objective case) XML
 	 * 
 	 * @throws TooFewNocNodesException
 	 */
-	public abstract String map() throws TooFewNocNodesException;
+	public abstract String[] map() throws TooFewNocNodesException;
 
 }

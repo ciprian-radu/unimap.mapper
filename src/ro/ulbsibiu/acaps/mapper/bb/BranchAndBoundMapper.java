@@ -744,8 +744,9 @@ public class BranchAndBoundMapper extends BandwidthConstrainedEnergyAndPerforman
 	}
 
 	@Override
-	protected void doMapping() {
+	protected int doMapping() {
 		branchAndBoundMapping();
+		return 1;
 	}
 
 	@Override
@@ -953,7 +954,7 @@ public class BranchAndBoundMapper extends BandwidthConstrainedEnergyAndPerforman
 	//			// and parseApcg(...) have the same effect
 //				bbMapper.printCores();
 	
-				String mappingXml = bbMapper.map();
+				String[] mappingXml = bbMapper.map();
 				File dir = new File(benchmarkFilePath + "ctg-" + ctgId);
 				dir.mkdirs();
 				String routing = "";
@@ -965,7 +966,7 @@ public class BranchAndBoundMapper extends BandwidthConstrainedEnergyAndPerforman
 						+ bbMapper.getMapperId() + routing + ".xml";
 				PrintWriter pw = new PrintWriter(mappingXmlFilePath);
 				logger.info("Saving the mapping XML file" + mappingXmlFilePath);
-				pw.write(mappingXml);
+				pw.write(mappingXml[0]);
 				pw.close();
 	
 				logger.info("The generated mapping is:");

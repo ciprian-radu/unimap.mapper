@@ -382,9 +382,10 @@ public class ExhaustiveSearchMapper extends BandwidthConstrainedEnergyAndPerform
 	}
 
 	@Override
-	protected void doMapping() {
+	protected int doMapping() {
 		long possibleMappings = countPossibleMappings(nodes.length);
 		searchExhaustively(possibleMappings);
+		return 1;
 	}
 
 	@Override
@@ -550,7 +551,7 @@ public class ExhaustiveSearchMapper extends BandwidthConstrainedEnergyAndPerform
 	//			// and parseApcg(...) have the same effect
 	//			bbMapper.printCores();
 	
-				String mappingXml = esMapper.map();
+				String[] mappingXml = esMapper.map();
 				File dir = new File(benchmarkFilePath + "ctg-" + ctgId);
 				dir.mkdirs();
 				String routing = "";
@@ -562,7 +563,7 @@ public class ExhaustiveSearchMapper extends BandwidthConstrainedEnergyAndPerform
 						+ esMapper.getMapperId() + routing + ".xml";
 				PrintWriter pw = new PrintWriter(mappingXmlFilePath);
 				logger.info("Saving the mapping XML file" + mappingXmlFilePath);
-				pw.write(mappingXml);
+				pw.write(mappingXml[0]);
 				pw.close();
 	
 				logger.info("The generated mapping is:");
