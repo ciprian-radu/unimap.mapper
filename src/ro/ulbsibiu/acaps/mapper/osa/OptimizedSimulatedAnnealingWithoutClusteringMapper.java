@@ -532,7 +532,7 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 			&& numberOfConsecutiveRejectedMoves >= numberOfIterationsPerTemperature;
 	}
 
-	protected void doMapping() {
+	protected int doMapping() {
 		double totalDeltaCost;
 
 		// set up the global control parameters for this annealing run
@@ -579,6 +579,7 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 		if (buildRoutingTable) {
 			programRouters();
 		}
+		return 1;
 	}
 
 	/**
@@ -1222,7 +1223,7 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 	//			// and parseApcg(...) have the same effect
 	//			osaMapper.printCores();
 	
-				String mappingXml = osaMapper.map();
+				String[] mappingXml = osaMapper.map();
 				File dir = new File(benchmarkFilePath + "ctg-" + ctgId);
 				dir.mkdirs();
 				String routing = "";
@@ -1234,7 +1235,7 @@ public class OptimizedSimulatedAnnealingWithoutClusteringMapper extends
 						+ osaMapper.getMapperId() + routing + ".xml";
 				PrintWriter pw = new PrintWriter(mappingXmlFilePath);
 				logger.info("Saving the mapping XML file" + mappingXmlFilePath);
-				pw.write(mappingXml);
+				pw.write(mappingXml[0]);
 				pw.close();
 	
 				logger.info("The generated mapping is:");

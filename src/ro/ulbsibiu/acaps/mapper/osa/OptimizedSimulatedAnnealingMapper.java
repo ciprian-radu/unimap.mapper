@@ -303,7 +303,7 @@ public class OptimizedSimulatedAnnealingMapper extends
 		//			// and parseApcg(...) have the same effect
 		//			osaMapper.printCores();
 		
-				String mappingXml = osaMapper.map();
+				String[] mappingXml = osaMapper.map();
 				File dir = new File(benchmarkFilePath + "ctg-" + ctgId);
 				dir.mkdirs();
 				String routing = "";
@@ -315,7 +315,7 @@ public class OptimizedSimulatedAnnealingMapper extends
 						+ osaMapper.getMapperId() + routing + ".xml";
 				PrintWriter pw = new PrintWriter(mappingXmlFilePath);
 				logger.info("Saving the mapping XML file" + mappingXmlFilePath);
-				pw.write(mappingXml);
+				pw.write(mappingXml[0]);
 				pw.close();
 		
 				logger.info("The generated mapping is:");

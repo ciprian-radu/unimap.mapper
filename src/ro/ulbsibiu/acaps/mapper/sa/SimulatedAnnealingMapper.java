@@ -439,7 +439,7 @@ public class SimulatedAnnealingMapper extends BandwidthConstrainedEnergyAndPerfo
 		return totalDeltaCost;
 	}
 
-	protected void doMapping() {
+	protected int doMapping() {
 		double cost3, cost2;
 		boolean done;
 		double tol3, tol2, temp;
@@ -530,6 +530,7 @@ public class SimulatedAnnealingMapper extends BandwidthConstrainedEnergyAndPerfo
 		if (buildRoutingTable) {
 			programRouters();
 		}
+		return 1;
 	}
 
 	/**
@@ -773,7 +774,7 @@ public class SimulatedAnnealingMapper extends BandwidthConstrainedEnergyAndPerfo
 	//			// and parseApcg(...) have the same effect
 	//			bbMapper.printCores();
 	
-				String mappingXml = saMapper.map();
+				String[] mappingXml = saMapper.map();
 				File dir = new File(benchmarkFilePath + "ctg-" + ctgId);
 				dir.mkdirs();
 				String routing = "";
@@ -785,7 +786,7 @@ public class SimulatedAnnealingMapper extends BandwidthConstrainedEnergyAndPerfo
 						+ saMapper.getMapperId() + routing + ".xml";
 				PrintWriter pw = new PrintWriter(mappingXmlFilePath);
 				logger.info("Saving the mapping XML file" + mappingXmlFilePath);
-				pw.write(mappingXml);
+				pw.write(mappingXml[0]);
 				pw.close();
 	
 				logger.info("The generated mapping is:");

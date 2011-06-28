@@ -84,54 +84,54 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 	/**
 	 * the selected jMetal single objective algorithm
 	 */
-	private JMetalAlgorithm jMetalAlgorithm;
+	protected JMetalAlgorithm jMetalAlgorithm;
 	
 	/**
 	 * jMetal {@link Problem} 
 	 */
-	private Problem problem;
+	protected Problem problem;
 	
 	/**
 	 * jMetal {@link Algorithm}
 	 */
-	private Algorithm algorithm;
+	protected Algorithm algorithm;
 	
 	/**
 	 * jMetal {@link Crossover} operator
 	 */
-	private Crossover crossover;
+	protected Crossover crossover;
 	
 	/**
 	 * jMetal {@link Mutation} operator
 	 */
-	private Mutation mutation;
+	protected Mutation mutation;
 	
 	/**
 	 * jMetal {@link Selection} operator
 	 */
-	private Selection selection;
+	protected Selection selection;
 	
 	private int[] solution;
 	
 	/** the distinct nodes with which each node communicates directly (through a single link) */
-	private Set<Integer>[] nodeNeighbors;
+	protected Set<Integer>[] nodeNeighbors;
 	
 	/** the maximum neighbors a node can have */
 	private int maxNodeNeighbors = 0;
 	
 	/** the distinct cores with which each core communicates directly */
-	private Set<Integer>[] coreNeighbors;
+	protected Set<Integer>[] coreNeighbors;
 	
 	/**
 	 * the total data communicated by the cores
 	 */
-	private double[] coreToCommunication;
+	protected double[] coreToCommunication;
 	
 	/** the total amount of data communicated by all cores*/
-	private long totalToCommunication;
+	protected long totalToCommunication;
 	
 	/** for every core, the (from and to) communication probability density function */
-	private double[][] coresCommunicationPDF;
+	protected double[][] coresCommunicationPDF;
 
 	/**
 	 * Default constructor
@@ -394,7 +394,7 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 		return MAPPER_ID_PREFIX + jMetalAlgorithm.toString() + sufix;
 	}
 	
-	private void computeCoreToCommunicationPDF() {
+	protected void computeCoreToCommunicationPDF() {
 		totalToCommunication = 0;
 		coreToCommunication = new double[cores.length];
 		
@@ -424,7 +424,7 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 		}
 	}
 	
-	private void computeCoresCommunicationPDF() {
+	protected void computeCoresCommunicationPDF() {
 		coresCommunicationPDF = new double[cores.length][cores.length];
 		
 		for (int i = 0; i < cores.length; i++) {
@@ -446,7 +446,7 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 		}
 	}
 	
-	private void computeCoreNeighbors() {
+	protected void computeCoreNeighbors() {
 		coreNeighbors = new LinkedHashSet[cores.length];
 		for (int i = 0; i < cores.length; i++) {
 			coreNeighbors[i] = new LinkedHashSet<Integer>();
@@ -551,7 +551,7 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 	}
 
 	@Override
-	protected void doMapping() {
+	protected int doMapping() {
 		try {
 			SolutionSet population = algorithm.execute();
 			Solution S = new Solution(population.get(0));
@@ -562,6 +562,7 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 		} catch (JMException e) {
 			logger.error(e);
 		}
+		return 1;
 	}
 
 	@Override
@@ -617,8 +618,8 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 	    }
 	    
 		MapperDatabase.getInstance().setOutputs(
-				new String[] { parameterName + "-" + "energy" },
-				new String[] { parameterValue.toString() + "-" + Double.toString(energy) });
+				new String[] { parameterName + "_" + "energy" },
+				new String[] { parameterValue.toString() + "_" + Double.toString(energy) });
 	}
 
 	public static void main(String args[]) throws TooFewNocNodesException,
@@ -803,7 +804,7 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 //			// and parseApcg(...) have the same effect
 //			eagaMapper.printCores();
 
-					String mappingXml = eaJMetalMapper.map();
+					String[] mappingXml = eaJMetalMapper.map();
 					File dir = new File(benchmarkFilePath + "ctg-" + ctgId);
 					dir.mkdirs();
 					String routing = "";
@@ -815,7 +816,7 @@ public class EnergyAwareJMetalEvolutionaryAlgorithmMapper extends EnergyAwareGen
 							+ eaJMetalMapper.getMapperId() + routing + ".xml";
 					PrintWriter pw = new PrintWriter(mappingXmlFilePath);
 					logger.info("Saving the mapping XML file" + mappingXmlFilePath);
-					pw.write(mappingXml);
+					pw.write(mappingXml[0]);
 					pw.close();
 
 					logger.info("The generated mapping is:");

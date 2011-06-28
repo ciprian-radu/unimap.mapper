@@ -107,7 +107,17 @@ public class JMetalEvolutionaryAlgorithmMapper implements Mapper {
 		/**
 		 * Non-ellitist Evolutionary Strategy 
 		 */
-		NEES
+		NEES,
+		
+		/**
+		 * NSGA-II
+		 */
+		NSGAII,
+		
+		/**
+		 * SPEA2 
+		 */
+		SPEA2
 	}
 	
 	/**
@@ -241,8 +251,9 @@ public class JMetalEvolutionaryAlgorithmMapper implements Mapper {
 		return jMetalAlgorithm.toString();
 	}	
 	
-	public String map() {
-		StringWriter stringWriter = new StringWriter();
+	public String[] map() {
+		StringWriter []stringWriter = new StringWriter[1];
+		stringWriter[0]= new StringWriter();
 		try {
 			problem = new MappingProblem(1, communications, cores, nodesNumber);
 
@@ -326,13 +337,14 @@ public class JMetalEvolutionaryAlgorithmMapper implements Mapper {
 					}
 				}
 			}
-
+			
+			
 			ro.ulbsibiu.acaps.ctg.xml.mapping.ObjectFactory mappingFactory = new ro.ulbsibiu.acaps.ctg.xml.mapping.ObjectFactory();
 			JAXBElement<MappingType> jaxbElement = mappingFactory.createMapping(mapping);
 			JAXBContext jaxbContext = JAXBContext.newInstance(MappingType.class);
 			Marshaller marshaller = jaxbContext.createMarshaller();
 			marshaller.setProperty("jaxb.formatted.output", Boolean.TRUE);
-			marshaller.marshal(jaxbElement, stringWriter);
+			marshaller.marshal(jaxbElement, stringWriter[0]);
 		} catch (ClassNotFoundException e) {
 			logger.error(e);
 		} catch (JMException e) {
@@ -341,7 +353,10 @@ public class JMetalEvolutionaryAlgorithmMapper implements Mapper {
 			logger.error("JAXB encountered an error", e);
 		}
 		
-		return stringWriter.toString();
+		String[] returnString = new String [1];
+		returnString[0]= stringWriter[0].toString();
+		
+		return returnString;
 	}
 
 	private void printCurrentMapping(int sol[]) {
@@ -734,7 +749,7 @@ public class JMetalEvolutionaryAlgorithmMapper implements Mapper {
 							jMetalAlgorithm, populationSize, maxEvaluations,
 							crossoverProbability, mutationProbability);
 
-					String mappingXml = gaMapper.map();
+					String[] mappingXml = gaMapper.map();
 
 					File dir = new File(path + "ctg-" + ctgId);
 					dir.mkdirs();
@@ -744,7 +759,7 @@ public class JMetalEvolutionaryAlgorithmMapper implements Mapper {
 							+ ".xml";
 					PrintWriter pw = new PrintWriter(mappingXmlFilePath);
 					logger.info("Saving the mapping XML file " + mappingXmlFilePath);
-					pw.write(mappingXml);
+					pw.write(mappingXml[0]);
 					pw.close();
 				}
 

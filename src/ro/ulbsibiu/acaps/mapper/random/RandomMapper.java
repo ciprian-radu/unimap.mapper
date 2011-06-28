@@ -133,7 +133,7 @@ public class RandomMapper implements Mapper {
 	 * @return a String containing the mapping XML
 	 */
 	@Override
-	public String map() throws TooFewNocNodesException {
+	public String[] map() throws TooFewNocNodesException {
 		if (logger.isDebugEnabled()) {
 			logger.debug("Random mapping started");
 		}
@@ -169,7 +169,7 @@ public class RandomMapper implements Mapper {
 			logger.debug("Random mapping finished");
 		}
 
-		return mappingXml;
+		return new String[] { mappingXml };
 	}
 
 	private ApcgCore[] getApcgCores() throws JAXBException {
@@ -290,13 +290,13 @@ public class RandomMapper implements Mapper {
 					
 					Mapper mapper = new RandomMapper(apcgId, apcgFilePaths,
 							nodeIds);
-					String mappingXml = mapper.map();
+					String[] mappingXml = mapper.map();
 					String mappingId = apcgId + "_" + mapper.getMapperId();
 					String xmlFileName = path + "ctg-" + ctgId + File.separator
 							+ "mapping-" + mappingId + ".xml";
 					PrintWriter pw = new PrintWriter(xmlFileName);
 					logger.info("Saving the mapping XML file " + xmlFileName);
-					pw.write(mappingXml);
+					pw.write(mappingXml[0]);
 					pw.close();
 				}
 			}
