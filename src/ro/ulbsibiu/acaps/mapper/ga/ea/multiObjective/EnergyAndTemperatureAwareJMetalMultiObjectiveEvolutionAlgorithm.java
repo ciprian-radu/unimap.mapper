@@ -111,6 +111,12 @@ public class EnergyAndTemperatureAwareJMetalMultiObjectiveEvolutionAlgorithm
 	/** counts how many cores were parsed from the parsed APCGs */
 	private int previousCorePowerCount = 0;
 	
+	/** the number of 2D mesh NoC rows */
+	private int noOfRows;
+	
+	/** the number of 2D mesh NoC columns */
+	private int noOfCols;
+	
 	public EnergyAndTemperatureAwareJMetalMultiObjectiveEvolutionAlgorithm(
 			String benchmarkName, String ctgId, String apcgId,
 			String topologyName, String topologySize, File topologyDir,
@@ -133,6 +139,15 @@ public class EnergyAndTemperatureAwareJMetalMultiObjectiveEvolutionAlgorithm
 		for (int i = 0; i < coresNumber; i++) {
 			corePower[i] = new CorePower(Integer.MIN_VALUE, null,
 					Integer.MIN_VALUE);
+		}
+		
+		String[] split = topologySize.split("x");
+		logger.assertLog(split != null && split.length == 2, "Incorrect topology size " + topologySize + "!");
+		try {
+			noOfCols = Integer.valueOf(split[0]);
+			noOfRows = Integer.valueOf(split[1]);
+		} catch (NumberFormatException e) {
+			logger.error(e);
 		}
 	}
 
@@ -157,6 +172,15 @@ public class EnergyAndTemperatureAwareJMetalMultiObjectiveEvolutionAlgorithm
 		for (int i = 0; i < coresNumber; i++) {
 			corePower[i] = new CorePower(Integer.MIN_VALUE, null,
 					Integer.MIN_VALUE);
+		}
+		
+		String[] split = topologySize.split("x");
+		logger.assertLog(split != null && split.length == 2, "Incorrect topology size " + topologySize + "!");
+		try {
+			noOfCols = Integer.valueOf(split[0]);
+			noOfRows = Integer.valueOf(split[1]);
+		} catch (NumberFormatException e) {
+			logger.error(e);
 		}
 	}
 
@@ -343,14 +367,6 @@ public class EnergyAndTemperatureAwareJMetalMultiObjectiveEvolutionAlgorithm
 		}
 
 		try {
-			int noOfCols, noOfRows;
-			if (hSize * hSize > individual.length) {
-				noOfCols = hSize;
-				noOfRows = hSize - 1;
-			} else {
-				noOfRows = hSize;
-				noOfCols = hSize;
-			}
 			String fileName = HOTSPOT_PATH + benchmarkName + "-ctg-" + ctgId
 					+ "-mapping-" + apcgId + "_" + getMapperId() + "-"
 					+ buildRoutingTable + "-" + legalTurnSet + "-" + noOfCols
@@ -396,14 +412,6 @@ public class EnergyAndTemperatureAwareJMetalMultiObjectiveEvolutionAlgorithm
 	 * @param individual the mapping
 	 */
 	private void runHotspot(int[] individual) {
-		int noOfCols, noOfRows;
-		if (hSize * hSize > individual.length) {
-			noOfCols = hSize;
-			noOfRows = hSize - 1;
-		} else {
-			noOfRows = hSize;
-			noOfCols = hSize;
-		}
 		try {
 			String flpFilename = HOTSPOT_PATH + "flp/" + noOfCols + "x" + noOfRows + ".flp";
 			String ptraceFileName = HOTSPOT_PATH + benchmarkName + "-ctg-"
@@ -457,15 +465,6 @@ public class EnergyAndTemperatureAwareJMetalMultiObjectiveEvolutionAlgorithm
 		double[] temperatures = new double[individual.length];
 
 		try {
-			int noOfCols, noOfRows;
-			if (hSize * hSize > individual.length) {
-				noOfCols = hSize;
-				noOfRows = hSize - 1;
-			} else {
-				noOfRows = hSize;
-				noOfCols = hSize;
-
-			}
 			String fileName = HOTSPOT_PATH + benchmarkName + "-ctg-" + ctgId
 					+ "-mapping-" + apcgId + "_" + getMapperId() + "-"
 					+ buildRoutingTable + "-" + legalTurnSet + "-" + noOfCols
@@ -520,26 +519,13 @@ public class EnergyAndTemperatureAwareJMetalMultiObjectiveEvolutionAlgorithm
 
 		double maxTemperature = Double.MIN_VALUE;
 
-		int noOfRows, noOfCols;
-		if (hSize * hSize > individual.length) {
-			noOfCols = hSize;
-			noOfRows = hSize - 1;
-		} else {
-			noOfRows = hSize;
-			noOfCols = hSize;
-		}
-
 		// here we take 4 adjacent (2 in X direction and 2 in Y direction) cores
 		// to measure the temperature of the block. All temperature of 4 cores
 		// are summed up. Temperature of block need to be minimized
 		for (int i = 0; i < individual.length; i++) {
 			int currentCol = i % hSize;
 			int currentRow = i / hSize;
-
-			if (currentCol + 1 >= noOfCols || currentRow + 1 >= noOfRows) {
-				continue;
-
-			} else {
+			if (currentCol + 1 < noOfCols && currentRow + 1 < noOfRows) {
 				double totalTemperature = temperatureOfCores[i]
 						+ temperatureOfCores[i + 1]
 						+ temperatureOfCores[(i + noOfCols)]
@@ -553,7 +539,7 @@ public class EnergyAndTemperatureAwareJMetalMultiObjectiveEvolutionAlgorithm
 		return 1 / maxTemperature;
 	}
 
-	public void analyzeIt (int solutionIndex, double temperature) {
+	public void analyzeIt (int solutionIndex, double onePerMaxTemperatureSubmatrix) {
 	    logger.info("Verify the communication load of each link...");
 	    String bandwidthRequirements;
 	    
@@ -634,8 +620,8 @@ public class EnergyAndTemperatureAwareJMetalMultiObjectiveEvolutionAlgorithm
 	    logger.info("Total communication energy consumption is " + energy);
 	    
 		MapperDatabase.getInstance().setOutputs(
-				new String[] { "bandwidthRequirements" + "_" + Integer.toString(solutionIndex), "maxBandwidthRequirement" + "_" + Integer.toString(solutionIndex), "energy" + "_" + Integer.toString(solutionIndex), "temperature" + "_" + Integer.toString(solutionIndex) },
-				new String[] { bandwidthRequirements, Long.toString(maxBandwidthRequirement), Double.toString(energy), Double.toString(1 / temperature) });
+				new String[] { "bandwidthRequirements" + "_" + Integer.toString(solutionIndex), "maxBandwidthRequirement" + "_" + Integer.toString(solutionIndex), "energy" + "_" + Integer.toString(solutionIndex), "onePerMaxTemperatureSubmatrix" + "_" + Integer.toString(solutionIndex) },
+				new String[] { bandwidthRequirements, Long.toString(maxBandwidthRequirement), Double.toString(energy), Double.toString(1 / onePerMaxTemperatureSubmatrix) });
 	}
 
 	@Override
@@ -670,8 +656,8 @@ public class EnergyAndTemperatureAwareJMetalMultiObjectiveEvolutionAlgorithm
 	    }
 	    
 		MapperDatabase.getInstance().setOutputs(
-				new String[] { parameterName + "_" + "energy" + "_" + "temperature" },
-				new String[] { parameterValue.toString() + "_" + Double.toString(energy) + "_" + Double.toString(1 / solution.getObjective(1)) });
+				new String[] { parameterName + "_" + "energy" + "_" + "onePerMaxTemperatureSubmatrix" },
+				new String[] { parameterValue.toString() + "_" + Double.toString(energy) + "_" + Double.toString(solution.getObjective(1)) });
 	}
 	
 	public static void main(String args[]) throws TooFewNocNodesException,
