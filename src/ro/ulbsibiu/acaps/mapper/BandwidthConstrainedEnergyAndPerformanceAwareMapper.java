@@ -785,8 +785,8 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 		float overloadCost = 0.0f;
 
 		// Clear the link usage
-		for (int i = 0; i < hSize; i++) {
-			for (int j = 0; j < nodes.length / hSize; j++) {
+		for (int i = 0; i < nodes.length / hSize; i++) {
+			for (int j = 0; j < hSize; j++) {
 				Arrays.fill(synLinkBandwithUsage[i][j], 0);
 			}
 		}
@@ -802,8 +802,8 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 			}
 		}
 
-		for (int i = 0; i < hSize; i++) {
-			for (int j = 0; j < nodes.length / hSize; j++) {
+		for (int i = 0; i < nodes.length / hSize; i++) {
+			for (int j = 0; j < hSize; j++) {
 				for (int k = 0; k < 4; k++) {
 					if (synLinkBandwithUsage[i][j][k] > links[0].getBandwidth()) {
 						overloadCost += ((float) synLinkBandwithUsage[i][j][k])
@@ -1018,8 +1018,8 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 			}
 		}
 
-		for (int row = 0; row < hSize; row++) {
-			for (int col = 0; col < nodes.length / hSize; col++) {
+		for (int row = 0; row < nodes.length / hSize; row++) {
+			for (int col = 0; col < hSize; col++) {
 				int nodeId = row * hSize + col;
 				for (int srcNode = 0; srcNode < nodes.length; srcNode++) {
 					for (int dstNode = 0; dstNode < nodes.length; dstNode++) {
@@ -1314,8 +1314,8 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 		if (!buildRoutingTable) {
 			linkBandwidthUsage = new int[links.length];
 		} else {
-			synLinkBandwithUsage = new int[hSize][nodes.length / hSize][4];
-			generatedRoutingTable = new int[hSize][nodes.length / hSize][nodes.length][nodes.length];
+			synLinkBandwithUsage = new int[nodes.length / hSize][hSize][4];
+			generatedRoutingTable = new int[nodes.length / hSize][hSize][nodes.length][nodes.length];
 			for (int i = 0; i < generatedRoutingTable.length; i++) {
 				for (int j = 0; j < generatedRoutingTable[i].length; j++) {
 					for (int k = 0; k < generatedRoutingTable[i][j].length; k++) {
