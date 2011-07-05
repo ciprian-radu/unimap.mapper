@@ -1366,9 +1366,9 @@ public abstract class BandwidthConstrainedEnergyAndPerformanceAwareMapper
 		for (int j = 0; j < totalNumberOfMappings; j++) {
 			doBeforeSavingMapping();
 			
-			saveRoutingTables();
+//			saveRoutingTables();
 			
-			saveTopology();
+//			saveTopology();
 	
 			MappingType mapping = new MappingType();
 			mapping.setId(getMapperId());
