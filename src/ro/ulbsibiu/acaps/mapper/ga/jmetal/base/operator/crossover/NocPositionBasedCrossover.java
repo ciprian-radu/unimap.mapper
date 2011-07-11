@@ -292,10 +292,9 @@ public abstract class NocPositionBasedCrossover extends Crossover {
 		String fixedParent;
 		int[] fixedPositions = new int[requiredNumberOfCores];
 
-		Solution[] offspring = new Solution[2];
+		Solution[] offspring = new Solution[1];
 
 		offspring[0] = new Solution(parent1);
-		offspring[1] = new Solution(parent2);
 
 		if (PERMUTATION_SOLUTION.isAssignableFrom(parent1.getType().getClass())
 				&& PERMUTATION_SOLUTION.isAssignableFrom(parent1.getType()
@@ -308,8 +307,6 @@ public abstract class NocPositionBasedCrossover extends Crossover {
 			int parent1Vector[] = ((Permutation) parent1.getDecisionVariables()[0]).vector_;
 			int parent2Vector[] = ((Permutation) parent2.getDecisionVariables()[0]).vector_;
 			int offspring1Vector[] = ((Permutation) offspring[0]
-					.getDecisionVariables()[0]).vector_;
-			int offspring2Vector[] = ((Permutation) offspring[1]
 					.getDecisionVariables()[0]).vector_;
 
 			if (PseudoRandom.randDouble() < probability) {
@@ -325,7 +322,7 @@ public abstract class NocPositionBasedCrossover extends Crossover {
 
 				// initialize the offsprings array
 				for (int i = 0; i < offspring1Vector.length; i++) {
-					offspring1Vector[i] = offspring2Vector[i] = Integer.MIN_VALUE;
+					offspring1Vector[i] = Integer.MIN_VALUE;
 				}
 
 				int[] tempParent = new int[permutationLength];
