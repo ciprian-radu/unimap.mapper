@@ -41,9 +41,9 @@ import ro.ulbsibiu.acaps.noc.xml.node.NodeType;
  */
 public abstract class MappingSimilarityCrossover extends Crossover {
 
-//	private static final int MAX_SIMILARITY_DISTANCE = Integer.MAX_VALUE;
+	private static final int MAX_SIMILARITY_DISTANCE = Integer.MAX_VALUE;
 //	private static final int MAX_SIMILARITY_DISTANCE = 2;
-	private static final int MAX_SIMILARITY_DISTANCE = 1;
+//	private static final int MAX_SIMILARITY_DISTANCE = 1;
 	
 	/**
 	 * Logger for this class

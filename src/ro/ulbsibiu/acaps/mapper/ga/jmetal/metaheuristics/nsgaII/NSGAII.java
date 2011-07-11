@@ -7,6 +7,7 @@
 package ro.ulbsibiu.acaps.mapper.ga.jmetal.metaheuristics.nsgaII;
 
 import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.TrackedAlgorithm;
+import ro.ulbsibiu.acaps.mapper.ga.jmetal.base.operator.crossover.NocPositionBasedCrossover;
 import jmetal.base.*;
 import jmetal.qualityIndicator.QualityIndicator;
 import jmetal.util.*;
@@ -97,15 +98,35 @@ public class NSGAII extends TrackedAlgorithm {
           //obtain parents
           parents[0] = (Solution) selectionOperator.execute(population);
           parents[1] = (Solution) selectionOperator.execute(population);
-          Solution[] offSpring = (Solution[]) crossoverOperator.execute(parents);
-          mutationOperator.execute(offSpring[0]);
-          mutationOperator.execute(offSpring[1]);
-          problem_.evaluate(offSpring[0]);
-          problem_.evaluateConstraints(offSpring[0]);
-          problem_.evaluate(offSpring[1]);
-          problem_.evaluateConstraints(offSpring[1]);
-          offspringPopulation.add(offSpring[0]);
-          offspringPopulation.add(offSpring[1]);
+			// if crossover operator is NocpositionBasedCrossover the
+			// crossover return one offspring in each call of the function
+			if (NocPositionBasedCrossover.class
+					.isAssignableFrom(crossoverOperator.getClass())) {
+				Solution[] offSpring = (Solution[]) crossoverOperator.execute(parents);
+				mutationOperator.execute(offSpring[0]);
+				problem_.evaluate(offSpring[0]);
+				problem_.evaluateConstraints(offSpring[0]);
+				offspringPopulation.add(offSpring[0]);
+					
+				parents[0] = (Solution) selectionOperator.execute(population);
+				parents[1] = (Solution) selectionOperator.execute(population);
+				
+				offSpring = (Solution[]) crossoverOperator.execute(parents);
+				mutationOperator.execute(offSpring[0]);
+				problem_.evaluate(offSpring[0]);
+				problem_.evaluateConstraints(offSpring[0]);
+				offspringPopulation.add(offSpring[0]);
+			} else {
+				Solution[] offSpring = (Solution[]) crossoverOperator.execute(parents);
+				mutationOperator.execute(offSpring[0]);
+				mutationOperator.execute(offSpring[1]);
+				problem_.evaluate(offSpring[0]);
+				problem_.evaluateConstraints(offSpring[0]);
+				problem_.evaluate(offSpring[1]);
+				problem_.evaluateConstraints(offSpring[1]);
+				offspringPopulation.add(offSpring[0]);
+				offspringPopulation.add(offSpring[1]);
+			}
           evaluations += 2;
         } // if                            
       } // for
